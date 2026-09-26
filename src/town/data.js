@@ -19,11 +19,18 @@ export async function loadMap(name = 'bangsaen') {
   const size = { w: (nx - 1) * step, d: (nz - 1) * step };
   const at = (i, j) => h[Math.min(nz - 1, Math.max(0, j)) * nx + Math.min(nx - 1, Math.max(0, i))];
 
-  /** Bilinear terrain height at scene (x, z); edge-clamped outside the grid. */
+  /**
+   * Terrain height at scene (x, z), matching the rendered mesh exactly: each grid cell
+   * is two flat triangles split along the (i, j+1)–(i+1, j) diagonal, the same way
+   * PlaneGeometry / the terrain tiles triangulate. Edge-clamped outside the grid.
+   * (Bilinear sampling would float or sink things by up to ~0.5 m on slopes.)
+   */
   function heightAt(x, z) {
     const fx = (x - x0) / step, fz = (z - z0) / step;
     const i = Math.floor(fx), j = Math.floor(fz), a = fx - i, b = fz - j;
-    return (at(i, j) * (1 - a) + at(i + 1, j) * a) * (1 - b) + (at(i, j + 1) * (1 - a) + at(i + 1, j + 1) * a) * b;
+    if (a + b <= 1) return at(i, j) + a * (at(i + 1, j) - at(i, j)) + b * (at(i, j + 1) - at(i, j));
+    const h11 = at(i + 1, j + 1);
+    return h11 + (1 - a) * (at(i, j + 1) - h11) + (1 - b) * (at(i + 1, j) - h11);
   }
 
   /** Float texture of the heights, for shaders that need water depth. */

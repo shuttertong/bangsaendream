@@ -5,12 +5,12 @@ import { createNPC } from './npc.js';
 
 const TALK = { range: 2.8, facing: 0.2 };
 
-export function createPeople(scene, map, places, collision) {
+export function createPeople(scene, map, places, collision, lift = () => 0) {
   const npcs = [];
   for (const def of ROSTER) {
     const place = places[def.place];
     if (!place) continue;
-    const npc = createNPC(scene, def, place, map);
+    const npc = createNPC(scene, def, place, map, lift);
     collision.circle(place.x, place.z, npc.radius, map.heightAt(place.x, place.z) + 2);
     npcs.push(npc);
   }

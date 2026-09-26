@@ -17,7 +17,7 @@ import { createSongthaews } from './songthaew.js';
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
@@ -34,7 +34,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     collision.rect(cx, cz, 1.7, 0.9, shop.yaw, map.heightAt(cx, cz) + 2.5);
   }
   scene.add(kit.build());
-  const people = createPeople(scene, map, places, collision);
+  const people = createPeople(scene, map, places, collision, lift);
 
   let hud = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };

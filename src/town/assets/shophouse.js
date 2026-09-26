@@ -21,15 +21,28 @@ function signboard(f, r, u, v, w, width) {
   }
 }
 
-function groundFloor(f, r, u, W, D) {
-  const w = D / 2;
-  const open = r.chance(0.55);
-  // recessed shop opening
-  f.box('lit', u, 1.35, w - 0.25, W - 0.5, 2.7, 0.52, col(B.interior));             // lit interior
+const BAY = 1.5;             // depth of the open shop bay under the upper floors
+
+function groundFloor(f, r, u, W, D, wall) {
+  const w = D / 2, back = w - BAY;
+  const open = r.chance(0.6);
+  // the bay: side walls, tiled floor, lit back wall
+  f.box('wall', u - W / 2 + 0.06, 1.45, w - BAY / 2, 0.12, 2.9, BAY, wall);
+  f.box('wall', u + W / 2 - 0.06, 1.45, w - BAY / 2, 0.12, 2.9, BAY, wall);
+  f.box('wall', u, 0.03, w - BAY / 2, W - 0.2, 0.06, BAY, col('#d8d2c4'));
+  f.box('lit', u, 1.45, back + 0.02, W - 0.24, 2.9, 0.04, col(B.interior));
   if (open) {
-    // goods / counter inside the open shop
-    f.box('wall', u, 0.45, w - 0.9, W - 1.2, 0.9, 0.6, col(r.pick(B.awnings)).offsetHSL(0, -0.2, 0.1));
-    f.box('metal', u, 2.55, w - 0.02, W - 0.5, 0.3, 0.3, col(B.shutter));        // rolled-up shutter
+    // shelves of goods on the back wall, a counter, a fluorescent tube
+    for (const y of [0.55, 1.15, 1.75]) {
+      f.box('wall', u, y, back + 0.22, W - 0.5, 0.04, 0.4, col('#8a7a66'));
+      for (let x = -W / 2 + 0.5; x < W / 2 - 0.4; x += 0.35 + r() * 0.2) {
+        const h = 0.18 + r() * 0.22;
+        f.box('lit', u + x, y + 0.02 + h / 2, back + 0.24, 0.24, h, 0.28, col(r.pick(B.goods)));
+      }
+    }
+    f.box('wall', u + (r() - 0.5) * 0.8, 0.45, w - 0.75, W * 0.45, 0.9, 0.55, col(r.pick(B.awnings)).offsetHSL(0, -0.25, 0.08));
+    f.box('lit', u, 2.8, w - BAY / 2, W * 0.5, 0.05, 0.08, col('#f4f6f0'));
+    f.box('metal', u, 2.72, w - 0.02, W - 0.3, 0.3, 0.3, col(B.shutter));        // rolled-up shutter
   } else {
     f.box('metal', u, 1.35, w - 0.05, W - 0.5, 2.7, 0.08, col(B.shutter));
     for (let y = 0.25; y < 2.7; y += 0.22) f.box('metal', u, y, w - 0.01, W - 0.55, 0.03, 0.03, col('#7d8386'));
@@ -61,8 +74,9 @@ function upperFloor(f, r, u, y, W, D, wall, balcony) {
 }
 
 /** Row of `n` shophouse units of width W, depth D, front centre at (x, z) facing `ry`. */
-export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors }) {
+export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
+  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, n * W + 0.08, drop + 0.8, D + 0.08, col(B.concrete));   // plinth where the ground falls away
   const rowWall = r.pick(B.walls);
   const total = n * W;
   for (let i = 0; i < n; i++) {
@@ -70,9 +84,12 @@ export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors }) 
     const fl = Math.max(2, Math.min(4, floors + (r.chance(0.25) ? (r.chance(0.5) ? 1 : -1) : 0)));
     const H = fl * FLOOR;
     const wall = r.chance(0.3) ? col(r.pick(B.walls)) : jitter(rowWall, r);
-    f.box('wall', u, H / 2 - 0.5, 0, W, H + 1, D, wall);                         // body (sunk 0.5 into slopes)
+    // body: upper floors full depth; the ground floor stops BAY short so the shop is a real recess
+    f.box('wall', u, (2.9 + H) / 2, 0, W, H - 2.9, D, wall);
+    f.box('wall', u, 0.95, -BAY / 2, W, 3.9, D - BAY, wall);
+    for (let k = 1; k < fl; k++) f.box('glass', u, k * FLOOR + 1.5, -D / 2 - 0.03, W * 0.35, 1.0, 0.04, col(B.glass));   // back windows
     f.box('wall', u - W / 2 + 0.06, H / 2, D / 2 + 0.1, 0.12, H, 0.25, col(r.pick(B.trim)));  // party wall pier
-    groundFloor(f, r, u, W, D);
+    groundFloor(f, r, u, W, D, wall);
     const bal = r.chance(0.6);
     for (let k = 1; k < fl; k++) upperFloor(f, r, u, k * FLOOR, W, D, wall, bal);
     // roof: parapet or a low metal shed
@@ -95,8 +112,9 @@ export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors }) 
 }
 
 /** Beach condo / hotel block: 6–12 floors with balconies on the front. */
-export function condoBlock(kit, r, { x, y, z, ry, width, D = 16, floors }) {
+export function condoBlock(kit, r, { x, y, z, ry, width, D = 16, floors, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
+  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, width + 0.1, drop + 0.8, D + 0.1, col(B.concrete));
   const wall = col(r.pick(['#eeeae2', '#e6e2d8', '#dfe6ea', '#f0e6d6']));
   const accent = col(r.pick(['#6f9fb5', '#b58a6a', '#8fa88a', '#c9b48a']));
   const H = floors * FLOOR;

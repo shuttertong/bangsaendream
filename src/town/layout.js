@@ -34,6 +34,24 @@ export class RoadIndex {
     }
   }
 
+  /** Nearest road edge: { d (negative = on the road), k (highway kind) } or null. */
+  nearest(x, z, radius = 40) {
+    let best = null, bd = radius;
+    const c = this.cell, r = Math.ceil(radius / c);
+    const gx = Math.floor(x / c), gz = Math.floor(z / c);
+    for (let i = gx - r; i <= gx + r; i++) for (let j = gz - r; j <= gz + r; j++) {
+      const list = this.grid.get(i * 100003 + j);
+      if (!list) continue;
+      for (const s of list) {
+        const dx = s.bx - s.ax, dz = s.bz - s.az, L = dx * dx + dz * dz || 1;
+        const t = Math.max(0, Math.min(1, ((x - s.ax) * dx + (z - s.az) * dz) / L));
+        const d = Math.hypot(s.ax + t * dx - x, s.az + t * dz - z) - s.hw;
+        if (d < bd) { bd = d; best = s; }
+      }
+    }
+    return best ? { d: bd, k: best.k } : null;
+  }
+
   /** Distance from (x, z) to the nearest road edge (negative = on the road). */
   clearance(x, z, radius = 40) {
     let best = radius;

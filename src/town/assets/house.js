@@ -37,8 +37,9 @@ function windowsOnFace(f, r, W, floors, w, sideU = 0, rot = 0) {
 }
 
 /** Detached house, front centre at (x, z) facing ry. */
-export function house(kit, r, { x, y, z, ry, W = 8, D = 9, floors = 1 }) {
+export function house(kit, r, { x, y, z, ry, W = 8, D = 9, floors = 1, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
+  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, W + 0.1, drop + 0.8, D + 0.1, col(B.concrete));
   const wall = col(r.pick(B.houseWalls)), H = floors * FLOOR;
   f.box('wall', 0, H / 2 - 0.5, 0, W, H + 1, D, wall);
   f.box('wall', 0, 0.1, D / 2 + 1.1, W * 0.6, 0.35, 2.2, col(B.concrete));             // porch slab

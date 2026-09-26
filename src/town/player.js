@@ -11,10 +11,11 @@ const MOVE = {
   runStick: 0.8,                // joystick push (0..1) that switches to running
 };
 
-export function createPlayer(scene, map, collision, input) {
+/** lift(x, z): extra height of the walkable surface (road / pavement) above the terrain. */
+export function createPlayer(scene, map, collision, input, lift = () => 0) {
   const kid = createKid(scene);
   const p = { x: 0, y: 0, z: 0, yaw: 0, vx: 0, vz: 0, vy: 0, grounded: true, speed: 0, prevSpeed: 0, prevYaw: 0 };
-  const ground = (x, z) => Math.max(map.heightAt(x, z), map.sea - collision.wade);
+  const ground = (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea - collision.wade);
 
   function place(x, z, yaw = 0) {
     Object.assign(p, { x, z, yaw, vx: 0, vz: 0, vy: 0, grounded: true });

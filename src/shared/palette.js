@@ -40,6 +40,7 @@ export const BUILDING = {
   awnings: ['#3f7fb5', '#2f8f78', '#c9573f', '#d69a3a', '#6d8fa6', '#9a5a8a', '#e0dcd2'],
   signs: ['#c94a3a', '#2f6fa8', '#e5b23a', '#3c8a5a', '#f0ebe0', '#d9723a', '#6a4f9a'],
   shutter: '#9aa0a3',
+  goods: ['#e8443a', '#f0c23a', '#3f8fd0', '#46b36a', '#f07fa8', '#f4f1e8', '#e08a3a'],
   interior: '#8c7b66',
   tileRoofs: ['#b8583a', '#a44e36', '#c06a42', '#8f4a3a'],
   metalRoofs: ['#8d9aa3', '#9aa7a0', '#a36f52', '#7d8e9c', '#b0b4b0'],

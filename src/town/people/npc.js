@@ -15,7 +15,7 @@ export const MOUTH = { closed: [1.2, 0.35], half: [1.2, 0.9], open: [1.1, 1.9], 
 const lerp = (a, b, t) => a + (b - a) * t;
 const angleLerp = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
 
-export function createNPC(scene, def, place, map) {
+export function createNPC(scene, def, place, map, lift = () => 0) {
   const { mesh, bones: B } = buildPerson(def.look);
   scene.add(mesh);
   const s = {
@@ -23,7 +23,7 @@ export function createNPC(scene, def, place, map) {
     headYaw: 0, headPitch: 0, waved: false, wave: 0, blinkIn: 1 + Math.random() * 3, blink: 0,
     mouth: 'closed', mouthX: MOUTH.closed[0], mouthY: MOUTH.closed[1], talking: false,
   };
-  const y = Math.max(map.heightAt(s.x, s.z), map.sea);
+  const y = Math.max(map.heightAt(s.x, s.z) + lift(s.x, s.z), map.sea);
   mesh.position.set(s.x, y, s.z);
   const head = new THREE.Vector3();
 

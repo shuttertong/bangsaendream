@@ -12,6 +12,13 @@ class NoCache(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class Server(http.server.ThreadingHTTPServer):
+    # the browser fetches ~60 ES modules at once (more with a phone on the LAN too);
+    # the default backlog of 5 drops connections (ERR_CONNECTION_RESET)
+    request_queue_size = 128
+    daemon_threads = True
+
+
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 root = Path(__file__).resolve().parent.parent
-http.server.ThreadingHTTPServer(('', port), partial(NoCache, directory=str(root))).serve_forever()
+Server(('', port), partial(NoCache, directory=str(root))).serve_forever()

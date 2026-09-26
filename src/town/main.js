@@ -17,7 +17,7 @@ import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler } from './layout.js';
-import { buildRoads, roadWidth } from './roads.js';
+import { buildRoads, roadWidth, surfaceLift } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
 import { buildBeach } from './beach.js';
@@ -78,7 +78,8 @@ async function boot() {
   const unlock = () => audio.unlock();
   addEventListener('pointerdown', unlock, { capture: true });
   addEventListener('keydown', unlock, { capture: true });
-  const player = createPlayer(scene, map, collision, input);
+  const lift = (x, z) => surfaceLift(layout.roadIdx, x, z);
+  const player = createPlayer(scene, map, collision, input, lift);
   player.place(START.x, START.z, START.yaw);
   const tpc = createThirdPersonCamera(camera, input, map, collision);
   tpc.setYaw(START.yaw + Math.PI);
@@ -112,7 +113,7 @@ async function boot() {
     }).catch(e => { console.error(e); document.body.classList.remove('in-game', 'fading'); });
     return true;
   };
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -174,7 +175,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
