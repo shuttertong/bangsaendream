@@ -4,7 +4,7 @@ import { t, tr } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
 import { ITEMS } from '../shared/items.js';
 
-const ICON = { speedboat: '🚤', home: '🏠', beach: '🏖️', tube: '🛟', food: '🥗', crab: '🦀', boat: '🦑', hill: '🐒' };
+const ICON = { sign: '🐬', speedboat: '🚤', home: '🏠', beach: '🏖️', tube: '🛟', food: '🥗', crab: '🦀', boat: '🦑', hill: '🐒' };
 const FADE_MS = 380, ARRIVE = 2.6;      // metres in front of the place's NPC
 
 export function createTravel(root, { places, player, camera, npcAt }) {

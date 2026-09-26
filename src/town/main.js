@@ -20,6 +20,8 @@ import { RoadIndex, Occupancy, seaDistSampler } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
+import { dressPromenades } from './promenade.js';
+import { buildLandmarks, completeRoundabout } from './landmarks.js';
 import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
@@ -59,18 +61,22 @@ async function boot() {
   // static town geometry, merged per (chunk, material)
   const t0 = performance.now();
   const kit = new Kit();
+  completeRoundabout(map);                                            // the bake clips the ring's far side
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
-  buildRoads(kit, map);
+  const promenades = buildRoads(kit, map, layout.seaDist);
+  const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
+  const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
   const town = kit.build();
   scene.add(town);
-  const nature = buildNature(map, layout);
+  const nature = buildNature(map, layout, { palm: [...promenade.palms, ...beach.palms] });
   scene.add(nature.group);
-  if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
+  if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles });
+  for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
   // audio can only start after a user gesture (iOS / Chrome autoplay rules)
@@ -115,7 +121,7 @@ async function boot() {
     }).catch(e => { loading = false; console.error(e); document.body.classList.remove('in-game', 'fading'); });
     return true;
   };
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {

@@ -113,7 +113,7 @@ export function coconutPalm(r) {
     pts.push(V(lean * s * s + Math.sin(s * 5 + r()) * 0.06, H * s, 0));
     rad.push(0.25 - 0.1 * s + (i === 0 ? 0.08 : 0));
   }
-  const bark = C('#8f8270');
+  const bark = C('#bab09c');                      // pale grey-brown, like Bang Saen's old palms
   const barkAt = (c, y) => c.copy(bark).offsetHSL(0, 0, (Math.sin(y * 18) > 0.6 ? -0.06 : 0.02) - y * 0.004);
   parts.push(tube(pts, rad, barkAt, 6));
   const trunkLo = tube(pts.filter((_, i) => i % 4 === 0), rad.filter((_, i) => i % 4 === 0), barkAt, 4);

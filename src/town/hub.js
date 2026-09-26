@@ -21,11 +21,12 @@ import { createSeats } from './seats.js';
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
     rentals: beach.rentals,
+    welcome,
     shops: buildings.rows.filter(r => r.kind === 'shop' && (r.road === 'tertiary' || r.road === 'secondary')),
   });
   // props that belong to people (built after the places are known)
@@ -60,6 +61,19 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     put(bananaGeometry(), sb.x + fx * 3 + ax * 3.2, sb.z + fz * 3 + az * 3.2, sb.yaw + 0.3);
     put(sofaGeometry(), sb.x + fx * 2.5 - ax * 3.4, sb.z + fz * 2.5 - az * 3.4, sb.yaw + Math.PI);
     put(jetskiGeometry(), sb.x + fx * 6 - ax * 6.5, sb.z + fz * 6 - az * 6.5, sb.yaw + 0.4, map.sea - 0.1);   // in the shallows
+    // floating pontoon walkway out into the sea: orange and white float blocks
+    const pontoon = [], seg = 1.0;
+    const float = (x, z, i) => pontoon.push(new THREE.BoxGeometry(seg * 0.96, 0.35, 2.2).toNonIndexed().rotateY(sb.yaw).translate(x, map.sea + 0.05, z));
+    const px0 = sb.x + ax * 14, pz0 = sb.z + az * 14;
+    for (let i = 0; i < 34; i++) float(px0 + fx * (6 + i * seg), pz0 + fz * (6 + i * seg), i);
+    for (let i = -10; i <= 10; i++) { const g = new THREE.BoxGeometry(2.2, 0.35, seg * 0.96).toNonIndexed().rotateY(sb.yaw); pontoon.push(g.translate(px0 + fx * 41 + ax * i * seg, map.sea + 0.05, pz0 + fz * 41 + az * i * seg)); }
+    pontoon.forEach((g, i) => {
+      const c = new THREE.Color(i % 2 ? '#f4f2ec' : '#f08a2a'), a = new Float32Array(g.attributes.position.count * 3);
+      for (let k = 0; k < a.length; k += 3) c.toArray(a, k);
+      g.deleteAttribute('uv');
+      g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+      parts.push(g);
+    });
     const landing = new THREE.Mesh(mergeGeometries(parts), paintedMaterial({ amp: 0.05, scale: 1 }));
     landing.castShadow = landing.receiveShadow = true;
     scene.add(landing);

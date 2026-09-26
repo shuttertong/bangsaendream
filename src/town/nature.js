@@ -8,10 +8,10 @@ import { getMaterial } from '../world/materials.js';
 
 // sea: [min, max] metres from the waterline; dens: per 100 m²; areas: land-use bonus
 const RULES = [
-  { sp: 'rainTree', sea: [38, 999], dens: 0.06, areas: { park: 1.2, grassland: 0.5, wood: 1.5, residential: 0.4 }, clear: 3.5, space: 6 },
-  { sp: 'casuarina', sea: [16, 32], dens: 0.5, areas: {}, clear: 1.4, space: 4.5 },
+  { sp: 'rainTree', sea: [60, 999], dens: 0.06, areas: { park: 1.2, grassland: 0.5, wood: 1.5, residential: 0.4 }, clear: 3.5, space: 6 },
+  { sp: 'casuarina', sea: [38, 70], dens: 0.08, areas: {}, clear: 1.4, space: 4.5 },    // the beach front is coconut palms (beach.js plants the band)
   { sp: 'casuarina', sea: [30, 999], dens: 0.05, areas: { wood: 1.2 }, clear: 1.4, space: 2.4 },
-  { sp: 'palm', sea: [14, 48], dens: 0.22, areas: { beach: 0.15 }, clear: 1.2, space: 3 },
+  { sp: 'palm', sea: [36, 60], dens: 0.3, areas: { beach: 0.2 }, clear: 1.2, space: 3 },   // behind the band; open sand stays open
   { sp: 'palm', sea: [48, 999], dens: 0.05, areas: { residential: 0.2, park: 0.3 }, clear: 1.2, space: 2.2 },
   { sp: 'frangipani', sea: [32, 999], dens: 0.06, areas: { park: 0.4, residential: 0.3 }, clear: 1.0, space: 1.6 },
 ];
@@ -20,7 +20,8 @@ const VARIANTS = 2;
 const LOD = { near: 150, rebuild: 15 };   // metres
 const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
 
-export function buildNature(map, ctx) {
+/** extra: { species: [{ x, y, z, rot, s }] } planted by other modules (promenade, beach rows). */
+export function buildNature(map, ctx, extra = {}) {
   const { occ, roadIdx, seaDist } = ctx;
   const r = rng(1234);
   const inland = map.inland || 100;
@@ -29,6 +30,10 @@ export function buildNature(map, ctx) {
   const areaAt = (x, z) => { for (const a of map.areas) if (inPoly(x, z, a.p)) return a.k; return null; };
   const placed = Object.fromEntries(Object.keys(SPECIES).map(k => [k, []]));
 
+  for (const [sp, list] of Object.entries(extra)) for (const t of list) {
+    placed[sp].push({ ...t, v: Math.floor(r() * VARIANTS) });
+    occ.mark(t.x, t.z, 1.2, 1.2);
+  }
   for (const rule of RULES) {
     for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
       const cx = x0 + (i + 0.5) * step, cz = z0 + (j + 0.5) * step;
@@ -52,7 +57,7 @@ export function buildNature(map, ctx) {
   }
 
   const group = new THREE.Group(), cards = cardMaterial(), fronds = frondMaterial(), bark = getMaterial('wood');
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
+  const m = new THREE.Matrix4(), shear = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
   const counts = {}, sets = [];
   for (const [sp, list] of Object.entries(placed)) {
     counts[sp] = list.length;
@@ -63,7 +68,9 @@ export function buildNature(map, ctx) {
       const mats = new Float32Array(inst.length * 16), cols = new Float32Array(inst.length * 3);
       const tr = rng(v + 99), tt = TINT[sp] * 2;
       inst.forEach((t, k) => {
-        m.compose(new THREE.Vector3(t.x, t.y, t.z), q.setFromAxisAngle(up, t.rot), new THREE.Vector3(t.s, t.s, t.s)).toArray(mats, k * 16);
+        m.compose(new THREE.Vector3(t.x, t.y, t.z), q.setFromAxisAngle(up, t.rot), new THREE.Vector3(t.s, t.s, t.s));
+        if (t.shear) m.multiply(shear.makeShear(0, 0, t.shear, 0, 0, 0));     // extra lean toward local +x (x += k·y)
+        m.toArray(mats, k * 16);
         c.setRGB(1 - tr() * tt, 1 - tr() * tt * 0.5, 1 - tr() * tt).toArray(cols, k * 3);   // tint multipliers ≤ 1
       });
       const tpl = SPECIES[sp](rng(sp.length * 100 + v));

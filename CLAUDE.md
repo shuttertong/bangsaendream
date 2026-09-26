@@ -175,7 +175,7 @@ Anti-aliasing comes from the composer's MSAA render target, not from the canvas.
   - distant forest edges use fewer, larger cards.
   - Bang Saen species:
     - **coconut palm** (curved trunk + strips of leaves)
-    - **casuarina / สนทะเล** (horizontal layers of needles, like Yoshimi's black pine; these line Bang Saen beach)
+    - **casuarina / สนทะเล** (horizontal layers of needles, like Yoshimi's black pine; a few behind the beach)
     - **rain tree / จามจุรี** (wide, round canopy)
     - **frangipani / ลีลาวดี** (low tree with flowers)
 - **Grass** (`grass.js`, the Breath-of-the-Wild approach):
@@ -291,6 +291,9 @@ Tunables live in each game's `rules.js`. The `playAll` quest counts 7 games. Hub
 Jet ski (2026-09-26, `src/jetski/`, also through Tom): the kid drives through a buoy slalom (`course.js` lays gates, net-float lines, moored longtails and bottles out ahead; `rules.js` RIDE / COURSE / SCORE). `boats/scene.js` takes `{ tow: false }` and a `wakeFrom` source for self-driven craft. Bot balance: sharp ≈ ฿200, sloppy ≈ ฿70–120. `playAll` now counts 8 games.
 Seats (`town/seats.js`): every deck chair under the umbrellas is a vendor's chair, rented for ฿5 (it stays yours until you rent another one). Concrete public benches (`beach.js` buildBenches, static kit geometry, so they add no draw calls) are free. `player.sit(seat, yaw, 'bench' | 'lounge')`; `hub.seated` covers both the songthaew and the seats.
 Khao lam (2026-09-26, `src/khaolam/`, offered by Grandma): pick the kind customers want, then pound the charred bamboo off each strip with a hammer (กะเทาะ = ทุบ): three blows per go, timed on a power meter (too light → the char stays; too hard → the rice cracks, lower price). Grandma serves orders from the tray automatically. The customer queue now lives in `shared/customers.js` (used by the som tam stall too). A khao lam stand sits beside Grandma's house (`assets/stall.js` khaoLamStand). Bot balance: ฿100–240. `playAll` counts 9 games.
+Beach layout (2026-09-26, from the user's photos + satellite view), back from the waterline: open pale sand (0–13 m) → three rows of blue-and-white umbrella sets (`beach.js` rows 14/17.5/21; umbrella + chairs or table baked into one instance) → a dense palm band leaning seaward (rows 25/29/33; instance shear adds lean) with benches and tall floodlights → the brick promenade (the OSM `pedestrian` way; `roads.js` PROMENADE, and a generated one on the sea side of beachfront roads) lined with palms and stalls (`promenade.js`). Casuarinas and rain trees now start further back.
+Welcome sign roundabout (วงเวียนบางแสน / วงเวียนโลมา): `town/landmarks.js` + `assets/landmark.js`, centre fitted to the OSM ring ways (615.9, 1236.5). The bake clips the ring's inland arc; `completeRoundabout()` restores it. Travel stop `welcome`. A floating pontoon sits at Tom's landing.
+Occupancy boxes along the shore must be rotated to the shore direction (`occ.mark/test(..., ry)`), otherwise diagonal coast spots block each other.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 

@@ -154,6 +154,10 @@ const STRINGS = {
     khaolamSold: 'ยายขายให้ลูกค้าแล้ว!',
     khaolamAngry: 'ลูกค้ารอนานเกินไป เดินไปแล้ว',
     khaolamGift: 'ยายให้ข้าวหลามไว้กินหนึ่งกระบอก',
+    // the welcome sign on the roundabout (a real bilingual sign: same text in both languages)
+    signWelcome1: 'ขอต้อนรับสู่หาดบางแสน',
+    signWelcome2: 'ด้วยความยินดียิ่ง',
+    signWelcomeEn: 'WELCOME TO BANGSAEN BEACH',
     // เก้าอี้ชายหาด
     sitRent: 'เช่าเก้าอี้ผ้าใบ ฿{n}',
     sitRented: 'นั่งเก้าอี้ที่เช่าไว้',
@@ -307,6 +311,10 @@ const STRINGS = {
     khaolamSold: 'Grandma sold it!',
     khaolamAngry: 'A customer got tired of waiting',
     khaolamGift: 'Grandma gives you a khao lam to eat',
+    // the welcome sign on the roundabout (a real bilingual sign: same text in both languages)
+    signWelcome1: 'ขอต้อนรับสู่หาดบางแสน',
+    signWelcome2: 'ด้วยความยินดียิ่ง',
+    signWelcomeEn: 'WELCOME TO BANGSAEN BEACH',
     sitRent: 'Rent a deck chair ฿{n}',
     sitRented: 'Sit in your rented chair',
     sitBench: 'Sit on the bench (free)',

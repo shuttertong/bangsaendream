@@ -12,7 +12,7 @@ export const PALETTE = {
   haze: '#d2e2ea',
   hazeSun: '#fbe9cf',        // haze tint toward the sun
 
-  sand: '#e8d8a8',
+  sand: '#eee2c6',                 // Bang Saen's pale, fine sand
   wetSand: '#cdbb8a',
   seabed: '#b9a77a',
   lowland: '#8aa65a',

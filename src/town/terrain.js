@@ -6,7 +6,7 @@ import { PALETTE } from '../shared/palette.js';
 
 const OUTER_HALF = 8000, OUTER_STEP = 80;
 const TILE = 75;        // core terrain tile size in grid cells (600 m) for frustum culling
-const BEACH_W = 34;     // metres of sand behind the waterline (up to the promenade)
+const BEACH_W = 50;     // metres of sand behind the waterline (up to and around the beach promenade)
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
 function seaDistance(map) {

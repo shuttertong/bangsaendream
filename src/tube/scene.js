@@ -124,7 +124,7 @@ export function buildScene() {
   const umb = [];
   for (let x = -40; x <= 40; x += 3.6) if (r() < 0.8) umb.push([x + r() * 0.8, 9 + (Math.round(x / 3.6) % 2) * 3.5]);
   const propMat = paintedMaterial({ amp: 0.06, scale: 1 });
-  const cols = ['#2f6fc4', '#d8443a', '#f0c23a'];
+  const cols = ['#ffffff', '#f2f4f8', '#ffffff'];                   // canopies are baked blue/white
   // [geometry, tinted canopy?, offset from the umbrella (chairs sit beside it, facing the sea)]
   for (const [geo, tinted, ox, oz] of [[PROPS.umbrellaCanopy(), true, 0, 0], [PROPS.umbrellaPole(), false, 0, 0], [PROPS.deckChair(), false, 0.7, -0.9]]) {
     const mesh = new THREE.InstancedMesh(geo, propMat, umb.length);

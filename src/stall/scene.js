@@ -100,7 +100,7 @@ export function buildScene() {
     const mesh = new THREE.InstancedMesh(geo, propMat, spots.length);
     spots.forEach(([x, z], i) => {
       mesh.setMatrixAt(i, m4.compose(new THREE.Vector3(x, -(z - 9) * 0.04, z), q.identity(), new THREE.Vector3(1, 1, 1)));
-      mesh.setColorAt(i, new THREE.Color(tinted ? ['#2f6fc4', '#d8443a', '#f0c23a'][i % 3] : '#ffffff'));
+      mesh.setColorAt(i, new THREE.Color(tinted ? ['#ffffff', '#f2f4f8'][i % 2] : '#ffffff'));   // canopies are baked blue/white
     });
     scene.add(mesh);
   }

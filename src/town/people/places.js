@@ -7,6 +7,7 @@ export const PLACES = {
   beach:     { name: { th: 'หาดบางแสน', en: 'Bang Saen Beach' }, icon: 'beach', anchor: { near: 'start', sea: 16 } },
   rental:    { name: { th: 'ร้านเช่าห่วงยาง', en: 'Inner-tube rental' }, icon: 'tube', anchor: 'rental' },
   shop:      { name: { th: 'ร้านส้มตำป้านวล', en: "Aunt Nuan's som tam" }, icon: 'food', anchor: 'shop' },
+  welcome:   { name: { th: 'วงเวียนบางแสน (ป้ายบางแสน)', en: 'Bang Saen roundabout' }, icon: 'sign', anchor: 'welcome' },
   speedboat: { name: { th: 'ท่าเรือสปีดโบ๊ท', en: 'Speedboat landing' }, icon: 'speedboat', anchor: { near: [150, 760], sea: 7 } },
   crabBeach: { name: { th: 'หาดปูลม', en: 'Ghost-crab beach' }, icon: 'crab', anchor: { near: [-560, 20], sea: 9 } },
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
@@ -33,7 +34,7 @@ function faceSea(x, z, seaDist) {
 }
 
 /**
- * ctx: { map, collision, seaDist, start: {x, z}, grandma: {x, z, yaw}, rentals: [{x, z, yaw}], shops: [rows] }
+ * ctx: { map, collision, seaDist, start: {x, z}, grandma: {x, z, yaw}, rentals: [{x, z, yaw}], shops: [rows], welcome: {x, z, ry} }
  * Returns { id: { id, name, icon, x, z, yaw } }.
  */
 export function resolvePlaces(ctx) {
@@ -54,6 +55,11 @@ export function resolvePlaces(ctx) {
       const fx = Math.sin(row.ry), fz = Math.cos(row.ry);
       [x, z] = freeSpot(row.x + fx * (row.D / 2 + 1.5), row.z + fz * (row.D / 2 + 1.5), ctx);
       yaw = row.ry;
+    } else if (a === 'welcome' && ctx.welcome) {
+      // on the ring road in front of the steps, looking up at the sign
+      const w = ctx.welcome, d = 17;
+      [x, z] = freeSpot(w.x + Math.sin(w.ry) * d, w.z + Math.cos(w.ry) * d, ctx);
+      yaw = w.ry + Math.PI;
     } else {
       const near = a.near === 'start' ? [ctx.start.x, ctx.start.z] : a.near;
       [x, z] = freeSpot(near[0], near[1], ctx, a.sea);

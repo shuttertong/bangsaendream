@@ -32,17 +32,24 @@ const box = (sx, sy, sz, x, y, z, hex = '#ffffff', rx = 0) => {
   return paint(g, hex);
 };
 
-/** Beach umbrella canopy (tinted per instance), 2.6 m wide, open at 2.2 m. */
-export function umbrellaCanopy() {
-  const g = new THREE.ConeGeometry(1.35, 0.5, 10, 1, true);
+/** Beach umbrella canopy, 2.6 m wide, open at 2.2 m: Bang Saen's blue-and-white panels
+ *  with a scalloped valance. Colours are baked, so instance tints should stay near white. */
+export function umbrellaCanopy(blue = '#2a62b8') {
+  const PANELS = 12;
+  const g = new THREE.ConeGeometry(1.35, 0.5, PANELS, 1, true);
   g.translate(0, 2.25, 0);
-  const rim = new THREE.CylinderGeometry(1.35, 1.35, 0.14, 10, 1, true);
-  rim.translate(0, 1.93, 0);
-  // a light and a dark panel alternate, like real beach umbrellas
-  const cone = paint(g, '#ffffff'), c = cone.attributes.color;
-  for (let i = 0; i < c.count; i++) if (Math.floor(i / 6) % 2) c.setXYZ(i, 0.82, 0.82, 0.82);
-  const r = paint(rim, '#ffffff');
-  return mergeGeometries([cone, backFace(cone), r, backFace(r)]);
+  const rim = new THREE.CylinderGeometry(1.35, 1.35, 0.2, PANELS * 2, 1, true);
+  rim.translate(0, 1.9, 0);
+  const cone = paint(g, '#ffffff'), c = cone.attributes.color, b = new THREE.Color(blue);
+  for (let i = 0; i < c.count; i++) if (Math.floor(i / 6) % 2) c.setXYZ(i, b.r, b.g, b.b);
+  // valance: scallops (lower edge dips between points), alternating with the panels above
+  const r = paint(rim, '#ffffff'), rp = r.attributes.position, rc = r.attributes.color;
+  for (let i = 0; i < rp.count; i++) {
+    const a = Math.atan2(rp.getZ(i), rp.getX(i)), k = ((a / (Math.PI * 2)) * PANELS * 2 + 100) % 1;
+    if (rp.getY(i) < 1.9) rp.setY(i, 1.8 + Math.abs(Math.sin(k * Math.PI)) * 0.08);
+    if (Math.floor(i / 6) % 4 < 2) rc.setXYZ(i, b.r, b.g, b.b);
+  }
+  return mergeGeometries([cone, backFace(cone), r]);   // valance: outside only
 }
 
 export function umbrellaPole() {
@@ -56,8 +63,7 @@ export function deckChair() {
   return mergeGeometries([
     box(0.62, 0.05, 1.2, 0, 0.32, 0.15),                    // seat
     box(0.62, 0.05, 0.75, 0, 0.58, -0.72, '#ffffff', 0.8),   // back rest, reclined ~45°
-    box(0.04, 0.32, 0.04, -0.28, 0.16, 0.65, '#bdbdb8'), box(0.04, 0.32, 0.04, 0.28, 0.16, 0.65, '#bdbdb8'),
-    box(0.04, 0.32, 0.04, -0.28, 0.16, -0.4, '#bdbdb8'), box(0.04, 0.32, 0.04, 0.28, 0.16, -0.4, '#bdbdb8'),
+    box(0.04, 0.3, 1.1, -0.28, 0.16, 0.12, '#bdbdb8'), box(0.04, 0.3, 1.1, 0.28, 0.16, 0.12, '#bdbdb8'),   // side frames
   ]);
 }
 

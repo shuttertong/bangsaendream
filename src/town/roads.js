@@ -13,7 +13,7 @@ export const ROAD_STYLE = {
   residential:   { w: 5.5, col: '#69696b' },
   living_street: { w: 4.5, col: '#747578' },
   service:       { w: 3.8, col: '#82817b' },
-  pedestrian:    { w: 5, col: '#bcae96', paved: true },      // beach promenade paving
+  pedestrian:    { w: 6, col: '#bcae96', paved: true },      // (beachfront ones become the brick promenade)
   footway:       { w: 1.8, col: '#b3a893', paved: true },
   path:          { w: 1.4, col: '#a89a78' },
   track:         { w: 3, col: '#9d8a66' },
@@ -22,6 +22,16 @@ export const ROAD_STYLE = {
 };
 export const ROAD_LIFT = 0.06;
 export const SIDEWALK = { kinds: ['secondary', 'tertiary'], w: 2.4, lift: 0.2, col: '#c2baa9', col2: '#b4ab98', curb: '#dcd7cb' };
+// Beach promenade (ทางเดินริมหาด): on the sea side of beachfront roads, a wide brick-paved
+// walk replaces the pavement. `sea`: how far from the waterline the road must be.
+export const PROMENADE = {
+  kinds: ['secondary', 'tertiary', 'residential'], w: 6, lift: 0.2, sea: [16, 46], minSand: 8,
+  pedestrianSea: 70,             // OSM pedestrian ways this close to the sea ARE the promenade: paved the same way
+  body: '#c9a08c', body2: '#bd917e', band: '#9e5646', border: '#8e4a3c', bandEvery: 6,
+};
+const PROM_CELL = 1;
+const promCells = new Set();
+const promKey = (x, z) => `${Math.floor(x / PROM_CELL)},${Math.floor(z / PROM_CELL)}`;
 const STEP = 2, DASH = 3, GAP = 5;
 export const roadWidth = k => ROAD_STYLE[k]?.w || 0;
 
@@ -30,6 +40,7 @@ export function surfaceLift(roadIdx, x, z) {
   const n = roadIdx.nearest(x, z, 12);
   if (!n) return 0;
   if (n.d < 0) return ROAD_LIFT;
+  if (promCells.has(promKey(x, z))) return PROMENADE.lift;
   return SIDEWALK.kinds.includes(n.k) && n.d < SIDEWALK.w ? SIDEWALK.lift : 0;
 }
 
@@ -80,10 +91,10 @@ function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false) {
   kit.tris3('road', pos, () => { const k = n++ * 3; return tmp.setRGB(col[k], col[k + 1], col[k + 2]); }, at);
 }
 
-/** Vertical kerb face along offset t, from `lo` to `hi` above the terrain, facing the road. */
-function kerb(kit, map, F, t, lo, hi, color, at) {
+/** Vertical kerb face along offset t, from `lo` to `hi` above the terrain, facing the road (or away: out). */
+function kerb(kit, map, F, t, lo, hi, color, at, out = false) {
   const { pts, nrm } = F, v = [];
-  const side = Math.sign(t);
+  const side = Math.sign(t) * (out ? -1 : 1);
   for (let i = 1; i < pts.length; i++) {
     const q = j => { const x = pts[j][0] + nrm[j][0] * t, z = pts[j][1] + nrm[j][1] * t; return [x, Math.max(map.heightAt(x, z), map.sea), z]; };
     const a = q(i - 1), b = q(i);
@@ -95,7 +106,35 @@ function kerb(kit, map, F, t, lo, hi, color, at) {
   if (v.length) kit.tris3('road', v, color, at);
 }
 
-export function buildRoads(kit, map) {
+/**
+ * Which side of each densified point is the sea (+1 left normal / −1 right) where this
+ * point of the road qualifies as beachfront, else 0.
+ */
+function seaSides(F, hw, seaDist) {
+  return F.pts.map(([x, z], i) => {
+    const [nx, nz] = F.nrm[i];
+    const l = seaDist(x + nx * (hw + 4), z + nz * (hw + 4)), r = seaDist(x - nx * (hw + 4), z - nz * (hw + 4));
+    const side = l < r ? 1 : -1, near = Math.min(l, r);
+    const edge = seaDist(x + nx * side * (hw + PROMENADE.w + 0.5), z + nz * side * (hw + PROMENADE.w + 0.5));
+    return near >= PROMENADE.sea[0] - hw - 4 && near <= PROMENADE.sea[1] && edge >= PROMENADE.minSand ? side : 0;
+  });
+}
+
+/** Split a frame into runs of consecutive points with the same non-zero side. */
+function runs(F, sides) {
+  const out = [];
+  let a = 0;
+  for (let i = 1; i <= sides.length; i++) {
+    if (i < sides.length && sides[i] === sides[a]) continue;
+    if (sides[a] && i - a >= 3) out.push({ side: sides[a], F: { pts: F.pts.slice(a, i), nrm: F.nrm.slice(a, i), along: F.along.slice(a, i) } });
+    a = i;
+  }
+  return out;
+}
+
+/** Returns the promenades built: [{ side, F, t0, t1 }] (offsets across the road frame). */
+export function buildRoads(kit, map, seaDist) {
+  const promenades = [];
   // bigger roads drawn slightly higher so they win at junctions
   const order = Object.keys(ROAD_STYLE).reverse();
   const white = new THREE.Color('#ebe7dc');
@@ -107,6 +146,21 @@ export function buildRoads(kit, map) {
     const mid = F.pts[F.pts.length >> 1];
     const at = { x: mid[0], z: mid[1] };
     const hw = st.w / 2, base = new THREE.Color(st.col), c = new THREE.Color();
+
+    // the real beach promenade (an OSM pedestrian way along the beach): brick paving + dressing
+    const mid2 = F.pts[F.pts.length >> 1];
+    if (r.k === 'pedestrian' && seaDist && seaDist(mid2[0], mid2[1]) < PROMENADE.pedestrianSea) {
+      const P = PROMENADE, hwP = P.w / 2, body = new THREE.Color(P.body), body2 = new THREE.Color(P.body2), band = new THREE.Color(P.band), border = new THREE.Color(P.border);
+      strip(kit, map, F, -hwP, hwP, 12, lift, (s, t) => {
+        const across = t + hwP;
+        if (across < 0.45 || across > P.w - 0.45) return border;
+        if (s % P.bandEvery < 0.5) return band;
+        return (Math.floor(s / 0.5) + Math.floor(across / 0.5)) % 2 ? body : body2;
+      }, at);
+      const sides = F.pts.map(([x, z], i) => (seaDist(x + F.nrm[i][0] * 5, z + F.nrm[i][1] * 5) < seaDist(x - F.nrm[i][0] * 5, z - F.nrm[i][1] * 5) ? 1 : -1));
+      for (const run of runs(F, sides)) promenades.push({ side: run.side, F: run.F, hw: -hwP, flush: true });
+      continue;
+    }
 
     if (st.paved) {
       // paving slabs: alternate two shades in a running-bond pattern
@@ -137,13 +191,38 @@ export function buildRoads(kit, map) {
       for (const e of [-1, 1]) { const a = e * (hw - 0.45), b = e * (hw - 0.3); strip(kit, map, F, Math.min(a, b), Math.max(a, b), 1, lift + 0.01, () => white, at); }
     }
 
+    // beach promenade on the sea side of beachfront stretches
+    const sides = seaDist && PROMENADE.kinds.includes(r.k) ? seaSides(F, hw, seaDist) : F.pts.map(() => 0);
+    const prom = runs(F, sides);
+    for (const { side, F: G } of prom) {
+      const t0 = side * hw, t1 = side * (hw + PROMENADE.w), lo = Math.min(t0, t1), hi = Math.max(t0, t1);
+      const P = PROMENADE, body = new THREE.Color(P.body), body2 = new THREE.Color(P.body2), band = new THREE.Color(P.band), border = new THREE.Color(P.border);
+      strip(kit, map, G, lo, hi, 12, P.lift, (s, t) => {
+        const across = Math.abs(t) - hw;
+        if (across < 0.45 || across > P.w - 0.45) return border;                      // dark border stripes
+        if (s % P.bandEvery < 0.5) return band;                                       // cross bands
+        return (Math.floor(s / 0.5) + Math.floor(across / 0.5)) % 2 ? body : body2;   // small pavers
+      }, at);
+      kerb(kit, map, G, t0, lift - 0.02, P.lift + 0.02, new THREE.Color('#c9c3b6'), at);   // step up from the road
+      kerb(kit, map, G, t1, -0.3, P.lift + 0.02, new THREE.Color('#b8ab94'), at, true);    // edge down to the sand
+      for (let i = 0; i < G.pts.length; i++) for (let k = 0; k <= P.w; k += 0.5) {
+        const tt = side * (hw + k);
+        promCells.add(promKey(G.pts[i][0] + G.nrm[i][0] * tt, G.pts[i][1] + G.nrm[i][1] * tt));
+      }
+      promenades.push({ side, F: G, t0, t1, hw });
+    }
+
     if (SIDEWALK.kinds.includes(r.k)) for (const e of [-1, 1]) {
-      // raised pavement with slabs, a kerb stone and its vertical face toward the road
+      // raised pavement with slabs, a kerb stone and its vertical face toward the road,
+      // wherever the promenade doesn't take its place
       const a = e * (hw + 0.2), b = e * (hw + SIDEWALK.w);
       const s1 = new THREE.Color(SIDEWALK.col), s2 = new THREE.Color(SIDEWALK.col2);
-      strip(kit, map, F, Math.min(a, b), Math.max(a, b), 2, SIDEWALK.lift, (s, t) => ((Math.floor(s / 1.0) + Math.floor(Math.abs(t) / 1.2)) % 2 ? s1 : s2), at);
-      strip(kit, map, F, e > 0 ? hw : -hw - 0.2, e > 0 ? hw + 0.2 : -hw, 1, SIDEWALK.lift + 0.02, () => new THREE.Color(SIDEWALK.curb), at);
-      kerb(kit, map, F, e * hw, lift - 0.02, SIDEWALK.lift + 0.02, new THREE.Color('#c9c3b6'), at);
+      for (const { F: G } of runs(F, sides.map(sd => (sd === e ? 0 : 1)))) {
+        strip(kit, map, G, Math.min(a, b), Math.max(a, b), 2, SIDEWALK.lift, (s, t) => ((Math.floor(s / 1.0) + Math.floor(Math.abs(t) / 1.2)) % 2 ? s1 : s2), at);
+        strip(kit, map, G, e > 0 ? hw : -hw - 0.2, e > 0 ? hw + 0.2 : -hw, 1, SIDEWALK.lift + 0.02, () => new THREE.Color(SIDEWALK.curb), at);
+        kerb(kit, map, G, e * hw, lift - 0.02, SIDEWALK.lift + 0.02, new THREE.Color('#c9c3b6'), at);
+      }
     }
   }
+  return promenades;
 }
