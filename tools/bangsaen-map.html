@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bang Saen 3D Map</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#a9d4ee;font-family:system-ui,sans-serif}
+  #hud{position:fixed;left:12px;top:12px;background:rgba(255,255,255,.88);padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;max-width:320px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  #hud b{font-size:15px}
+  #status{color:#555}
+  button{margin-top:6px;margin-right:6px;padding:5px 10px;border:0;border-radius:6px;background:#2b7cd3;color:#fff;cursor:pointer;font-size:12px}
+  button:disabled{background:#999}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div id="hud">
+  <b>หาดบางแสน · Bang Saen</b><br>
+  <span id="status">Loading…</span><br>
+  <small>Drag = rotate · Right-drag = pan · Wheel = zoom</small><br>
+  <button id="exp" disabled>Export game data (.json + .bin)</button>
+  <div style="font-size:10px;color:#777;margin-top:6px">Map data © OpenStreetMap contributors · Elevation: Mapzen Terrarium (AWS)</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ---------- CONFIG ----------
+const ORIGIN = { lat: 13.2835, lon: 100.9151 };   // Bang Saen Beach (from your Google Maps link)
+const HALF = 1600;          // metres from centre -> 3.2 km square
+const STEP = 8;             // terrain grid spacing (m)
+const HSCALE = 1.5;         // height exaggeration
+const SEA = 0.4;            // sea level in scene units
+const ZOOM = 14;            // terrarium tile zoom
+const OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter'
+];
+
+const status = t => document.getElementById('status').textContent = t;
+const MX = 111320 * Math.cos(ORIGIN.lat * Math.PI / 180), MZ = 110540;
+const toXZ = (lat, lon) => [(lon - ORIGIN.lon) * MX, -(lat - ORIGIN.lat) * MZ];
+const bbox = {
+  s: ORIGIN.lat - HALF / MZ, n: ORIGIN.lat + HALF / MZ,
+  w: ORIGIN.lon - HALF / MX, e: ORIGIN.lon + HALF / MX
+};
+
+// ---------- SCENE ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xa9d4ee);
+scene.fog = new THREE.Fog(0xa9d4ee, 1500, 4200);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 10000);
+camera.position.set(900, 700, 900);
+const controls = new MapControls(camera, renderer.domElement);
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xdff2ff, 0x8a7a55, 1.4));
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
+sun.position.set(-800, 1200, 500);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -1800, right: 1800, top: 1800, bottom: -1800, far: 4000 });
+scene.add(sun);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- ELEVATION (Terrarium tiles) ----------
+const lon2t = (lon, z) => (lon + 180) / 360 * 2 ** z;
+const lat2t = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; };
+
+async function loadElevation() {
+  const x0 = Math.floor(lon2t(bbox.w, ZOOM)), x1 = Math.floor(lon2t(bbox.e, ZOOM));
+  const y0 = Math.floor(lat2t(bbox.n, ZOOM)), y1 = Math.floor(lat2t(bbox.s, ZOOM));
+  const W = (x1 - x0 + 1) * 256, H = (y1 - y0 + 1) * 256;
+  const cv = new OffscreenCanvas(W, H), ctx = cv.getContext('2d');
+  const jobs = [];
+  for (let tx = x0; tx <= x1; tx++) for (let ty = y0; ty <= y1; ty++) {
+    jobs.push(fetch(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${ZOOM}/${tx}/${ty}.png`)
+      .then(r => r.blob()).then(createImageBitmap)
+      .then(img => ctx.drawImage(img, (tx - x0) * 256, (ty - y0) * 256)));
+  }
+  await Promise.all(jobs);
+  const px = ctx.getImageData(0, 0, W, H).data;
+  const nx = Math.round(2 * HALF / STEP) + 1, nz = nx;
+  const h = new Float32Array(nx * nz);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const x = -HALF + i * STEP, z = -HALF + j * STEP;
+    const lon = ORIGIN.lon + x / MX, lat = ORIGIN.lat - z / MZ;
+    const u = Math.min(W - 1, Math.max(0, Math.floor((lon2t(lon, ZOOM) - x0) * 256)));
+    const v = Math.min(H - 1, Math.max(0, Math.floor((lat2t(lat, ZOOM) - y0) * 256)));
+    const k = (v * W + u) * 4;
+    const m = px[k] * 256 + px[k + 1] + px[k + 2] / 256 - 32768;
+    h[j * nx + i] = Math.max(-12, m) * HSCALE;
+  }
+  return { nx, nz, h };
+}
+
+let ELEV;
+function heightAt(x, z) {
+  const { nx, nz, h } = ELEV;
+  const fx = (x + HALF) / STEP, fz = (z + HALF) / STEP;
+  const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(nz - 2, Math.floor(fz)));
+  const a = fx - i, b = fz - j;
+  const q = (ii, jj) => h[jj * nx + ii];
+  return (q(i, j) * (1 - a) + q(i + 1, j) * a) * (1 - b) + (q(i, j + 1) * (1 - a) + q(i + 1, j + 1) * a) * b;
+}
+
+// The free DEM is noisy at the shore, so use the OSM coastline (land is on the LEFT of each
+// coastline way) to decide sea vs land for every terrain vertex.
+function applyCoastMask(els) {
+  const segs = [];
+  for (const e of els) if (e.tags?.natural === 'coastline' && e.geometry) {
+    const p = e.geometry.map(g => toXZ(g.lat, g.lon));
+    for (let i = 1; i < p.length; i++) segs.push([p[i - 1][0], -p[i - 1][1], p[i][0], -p[i][1]]); // (east, north)
+  }
+  if (!segs.length) return;
+  const { nx, nz, h } = ELEV;
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const px = -HALF + i * STEP, py = HALF - j * STEP;          // (east, north)
+    let best = Infinity, side = 1;
+    for (const [ax, ay, bx, by] of segs) {
+      const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L));
+      const d = (ax + t * dx - px) ** 2 + (ay + t * dy - py) ** 2;
+      if (d < best) { best = d; side = dx * (py - ay) - dy * (px - ax); }
+    }
+    const k = j * nx + i, dist = Math.sqrt(best);
+    if (side < 0) h[k] = Math.min(h[k], -Math.min(12, 1 + dist * 0.02) * HSCALE);   // sea: slope gently down
+    else h[k] = Math.max(h[k], SEA + 0.4 + Math.min(1, dist / 40));               // land: keep above water
+  }
+}
+
+function buildTerrain() {
+  const { nx, nz, h } = ELEV;
+  const g = new THREE.PlaneGeometry(2 * HALF, 2 * HALF, nx - 1, nz - 1);
+  g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position, col = new Float32Array(pos.count * 3), c = new THREE.Color();
+  for (let k = 0; k < pos.count; k++) {
+    const y = h[k]; pos.setY(k, y);
+    if (y < SEA + 0.6) c.set(0xd9c89a);             // shore sand / seabed
+    else if (y < 25) c.set(0x7fae5c);               // lowland green
+    else c.set(0x5d8a45).lerp(new THREE.Color(0x4a6e3a), Math.min(1, (y - 25) / 150));
+    c.offsetHSL(0, 0, (Math.random() - .5) * .03);
+    col.set([c.r, c.g, c.b], k * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  m.receiveShadow = true;
+  scene.add(m);
+
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000),
+    new THREE.MeshPhongMaterial({ color: 0x2f8fb8, transparent: true, opacity: .82, shininess: 90, specular: 0x99ccee }));
+  sea.rotation.x = -Math.PI / 2; sea.position.y = SEA;
+  scene.add(sea);
+}
+
+// ---------- OSM ----------
+async function loadOSM() {
+  const b = `${bbox.s},${bbox.w},${bbox.n},${bbox.e}`;
+  const q = `[out:json][timeout:90];(way["building"](${b});way["highway"](${b});way["natural"](${b});way["landuse"](${b});way["leisure"](${b});way["waterway"](${b});way["amenity"="parking"](${b}););out geom;`;
+  // Ask all mirrors at once, use whichever answers first (public servers are often busy)
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 90000);
+  try {
+    const els = await Promise.any(OVERPASS.map(async url => {
+      const r = await fetch(url, { method: 'POST', signal: ac.signal, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(q) });
+      if (!r.ok) throw new Error(r.status);
+      return (await r.json()).elements;
+    }));
+    ac.abort();
+    return els;
+  } catch (e) { throw new Error('Could not reach the OpenStreetMap servers. If you are viewing this inside the chat preview, download the file and open it directly in Chrome (the preview blocks outside servers). Otherwise the servers are busy, so reload in a minute.'); }
+}
+
+const ROAD_W = { motorway: 14, trunk: 12, primary: 10, secondary: 8, tertiary: 7, residential: 5, unclassified: 5, service: 3.5, living_street: 4, pedestrian: 4, track: 3, footway: 1.6, path: 1.4, cycleway: 1.8, steps: 1.5 };
+const AREA_COL = { beach: 0xeedfb0, sand: 0xeedfb0, wood: 0x4f7d3a, scrub: 0x6d8f4a, grassland: 0x8fbf66, park: 0x86c264, pitch: 0x6fb85a, garden: 0x8cc46c, water: 0x3b95c4, parking: 0xb8b8b0, residential: 0xc9c1b0, commercial: 0xd6c3b3, retail: 0xd6c3b3, farmland: 0xb7c77a, cemetery: 0x9fb58a, school: 0xd9c9a0, university: 0xd9c9a0 };
+
+const areaKind = t => t.natural || t.leisure || t.landuse || (t.amenity === 'parking' ? 'parking' : null);
+
+function inPoly(x, z, p) {
+  let ins = false;
+  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    const [xi, zi] = p[i], [xj, zj] = p[j];
+    if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins;
+  }
+  return ins;
+}
+
+function buildOSM(els) {
+  const data = { origin: ORIGIN, buildings: [], roads: [], areas: [], streams: [], coast: [] };
+  const bGeos = [], rGeos = [], aGeos = [], treePts = [];
+  const bc = new THREE.Color();
+
+  for (const e of els) {
+    if (!e.geometry || !e.tags) continue;
+    const t = e.tags, p = e.geometry.map(g => toXZ(g.lat, g.lon));
+    const closed = p.length > 3 && e.nodes && e.nodes[0] === e.nodes[e.nodes.length - 1];
+
+    if (t.building && closed) {
+      const lv = parseInt(t['building:levels']) || (t.building === 'apartments' || t.building === 'hotel' ? 6 : 1 + (Math.random() * 2 | 0));
+      const hgt = parseFloat(t.height) || lv * 3.2;
+      data.buildings.push({ p: p.map(v => v.map(n => +n.toFixed(1))), lv, n: t.name, b: t.building });
+      const shape = new THREE.Shape(p.map(([x, z]) => new THREE.Vector2(x, -z)));
+      const g = new THREE.ExtrudeGeometry(shape, { depth: hgt, bevelEnabled: false });
+      g.rotateX(-Math.PI / 2);
+      let cx = 0, cz = 0; p.forEach(([x, z]) => { cx += x; cz += z; });
+      let base = Infinity; p.forEach(([x, z]) => base = Math.min(base, heightAt(x, z)));
+      g.translate(0, Math.max(base, SEA) - 0.3, 0);
+      bc.setHSL(0.05 + Math.random() * 0.1, 0.25, 0.72 + Math.random() * 0.15);
+      const n = g.attributes.position.count, cols = new Float32Array(n * 3);
+      for (let k = 0; k < n; k++) cols.set([bc.r, bc.g, bc.b], k * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+      bGeos.push(g.toNonIndexed ? (g.index ? g.toNonIndexed() : g) : g);
+    }
+    else if (t.highway && ROAD_W[t.highway]) {
+      data.roads.push({ k: t.highway, p: p.map(v => v.map(n => +n.toFixed(1))) });
+      rGeos.push(ribbon(p, ROAD_W[t.highway], t.highway));
+    }
+    else if (t.waterway) {
+      data.streams.push({ k: t.waterway, p });
+      rGeos.push(ribbon(p, t.waterway === 'river' ? 20 : 4, 'water'));
+    }
+    else if (t.natural === 'coastline') {
+      data.coast.push({ p });
+    }
+    else if (closed && areaKind(t) && AREA_COL[areaKind(t)]) {
+      const k = areaKind(t);
+      data.areas.push({ k, p });
+      const shape = new THREE.Shape(p.map(([x, z]) => new THREE.Vector2(x, -z)));
+      const g = new THREE.ShapeGeometry(shape);
+      g.rotateX(-Math.PI / 2);
+      const pos = g.attributes.position;
+      const lift = k === 'water' ? 0.35 : 0.15;
+      for (let i = 0; i < pos.count; i++) pos.setY(i, Math.max(heightAt(pos.getX(i), pos.getZ(i)), SEA) + lift);
+      const c = new THREE.Color(AREA_COL[k]), cols = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) cols.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+      aGeos.push(g.index ? g.toNonIndexed() : g);
+      if (k === 'wood' || k === 'park' || k === 'scrub') scatter(p, k === 'wood' ? 260 : 900, treePts);
+    }
+  }
+
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  if (aGeos.length) { const m = new THREE.Mesh(mergeGeometries(aGeos), new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1 })); m.receiveShadow = true; scene.add(m); }
+  if (rGeos.length) { const m = new THREE.Mesh(mergeGeometries(rGeos), new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2 })); m.receiveShadow = true; scene.add(m); }
+  if (bGeos.length) { const m = new THREE.Mesh(mergeGeometries(bGeos), mat); m.castShadow = m.receiveShadow = true; scene.add(m); }
+  addTrees(treePts);
+  addBeachPalms(data.areas.filter(a => a.k === 'beach'));
+  return data;
+}
+
+function ribbon(p, w, kind) {
+  const c = new THREE.Color(kind === 'water' ? 0x3b95c4 : (w >= 7 ? 0x55575c : w >= 3 ? 0x77787c : 0xc9b48a));
+  const pos = [], col = [], idx = [];
+  for (let i = 0; i < p.length; i++) {
+    const a = p[Math.max(0, i - 1)], b = p[Math.min(p.length - 1, i + 1)];
+    let dx = b[0] - a[0], dz = b[1] - a[1]; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+    const [x, z] = p[i], nx = -dz * w / 2, nz = dx * w / 2;
+    for (const s of [1, -1]) {
+      const X = x + nx * s, Z = z + nz * s;
+      pos.push(X, Math.max(heightAt(X, Z), SEA) + 0.3, Z); col.push(c.r, c.g, c.b);
+    }
+    if (i) { const k = i * 2; idx.push(k - 2, k - 1, k, k - 1, k + 1, k); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g.toNonIndexed();
+}
+
+function scatter(p, areaPerTree, out) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  p.forEach(([x, z]) => { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); });
+  const n = Math.min(1500, ((maxX - minX) * (maxZ - minZ)) / areaPerTree | 0);
+  for (let i = 0; i < n; i++) {
+    const x = minX + Math.random() * (maxX - minX), z = minZ + Math.random() * (maxZ - minZ);
+    if (inPoly(x, z, p)) out.push([x, z]);
+  }
+}
+
+function addTrees(pts) {
+  if (!pts.length) return;
+  const crown = new THREE.IcosahedronGeometry(4, 0); crown.translate(0, 7, 0);
+  const trunk = new THREE.CylinderGeometry(.5, .7, 5, 5); trunk.translate(0, 2.5, 0);
+  const mC = new THREE.InstancedMesh(crown, new THREE.MeshLambertMaterial({ color: 0x3f7a35, flatShading: true }), pts.length);
+  const mT = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ color: 0x6b4a2f }), pts.length);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+  pts.forEach(([x, z], i) => {
+    const k = .7 + Math.random() * .7; s.set(k, k * (.9 + Math.random() * .4), k);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6.28);
+    M.compose(new THREE.Vector3(x, heightAt(x, z), z), q, s);
+    mC.setMatrixAt(i, M); mT.setMatrixAt(i, M);
+  });
+  mC.castShadow = mT.castShadow = true;
+  scene.add(mC, mT);
+}
+
+// Coconut palms along the beach (Bang Saen's signature look)
+function addBeachPalms(beaches) {
+  const pts = [];
+  beaches.forEach(b => scatter(b.p, 600, pts));
+  if (!pts.length) return;
+  const trunk = new THREE.CylinderGeometry(.35, .5, 10, 5); trunk.translate(0, 5, 0); trunk.rotateZ(.12);
+  const leaves = new THREE.ConeGeometry(4.5, 2, 7, 1, true); leaves.translate(1.2, 10.3, 0);
+  const mT = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ color: 0x8a6a45 }), pts.length);
+  const mL = new THREE.InstancedMesh(leaves, new THREE.MeshLambertMaterial({ color: 0x3f8f3a, side: THREE.DoubleSide, flatShading: true }), pts.length);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+  pts.forEach(([x, z], i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * 6.28);
+    M.compose(new THREE.Vector3(x, Math.max(heightAt(x, z), SEA), z), q, one.clone().multiplyScalar(.8 + Math.random() * .4));
+    mT.setMatrixAt(i, M); mL.setMatrixAt(i, M);
+  });
+  mT.castShadow = mL.castShadow = true;
+  scene.add(mT, mL);
+}
+
+// ---------- EXPORT (same format idea as the Yoshimi game) ----------
+function exportData(data) {
+  const { nx, nz, h } = ELEV;
+  const json = { ...data, scale: 1, hscale: HSCALE, core: { x0: -HALF, z0: -HALF, step: STEP, nx, nz } };
+  const bin = new Int16Array(h.length);
+  for (let i = 0; i < h.length; i++) bin[i] = Math.round(h[i] / HSCALE * 10);  // decimetres
+  const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); };
+  dl(new Blob([JSON.stringify(json)], { type: 'application/json' }), 'bangsaen.json');
+  dl(new Blob([bin.buffer]), 'bangsaen-core.bin');
+}
+
+// ---------- RUN ----------
+(async () => {
+  try {
+    status('Loading elevation tiles…');
+    status('Loading elevation + OpenStreetMap (buildings, roads, beach)…');
+    const flat = () => { const nx = Math.round(2 * HALF / STEP) + 1; return { nx, nz: nx, h: new Float32Array(nx * nx).fill(2) }; };
+    const [elev, els] = await Promise.all([loadElevation().catch(flat), loadOSM()]);  // flat ground if elevation fails
+    ELEV = elev;
+    applyCoastMask(els);
+    buildTerrain();
+    const data = buildOSM(els);
+    status(`${data.buildings.length} buildings · ${data.roads.length} roads · ${data.areas.length} areas`);
+    const btn = document.getElementById('exp');
+    btn.disabled = false; btn.onclick = () => exportData(data);
+  } catch (e) { status('Error: ' + e.message); console.error(e); }
+})();
+
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
