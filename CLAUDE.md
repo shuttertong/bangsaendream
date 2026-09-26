@@ -278,6 +278,9 @@ M3 done: 7 NPCs (roster.js), dialogue with Thai grapheme typing and mouth shapes
 M4 done: จับปูลม (`src/crab/`: species.js table, scene.js dusk beach, crabs.js AI, ui.js reusable round UI, index.js start/stop).
 Games are registered in `src/games.js` (lazy import, catch tables become bag items). While a game runs, main.js pauses the hub and renders the game's own scene; `hub.finishGame()` pays out baht, fills the bag and saves the best result.
 Jump into a game from the console: `__game.startGame('crab')`.
+M5 done: ตกหมึก (`src/squid/`, uses `world/underwater.js`), ลิงเขาสามมุข (`src/monkey/`), ห่วงยาง (`src/tube/`), ร้านส้มตำ (`src/stall/`). All five share `shared/gameUI.js`.
+Balance testing: `__game.tick(1/60)` advances the game logic without rendering, so a scripted bot can play a whole round in one call. Each game returns a `debug` handle from `start()`.
+Payout targets for a good round: about ฿100–250.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 

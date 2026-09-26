@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 const col = hex => new THREE.Color(hex);
 
-export function somTamCart(kit, { x, y, z, ry }) {
+export function somTamCart(kit, { x, y, z, ry, umbrella = true }) {
   const f = kit.frame(x, y, z, ry);
   const wood = col('#b0784a'), steel = col('#c9cdd0');
   f.box('wall', 0, 0.85, 0, 1.6, 0.08, 0.8, col('#e9e2d0'));              // counter top
@@ -18,6 +18,7 @@ export function somTamCart(kit, { x, y, z, ry }) {
   const mortar = new THREE.CylinderGeometry(0.16, 0.11, 0.2, 12);
   kit.add('wall', mortar, new THREE.Matrix4().setPosition(f.P(0.45, 0.99, 0.05)), col('#a8583a'));
   f.rod('wall', [0.45, 1.0, 0.05], [0.55, 1.28, 0.1], 0.025, col('#c9a86a'));
+  if (!umbrella) return;
   // umbrella on a pole
   f.rod('metal', [0.75, 0.9, -0.35], [0.75, 2.5, -0.35], 0.025, steel);
   const canopy = new THREE.ConeGeometry(1.1, 0.35, 10, 1, true);
