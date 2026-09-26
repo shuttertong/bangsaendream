@@ -3,7 +3,7 @@
 import { rng, walkLine } from './layout.js';
 import { roadWidth } from './roads.js';
 import { shophouseRow, condoBlock } from './assets/shophouse.js';
-import { house, footprintBuilding } from './assets/house.js';
+import { house, footprintBuilding, grandmaHouse } from './assets/house.js';
 
 // Tunables
 const FRONTAGE = {
@@ -18,8 +18,10 @@ const FRONTAGE = {
   condoChance: 0.12,      // per long row on a main road
   houseChance: 0.5,       // short runs become houses (else small shophouse rows)
 };
+// Grandma's house (fictional): the closest quiet-street lot to the start that fits a yard
+const GRANDMA = { roads: ['residential', 'unclassified', 'service'], lot: 12, depth: 12, maxDist: 600 };
 
-export function buildBuildings(kit, map, ctx) {
+export function buildBuildings(kit, map, ctx, near) {
   const { occ, roadIdx, seaDist } = ctx;
   const r = rng(20260926);
   const counts = { osm: 0, shop: 0, condo: 0, house: 0, rows: [] };
@@ -46,6 +48,31 @@ export function buildBuildings(kit, map, ctx) {
     if (hi - lo > FRONTAGE.maxSlope) return false;
     return !occ.test(cx - fx * D / 2, cz - fz * D / 2, hw, D / 2 + 0.3, Math.atan2(fx, fz));
   };
+
+  // reserve grandma's lot first so the generic frontage builds around it
+  let best = null;
+  for (const road of map.roads) {
+    if (!GRANDMA.roads.includes(road.k) || road.p.length < 2) continue;
+    const off = roadWidth(road.k) / 2 + FRONTAGE.setback;
+    for (const side of [1, -1]) walkLine(road.p, 3, (x, z, dx, dz) => {
+      const nx = -dz * side, nz = dx * side, cx = x + nx * off, cz = z + nz * off;
+      const d = Math.hypot(cx - near.x, cz - near.z);
+      if (d > GRANDMA.maxDist || (best && d >= best.d)) return;
+      if (seaDist(cx + nx * 6, cz + nz * 6) < seaDist(x, z) - 1.5) return;
+      if (fits(cx, cz, -nx, -nz, GRANDMA.lot / 2, GRANDMA.depth)) best = { d, cx, cz, fx: -nx, fz: -nz };
+    });
+  }
+  if (best) {
+    const { cx, cz, fx, fz } = best, D = GRANDMA.depth, ry = Math.atan2(fx, fz);
+    const x = cx - fx * D / 2, z = cz - fz * D / 2;
+    occ.mark(x, z, GRANDMA.lot / 2 + 1, D / 2 + 0.5, ry);
+    const y = Math.max(map.sea, Math.min(map.heightAt(cx, cz), map.heightAt(x - fx * D / 2, z - fz * D / 2)));
+    grandmaHouse(kit, r, { x, y, z, ry, W: GRANDMA.lot, D });
+    // she waits in the front yard beside the stairs, facing the street
+    const ax = fz, az = -fx;                                    // along the street
+    counts.grandma = { x: cx - fx * 1.4 + ax * 2.4, z: cz - fz * 1.4 + az * 2.4, yaw: ry };
+    counts.rows.push({ x: x - fx * 2.0, z: z - fz * 2.0, ry, n: 2, D: 8, road: 'grandma', kind: 'grandma', top: 9 });
+  }
 
   for (const road of map.roads) {
     const chance = FRONTAGE.roads[road.k];
@@ -90,20 +117,23 @@ function placeRun(kit, map, r, run, kind, occ, counts) {
   y = Math.max(y, map.sea);
   const main = kind === 'secondary' || kind === 'tertiary';
   const W = FRONTAGE.lot * n;
-  const row = { x, z: zz, ry, n, D, road: kind, top: y + 14 - map.heightAt(x, zz) };
+  const row = { x, z: zz, ry, n, D, road: kind, kind: 'empty', top: y + 14 - map.heightAt(x, zz) };
   counts.rows.push(row);
   if (main && n >= 5 && D >= 12 && r.chance(FRONTAGE.condoChance)) {
     const floors = 6 + Math.floor(r() * 7);
     condoBlock(kit, r, { x, y, z: zz, ry, width: W - 1, D, floors });
     row.top = floors * 3.2 + 3;
+    row.kind = 'condo';
     counts.condo++;
   } else if (n === 2 && r.chance(FRONTAGE.houseChance)) {
     // detached house set back a little, with a yard
     const hd = Math.min(D - 3, 8);
     house(kit, r, { x: fcx - fx * (hd / 2 + 2.6), y, z: fcz - fz * (hd / 2 + 2.6), ry, W: Math.min(W - 0.6, 8), D: hd, floors: r.chance(0.3) ? 2 : 1 });
+    row.kind = 'house';
     counts.house++;
   } else if (n >= 2) {
     shophouseRow(kit, r, { x, y, z: zz, ry, n, W: FRONTAGE.lot, D, floors: main ? 3 : 2 });
+    row.kind = 'shop';
     counts.shop += n;
   }
 }

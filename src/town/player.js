@@ -21,9 +21,9 @@ export function createPlayer(scene, map, collision, input) {
     p.y = ground(x, z);
   }
 
-  /** camYaw: the camera's yaw, so "forward" means away from the camera. */
-  function update(dt, camYaw) {
-    const { f, r, mag } = input.axis();                       // keys or on-screen joystick
+  /** camYaw: the camera's yaw, so "forward" means away from the camera. frozen: no input (talking, menus). */
+  function update(dt, camYaw, frozen = false) {
+    const { f, r, mag } = frozen ? { f: 0, r: 0, mag: 0 } : input.axis();   // keys or on-screen joystick
     const len = Math.hypot(f, r);
     // Shift runs; on the joystick, pushing past `runStick` runs and less walks slower
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
@@ -55,7 +55,7 @@ export function createPlayer(scene, map, collision, input) {
 
     // vertical: jump and gravity
     const g = ground(p.x, p.z);
-    if (p.grounded && (input.down('Space') || input.jump)) { p.vy = MOVE.jump; p.grounded = false; }
+    if (!frozen && p.grounded && (input.down('Space') || input.jump)) { p.vy = MOVE.jump; p.grounded = false; }
     if (!p.grounded) {
       p.vy -= MOVE.gravity * dt;
       p.y += p.vy * dt;
@@ -72,5 +72,12 @@ export function createPlayer(scene, map, collision, input) {
     kid.update(dt, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, speed, dist: moved, accel, turn, grounded: p.grounded, vy: p.vy, groundAt: ground });
   }
 
-  return { state: p, kid, place, update };
+  /** Turn smoothly toward a point (e.g. whoever we're talking to). */
+  function faceTo(x, z, dt) {
+    let d = Math.atan2(x - p.x, z - p.z) - p.yaw;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    p.yaw += d * Math.min(1, dt * 8);
+  }
+
+  return { state: p, kid, place, update, faceTo };
 }

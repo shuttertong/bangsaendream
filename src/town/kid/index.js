@@ -21,7 +21,7 @@ export function createKid(scene) {
   const s = {
     phase: 0, speed: 0, lean: 0, side: 0, t: 0,
     hatOff: new THREE.Vector3(), hatVel: new THREE.Vector3(),
-    headPrev: new THREE.Vector3(), headPrev2: new THREE.Vector3(), first: true,
+    headPrev: new THREE.Vector3(), headPrev2: new THREE.Vector3(), first: true, blinkIn: 2, blink: 0,
   };
   const tmp = new THREE.Vector3(), acc = new THREE.Vector3();
 
@@ -81,6 +81,10 @@ export function createKid(scene) {
     B.spine.rotation.set(s.lean * 0.6, Math.sin(s.phase * Math.PI * 2) * 0.12 * move, 0);
     B.head.rotation.set(-s.lean * 0.7 + Math.sin(s.t * 1.3) * 0.02 * (1 - move), 0, -s.side * 0.5);
     B.spine.scale.setScalar(1 + Math.sin(s.t * 2.2) * 0.006 * (1 - move));   // breathing
+    s.blinkIn -= dt;                                                     // blink every few seconds
+    if (s.blinkIn <= 0) { s.blink = 0.12; s.blinkIn = 2 + Math.random() * 3; }
+    s.blink = Math.max(0, s.blink - dt);
+    B.eyes.scale.y = s.blink > 0 ? 0.12 : 1;
 
     if (m.grounded) {
       const [L, R] = targets;

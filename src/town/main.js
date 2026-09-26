@@ -1,4 +1,4 @@
-// Hub boot + per-frame update. M1: terrain, sea, sky, haze, post-FX, free camera.
+// Hub boot + per-frame update: builds the world, then hands gameplay to hub.js.
 import * as THREE from 'three';
 import { createRenderer, createLights } from '../world/render.js';
 import { createSky, buildEnvironment } from '../world/sky.js';
@@ -23,6 +23,8 @@ import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
+import { createHub } from './hub.js';
+import * as P from '../shared/progress.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -31,6 +33,8 @@ const $ = id => document.getElementById(id);
 const START = { x: 318, z: 985, yaw: Math.atan2(-0.318, -0.948) };
 
 async function boot() {
+  if (params.has('reset')) P.reset();                  // ?reset=1 → new game
+  P.load();
   $('loading').textContent = t('loading');
   $('credit').textContent = t('credit');
 
@@ -54,7 +58,7 @@ async function boot() {
   const kit = new Kit();
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
   buildRoads(kit, map);
-  const counts = buildBuildings(kit, map, layout);
+  const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
   const town = kit.build();
@@ -75,6 +79,7 @@ async function boot() {
   let free = params.has('view');
   if (free) cam.setView(params.get('view'));
   if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud') });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -92,7 +97,8 @@ async function boot() {
     U.time.value = time;
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
-    else { player.update(dt, tpc.state.yaw); tpc.update(dt, player.state); focus = tpc.target; }
+    else { player.update(dt, tpc.state.yaw, hub.frozen); tpc.update(dt, player.state); focus = tpc.target; }
+    hub.update(dt);
     // near plane grows with height: keeps depth precision for the sea/shore from the air
     const above = camera.position.y - Math.max(map.heightAt(camera.position.x, camera.position.z), map.sea);
     const near = Math.min(40, Math.max(0.3, above * 0.02));
@@ -129,7 +135,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, bench };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench };
 }
 
 function debugOverlay(renderer, camera) {

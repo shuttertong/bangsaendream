@@ -137,3 +137,62 @@ export function footprintBuilding(kit, r, map, b) {
     kit.add('wall', rim, new THREE.Matrix4(), col(B.trim[1]), { x: box.cx, z: box.cz });
   }
 }
+
+/** Gable roof over a W×D rectangle (ridge along u), eaves at y, with triangular ends. */
+function gableRoof(f, mat, W, D, y, rise, o, color, endColor) {
+  const hw = W / 2 + o, hd = D / 2 + o, T = y + rise;
+  f.tris(mat, [
+    -hw, y, hd, hw, y, hd, hw, T, 0,   -hw, y, hd, hw, T, 0, -hw, T, 0,        // front slope
+    hw, y, -hd, -hw, y, -hd, -hw, T, 0,   hw, y, -hd, -hw, T, 0, hw, T, 0,     // back slope
+  ], color);
+  f.tris(mat, [W / 2, y, D / 2, W / 2, y, -D / 2, W / 2, T - 0.05, 0,
+    -W / 2, y, -D / 2, -W / 2, y, D / 2, -W / 2, T - 0.05, 0], endColor);  // gable ends
+  f.box('wall', 0, y - 0.04, 0, 2 * hw, 0.08, 2 * hd, col('#6a4a34'));                   // soffit
+}
+
+/** Grandma's house: a raised Thai wooden house with a veranda, stairs, water jars. */
+export function grandmaHouse(kit, r, { x, y, z, ry, W = 12, D = 12 }) {
+  const f = kit.frame(x, y, z, ry);
+  const wood = col('#8f623e'), dark = col('#5e3f28'), post = col('#6e4c33');
+  const hw = 4.2, hd = 3.4, floor = 1.9, wallH = 2.5;       // house body half sizes, floor height
+  const cz = -2.4;                                           // body sits toward the back of the lot
+  // stilts + floor platform (body + front veranda)
+  for (const u of [-hw, 0, hw]) for (const w of [-hd, 0, hd, hd + 1.8]) f.box('wall', u, floor / 2 - 0.3, cz + w, 0.22, floor + 0.6, 0.22, post);
+  f.box('wall', 0, floor, cz + 0.9, hw * 2 + 0.4, 0.22, hd * 2 + 2.2, dark);
+  // walls with horizontal planks
+  f.box('wall', 0, floor + wallH / 2, cz, hw * 2, wallH, hd * 2, wood);
+  for (let y2 = floor + 0.3; y2 < floor + wallH; y2 += 0.32) {
+    f.box('wall', 0, y2, cz + hd + 0.01, hw * 2, 0.03, 0.02, dark);
+    f.box('wall', hw + 0.01, y2, cz, 0.02, 0.03, hd * 2, dark);
+    f.box('wall', -hw - 0.01, y2, cz, 0.02, 0.03, hd * 2, dark);
+  }
+  // door + open shutters
+  f.box('lit', 0, floor + 1.05, cz + hd + 0.02, 1.1, 2.0, 0.05, col('#4a3526'));
+  for (const u of [-2.6, 2.6]) {
+    f.box('lit', u, floor + 1.4, cz + hd + 0.02, 1.0, 1.1, 0.05, col('#3a2c22'));
+    for (const s of [-1, 1]) f.box('wall', u + s * 0.8, floor + 1.4, cz + hd + 0.12, 0.55, 1.1, 0.05, wood);
+  }
+  // veranda railing
+  const vz = cz + hd + 1.8;
+  f.box('wall', 0, floor + 0.85, vz, hw * 2 + 0.3, 0.08, 0.1, dark);
+  for (let u = -hw; u <= hw; u += 0.45) if (Math.abs(u) > 0.7) f.box('wall', u, floor + 0.45, vz, 0.06, 0.8, 0.06, wood);
+  for (const u of [-hw, hw]) f.box('wall', u, floor + 1.4, vz, 0.18, 2.8, 0.18, post);     // veranda posts
+  // stairs down to the yard
+  for (let i = 0; i < 6; i++) f.box('wall', 0, floor - 0.3 * (i + 1) + 0.15, vz + 0.35 + i * 0.3, 1.2, 0.08, 0.3, wood);
+  // steep clay-tile gable roof over body + veranda
+  gableRoof(f, 'wall', hw * 2, hd * 2 + 1.8, floor + wallH + 0.05, 2.6, 0.7, col('#b0553a'), wood);
+  // under the house: bamboo bench (แคร่) and glazed water jars (โอ่ง)
+  f.box('wall', -1.8, 0.45, cz + 0.5, 1.9, 0.08, 1.0, col('#c9a86a'));
+  for (const [u, w] of [[-2.6, 0.05], [-1.0, 0.05], [-2.6, 0.95], [-1.0, 0.95]]) f.box('wall', u, 0.22, cz + w, 0.08, 0.44, 0.08, col('#a88a58'));
+  const jar = new THREE.SphereGeometry(0.42, 14, 10);
+  for (const u of [hw + 0.8, hw + 1.7]) {
+    const p = f.P(u, 0.45, cz + hd + 0.6);
+    kit.add('metal', jar, new THREE.Matrix4().compose(p, new THREE.Quaternion(), new THREE.Vector3(1, 1.25, 1)), col('#6a3f24'));
+  }
+  // potted plants on the veranda + spirit house by the gate
+  for (const u of [-3.4, 3.4]) {
+    f.box('wall', u, floor + 0.3, vz - 0.4, 0.35, 0.35, 0.35, col('#a8583a'));
+    f.box('wall', u, floor + 0.7, vz - 0.4, 0.5, 0.5, 0.5, col('#4f7a3a'));
+  }
+  spiritHouse(kit, f.P(-W / 2 + 1.2, 0, D / 2 - 1.2), ry, r);
+}

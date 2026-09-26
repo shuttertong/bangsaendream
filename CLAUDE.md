@@ -105,8 +105,9 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
     ├── world/     render.js, postfx.js, haze.js, sky.js, water.js, materials.js, textures.js, foliage.js (leaf atlas + billboard cards)
     ├── town/      main.js, data.js, terrain.js, freecam.js (M1 orbit camera + ?view= presets), roads.js, buildings.js, nature.js,
     │              grass.js, player.js, camera.js (third person), collision.js, layout.js (placement helpers),
-    │              beach.js (umbrellas, stalls, power poles), hud.js, travel.js, quests.js, bag.js, kid/ (model.js, index.js),
-    │              people/ (npc.js, talk.js), assets/ (kit.js, trees.js, shophouse.js, house.js, stall.js, props.js),
+    │              beach.js (umbrellas, stalls, power poles), hub.js (M3 wiring), hud.js, travel.js (+ bag panel), quests.js,
+    │              kid/ (model.js, index.js), people/ (body.js person builder, roster.js cast + scripts, places.js,
+    │              npc.js, talk.js, index.js), assets/ (kit.js, trees.js, shophouse.js, house.js, stall.js, props.js),
     │              data/ (bangsaen.json, bangsaen-core.bin)
     ├── crab/  squid/  monkey/  tube/  stall/     # one folder per mini-game
     └── ...
@@ -273,6 +274,8 @@ Anti-aliasing comes from the composer's MSAA render target, not from the canvas.
 Finish and test one milestone before starting the next.
 
 **Status (2026-09-26):** M1 done. M2 done except grass (§5.6 grass tiles) and Worker-built characters, which are deferred.
+M3 done: 7 NPCs (roster.js), dialogue with Thai grapheme typing and mouth shapes, travel menu (M), bag (B), quests, and a save that survives reloads (`?reset=1` starts a new game).
+Mini-game offers from NPCs call `onGame(id)` in hub.js, which is the hook for M4.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 

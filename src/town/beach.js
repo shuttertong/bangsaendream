@@ -27,7 +27,7 @@ export function buildBeach(map, ctx, kit) {
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
   const put = (list, x, z, ry, color, s = 1) => {
     m.compose(new THREE.Vector3(x, map.heightAt(x, z) - 0.05, z), q.setFromAxisAngle(up, ry), new THREE.Vector3(s, s, s));
-    list.push({ m: m.clone(), c: new THREE.Color(color) });
+    list.push({ m: m.clone(), c: new THREE.Color(color), x, z, ry });
   };
 
   // coastline offset inland by d: land is on the left of each coast way
@@ -88,7 +88,8 @@ export function buildBeach(map, ctx, kit) {
   const poles = buildPoles(map, ctx, kit, r);
   make(P.powerPole(), poles);
 
-  return { group, poles, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
+  const rentals = lists.rental.map(it => ({ x: it.x, z: it.z, yaw: it.ry }));
+  return { group, poles, rentals, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
 }
 
 /** Power poles on the land side of main roads, with three sagging cables between them. */
