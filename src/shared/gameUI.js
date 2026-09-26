@@ -52,11 +52,15 @@ export function createGameUI(root, { title, how, keys }) {
 
   return {
     set onStart(f) { onStart = f; }, set onQuit(f) { onQuit = f; }, set onBack(f) { onBack = f; },
-    bar(time, count, baht) {
-      const m = Math.floor(time / 60), s = Math.floor(time % 60);
-      $('.g-time').textContent = `⏱ ${m}:${String(s).padStart(2, '0')}`;
-      $('.g-time').classList.toggle('low', time < 15);
-      $('.g-count').textContent = `${t('caught')} ${count}`;
+    /** time: seconds left, or a string shown instead (e.g. the wave number). */
+    bar(time, count, baht, countLabel = t('caught')) {
+      if (typeof time === 'string') { $('.g-time').textContent = time; $('.g-time').classList.remove('low'); }
+      else {
+        const m = Math.floor(time / 60), s = Math.floor(time % 60);
+        $('.g-time').textContent = `⏱ ${m}:${String(s).padStart(2, '0')}`;
+        $('.g-time').classList.toggle('low', time < 15);
+      }
+      $('.g-count').textContent = `${countLabel} ${count}`;
       $('.g-baht').textContent = `฿${baht}`;
     },
     pop(text, kind = '') {
@@ -66,7 +70,7 @@ export function createGameUI(root, { title, how, keys }) {
       $('.g-pops').appendChild(d);
       setTimeout(() => d.remove(), 1600);
     },
-    /** rows: [{ icon, name: {th,en}, count, best, baht }] */
+    /** rows: [{ icon, name: {th,en}, count, best (cm) | detail (text), baht }] */
     results(rows, total, record) {
       $('.g-top').hidden = true;
       const r = $('.g-results');
@@ -77,7 +81,7 @@ export function createGameUI(root, { title, how, keys }) {
       for (const row of rows) {
         const d = document.createElement('div');
         d.className = 'g-row';
-        d.innerHTML = `<span class="ic">${row.icon}</span><span class="nm">${tr(row.name)} ×${row.count}</span><span class="sz">${t('cm', { n: row.best })}</span><span class="bt">฿${row.baht}</span>`;
+        d.innerHTML = `<span class="ic">${row.icon}</span><span class="nm">${tr(row.name)} ×${row.count}</span><span class="sz">${row.detail ?? t('cm', { n: row.best })}</span><span class="bt">฿${row.baht}</span>`;
         list.appendChild(d);
       }
       r.querySelector('.g-sum').innerHTML = `${t('total')} <b>฿${total}</b>${record ? ` <span class="rec">${t('newRecord')}</span>` : ''}`;
