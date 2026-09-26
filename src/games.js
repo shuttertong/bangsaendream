@@ -16,6 +16,7 @@ export const GAMES = {
   banana: { load: () => import('./banana/index.js') },
   sofa: { load: () => import('./sofa/index.js') },
   jetski: { load: () => import('./jetski/index.js') },
+  khaolam: { load: () => import('./khaolam/index.js') },
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
@@ -23,3 +24,5 @@ for (const s of SQUID) ITEMS[`squid_${s.id}`] = { icon: s.icon, name: s.name, pr
 for (const s of SNACKS) ITEMS[`monkey_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
 for (const s of FINDS) ITEMS[`tube_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
 // the stall pays in baht; dishes aren't kept in the bag
+// Grandma's khao lam: sell enough and she gives you one
+ITEMS.khaolam_tube = { icon: '🎋', name: { th: 'ข้าวหลาม', en: 'Khao lam' }, price: 35 };

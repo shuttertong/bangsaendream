@@ -10,7 +10,7 @@ import { createHUD } from './hud.js';
 import { createTravel } from './travel.js';
 import { updateQuests, questText } from './quests.js';
 import { Kit } from './assets/kit.js';
-import { somTamCart } from './assets/stall.js';
+import { somTamCart, khaoLamStand } from './assets/stall.js';
 import { speedboatGeometry, bananaGeometry, sofaGeometry, jetskiGeometry } from '../boats/models.js';
 import { paintedMaterial } from '../world/materials.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -36,6 +36,13 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     const cx = shop.x + ax * 1.3 - Math.sin(shop.yaw) * 0.4, cz = shop.z + az * 1.3 - Math.cos(shop.yaw) * 0.4;
     somTamCart(kit, { x: cx, y: map.heightAt(cx, cz), z: cz, ry: shop.yaw });
     collision.rect(cx, cz, 1.7, 0.9, shop.yaw, map.heightAt(cx, cz) + 2.5);
+  }
+  // Grandma's khao lam stand next to where she stands outside her house
+  const gm = places.grandma;
+  if (gm) {
+    const rx = Math.cos(gm.yaw), rz = -Math.sin(gm.yaw), sx = gm.x + rx * 2.2, sz = gm.z + rz * 2.2;
+    khaoLamStand(kit, { x: sx, y: map.heightAt(sx, sz), z: sz, ry: gm.yaw });
+    collision.rect(sx + rx * 0.6, sz + rz * 0.6, 3.2, 0.9, gm.yaw, map.heightAt(sx, sz) + 1.3);
   }
   scene.add(kit.build());
   // Tom's speedboat landing: the boat in the shallows, a banana and a sofa on the sand

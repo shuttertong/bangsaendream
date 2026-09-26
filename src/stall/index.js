@@ -3,9 +3,9 @@
 // patience. Button-driven, so it plays the same on touch, mouse or keys.
 // start(ctx) → { update, render }; stop() cleans up.
 import * as THREE from 'three';
-import { buildScene } from './scene.js';
-import { createCustomers } from './customers.js';
-import { DISHES, SIDES, ROUND, matches } from './menu.js';
+import { buildScene, SLOTS } from './scene.js';
+import { createCustomers } from '../shared/customers.js';
+import { DISHES, SIDES, ROUND, matches, makeOrder } from './menu.js';
 import { createGameUI } from '../shared/gameUI.js';
 import { createPostFX } from '../world/postfx.js';
 import { rng } from '../core/rng.js';
@@ -46,7 +46,10 @@ export function start(ctx) {
   addEventListener('resize', resize);
   resize();
 
-  const customers = createCustomers(scene, r);
+  const customers = createCustomers(scene, r, {
+    slots: SLOTS, lane: 3.4, order: () => makeOrder(r),
+    patience: el => THREE.MathUtils.lerp(ROUND.patience[0], ROUND.patience[1], Math.min(1, el / ROUND.time)),
+  });
   const ui = createGameUI(ctx.root, { title: t('stallTitle'), how: t('stallHow'), keys: t('stallKeys'), audio: ctx.audio });
   const root = document.getElementById('game-ui');
   ctx.audio?.ambience({ surf: 0.4, breeze: 0.3, cicadas: 0.4 });

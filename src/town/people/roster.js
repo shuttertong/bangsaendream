@@ -46,6 +46,13 @@ export const ROSTER = [
           { say: { th: 'ได้ยินว่าหลานรู้จักคนทั้งหาดแล้ว เก่งมาก! ยายให้ค่าขนมเพิ่ม', en: 'I hear you know the whole beach now. Here, a little extra pocket money!' } },
           { give: { baht: 50 } }, { flag: 'grandmaThanks' },
         ] : []),
+        { ask: [
+          { label: { th: '🎋 ช่วยยายขายข้าวหลาม', en: '🎋 Help sell khao lam' }, then: [
+            { say: { th: 'ดีเลยหลาน เอาค้อนทุบกะเทาะเปลือกให้บาง ๆ นะ อย่าทุบแรงจนข้าวแตกล่ะ', en: "Lovely! Pound the burnt skin off with the hammer, nice and thin, and don't hit so hard the rice cracks." } },
+            { game: 'khaolam' },
+          ] },
+          { label: { th: 'เดี๋ยวค่อยช่วยนะยาย', en: 'Later, Grandma' }, then: [] },
+        ] },
       ];
     },
   },
@@ -57,7 +64,7 @@ export const ROSTER = [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
         : s.quests.playAll === 'active'
-        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana boat, sofa boat and jet ski." } }
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ช่วยยายขายข้าวหลาม ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Grandma's khao lam, squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana boat, sofa boat and jet ski." } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },

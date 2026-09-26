@@ -253,3 +253,22 @@ body.touch-on #game-ui .b-tilt { bottom: calc(130px + env(safe-area-inset-bottom
 #game-ui .j-guide.on { opacity: 1; }
 #game-ui .j-guide i { font-style: normal; font-size: 42px; line-height: 1; color: #ff7a3a; }
 #game-ui .j-guide b { font: 600 15px Kanit, sans-serif; }
+
+/* khao lam: power meter beside the board; one row of buttons (kinds with tray counts + pound) */
+#game-ui .k-meter { position: absolute; right: max(16px, 5vw); top: 30%; width: 24px; height: 36vh; border-radius: 12px; background: rgba(30, 22, 14, .55); border: 2px solid rgba(255,255,255,.85); box-shadow: 0 3px 12px rgba(40,20,10,.35); opacity: 0; transition: opacity .2s; }
+#game-ui .k-meter.on { opacity: 1; }
+#game-ui .k-meter .zone { position: absolute; left: 2px; right: 2px; background: #4fd06a; border-radius: 6px; }
+#game-ui .k-meter .mark { position: absolute; left: -10px; right: -10px; height: 7px; margin-bottom: -3.5px; background: #fff; border: 2px solid #3a3228; border-radius: 4px; }
+#game-ui .k-meter b { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font: 600 15px Kanit, sans-serif; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); white-space: nowrap; }
+#game-ui .k-panel { padding: 7px; }
+#game-ui .k-panel .k-btns { grid-template-columns: repeat(3, 1fr) 1.4fr; }
+#game-ui .k-panel .k-btns button { position: relative; padding: 4px 1px; font-size: 13px; overflow: visible; }
+#game-ui .k-panel .k-btns button b { font-size: 18px; }
+#game-ui .k-panel .k-btns button small { font-size: 11px; color: #9a8a76; }
+#game-ui .k-panel .k-btns button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+#game-ui .k-panel .k-btns button:disabled { opacity: .4; }
+#game-ui .k-panel .k-btns button.pound.pick { background: #fff; color: var(--ink); border-color: #e2c89a; }
+#game-ui .k-panel .k-btns button.pound:disabled { opacity: 1; }
+#game-ui .k-panel .k-count { position: absolute; top: -9px; right: -2px; font: 600 11px Kanit, sans-serif; font-style: normal; background: #4a7a9a; color: #fff; border-radius: 8px; padding: 0 6px; }
+#game-ui .k-panel .k-count:empty { display: none; }
+@media (max-aspect-ratio: 1/1) { #game-ui .k-meter { top: 40%; height: 26vh; } }

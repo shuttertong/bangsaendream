@@ -1,9 +1,9 @@
-// Customers walk up the promenade to a free spot at the counter, wait with an order
-// and a patience timer, then walk off happy (served) or in a huff (patience ran out).
-import * as THREE from 'three';
+// Customers for the shop mini-games (som tam cart, grandma's khao lam stall): they walk
+// along the street to a free spot at the counter, wait with an order and a patience
+// timer, then walk off happy (served) or in a huff (patience ran out).
+//   opts: { slots: [Vector3], lane: z of the street, order: () => order,
+//           patience: elapsed => seconds, from: x where they appear (±) }
 import { buildPerson } from '../town/people/body.js';
-import { ROUND, makeOrder } from './menu.js';
-import { SLOTS } from './scene.js';
 
 // look pools for random passers-by (fictional, no likenesses)
 const LOOKS = {
@@ -14,9 +14,7 @@ const LOOKS = {
   hair: ['short', 'short', 'long', 'bun'],
 };
 
-const LANE = 3.4;                // z of the promenade path customers walk along
-
-export function createCustomers(scene, r) {
+export function createCustomers(scene, r, { slots: SLOTS, lane: LANE = 3.4, order, patience: patienceAt, from: FROM = 9 }) {
   const list = [];
   const pick = a => a[Math.floor(r() * a.length)];
 
@@ -31,12 +29,11 @@ export function createCustomers(scene, r) {
       bottomColor: pick(LOOKS.bottom), hat: pick(LOOKS.hat), hatColor: pick(LOOKS.shirt), hairStyle: pick(LOOKS.hair), belly: r() * 0.4,
     };
     const p = buildPerson(look);
-    const from = r() < 0.5 ? -9 : 9;
+    const from = r() < 0.5 ? -FROM : FROM;
     p.mesh.position.set(from, 0, LANE);
     scene.add(p.mesh);
-    const t = Math.min(1, elapsed / ROUND.time);
-    const patience = THREE.MathUtils.lerp(ROUND.patience[0], ROUND.patience[1], t) * (0.85 + r() * 0.3);
-    const c = { p, slot, state: 'walkIn', order: makeOrder(r), patience, left: patience, exit: -from, phase: r() * 6, mood: null };
+    const patience = patienceAt(elapsed) * (0.85 + r() * 0.3);
+    const c = { p, slot, state: 'walkIn', order: order(), patience, left: patience, exit: -from, phase: r() * 6, mood: null };
     list.push(c);
     return c;
   }

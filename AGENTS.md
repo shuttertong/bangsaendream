@@ -1,4 +1,4 @@
-# CLAUDE.md — "ปิดเทอมที่บางแสน" (Summer Break at Bang Saen)
+# AGENTS.md — "ปิดเทอมที่บางแสน" (Summer Break at Bang Saen)
 
 A 3D browser game set on a real-world map of Bang Saen Beach, Chonburi, Thailand.
 The player explores the town as a hub world and plays 5 mini-games based on local life.
@@ -93,7 +93,7 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
 
 ```
 /
-├── CLAUDE.md
+├── AGENTS.md
 ├── CREDITS.md               # every sound, font and data source
 ├── index.html               # importmap, canvas, HUD root → src/town/main.js
 ├── tools/
@@ -290,13 +290,12 @@ They share `src/boats/` (`scene.js` open sea + speedboat + wake, `tow.js` tow pa
 Tunables live in each game's `rules.js`. The `playAll` quest counts 7 games. Hub draw calls peak at about 275 at the landing, after merging umbrella poles into canopies, merging the songthaew decals and hiding trucks beyond 260 m.
 Jet ski (2026-09-26, `src/jetski/`, also through Tom): the kid drives through a buoy slalom (`course.js` lays gates, net-float lines, moored longtails and bottles out ahead; `rules.js` RIDE / COURSE / SCORE). `boats/scene.js` takes `{ tow: false }` and a `wakeFrom` source for self-driven craft. Bot balance: sharp ≈ ฿200, sloppy ≈ ฿70–120. `playAll` now counts 8 games.
 Seats (`town/seats.js`): every deck chair under the umbrellas is a vendor's chair, rented for ฿5 (it stays yours until you rent another one). Concrete public benches (`beach.js` buildBenches, static kit geometry, so they add no draw calls) are free. `player.sit(seat, yaw, 'bench' | 'lounge')`; `hub.seated` covers both the songthaew and the seats.
-Khao lam (2026-09-26, `src/khaolam/`, offered by Grandma): pick the kind customers want, then pound the charred bamboo off each strip with a hammer (กะเทาะ = ทุบ): three blows per go, timed on a power meter (too light → the char stays; too hard → the rice cracks, lower price). Grandma serves orders from the tray automatically. The customer queue now lives in `shared/customers.js` (used by the som tam stall too). A khao lam stand sits beside Grandma's house (`assets/stall.js` khaoLamStand). Bot balance: ฿100–240. `playAll` counts 9 games.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 
 ---
 
-## 8. Working Rules for Claude
+## 8. Working Rules for Codex
 
 1. **Small modules.** Keep each file to about 400 lines or less and one responsibility. Change one module at a time.
 2. **Data-driven.** Put tunable values (species, prices, colors, spawn rates, dialogue) in data files, not in logic.
