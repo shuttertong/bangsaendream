@@ -1,0 +1,101 @@
+// Terrain from the baked height grid: a detailed core mesh, plus a coarse outer ring
+// that extends the edge heights so the map never ends in a cliff.
+import * as THREE from 'three';
+import { paintedMaterial } from '../world/materials.js';
+import { PALETTE } from '../shared/palette.js';
+
+const OUTER_HALF = 8000, OUTER_STEP = 40;
+const BEACH_W = 22;     // metres of sand behind the waterline
+
+/** Chamfer distance (m) from every grid cell to the nearest sea cell. */
+function seaDistance(map) {
+  const { nx, nz, step } = map.core, h = map.heights, sea = map.sea;
+  const d = new Float32Array(nx * nz).fill(1e9);
+  for (let k = 0; k < d.length; k++) if (h[k] < sea) d[k] = 0;
+  const s1 = step, s2 = step * Math.SQRT2;
+  const relax = (k, k2, w) => { if (d[k2] + w < d[k]) d[k] = d[k2] + w; };
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const k = j * nx + i;
+    if (i > 0) relax(k, k - 1, s1);
+    if (j > 0) { relax(k, k - nx, s1); if (i > 0) relax(k, k - nx - 1, s2); if (i < nx - 1) relax(k, k - nx + 1, s2); }
+  }
+  for (let j = nz - 1; j >= 0; j--) for (let i = nx - 1; i >= 0; i--) {
+    const k = j * nx + i;
+    if (i < nx - 1) relax(k, k + 1, s1);
+    if (j < nz - 1) { relax(k, k + nx, s1); if (i < nx - 1) relax(k, k + nx + 1, s2); if (i > 0) relax(k, k + nx - 1, s2); }
+  }
+  return d;
+}
+
+const C = Object.fromEntries(['sand', 'wetSand', 'seabed', 'lowland', 'lowlandDry', 'hill', 'rock']
+  .map(k => [k, new THREE.Color(PALETTE[k])]));
+const tmp = new THREE.Color();
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const hash = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
+
+/** Ground colour from height, slope (normal.y) and distance to the sea. */
+function groundColor(out, y, ny, dist, sea, x, z) {
+  if (y < sea) {                                   // seabed, darker with depth
+    out.copy(C.wetSand).lerp(C.seabed, smooth(0, 3, sea - y));
+    return out;
+  }
+  const jitter = (hash(Math.floor(x / 13), Math.floor(z / 13)) - 0.5) * 10;
+  const beach = 1 - smooth(BEACH_W - 8, BEACH_W + 6, dist + jitter);
+  out.copy(C.lowland).lerp(C.lowlandDry, hash(Math.floor(x / 50), Math.floor(z / 50)) * 0.5);
+  out.lerp(C.hill, smooth(12, 45, y));
+  out.lerp(C.rock, smooth(0.86, 0.7, ny) * 0.8);
+  tmp.copy(C.sand).lerp(C.wetSand, 1 - smooth(0.2, 1.4, y - sea));
+  return out.lerp(tmp, beach);
+}
+
+function coreMesh(map, dist) {
+  const { x0, z0, nx, nz } = map.core;
+  const g = new THREE.PlaneGeometry(map.size.w, map.size.d, nx - 1, nz - 1);
+  g.rotateX(-Math.PI / 2);
+  g.translate(x0 + map.size.w / 2, 0, z0 + map.size.d / 2);
+  const pos = g.attributes.position;
+  // PlaneGeometry rotated -90° about X runs rows from -z to +z, matching the bin (north first)
+  for (let k = 0; k < pos.count; k++) pos.setY(k, map.heights[k]);
+  g.computeVertexNormals();
+  const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();
+  for (let k = 0; k < pos.count; k++) {
+    groundColor(c, pos.getY(k), nrm.getY(k), dist[k], map.sea, pos.getX(k), pos.getZ(k)).toArray(col, k * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+function outerMesh(map) {
+  const n = OUTER_HALF * 2 / OUTER_STEP;
+  const g = new THREE.PlaneGeometry(OUTER_HALF * 2, OUTER_HALF * 2, n, n);
+  g.rotateX(-Math.PI / 2);
+  const { x0, z0 } = map.core, x1 = x0 + map.size.w, z1 = z0 + map.size.d;
+  const pos = g.attributes.position;
+  for (let k = 0; k < pos.count; k++) {
+    const x = pos.getX(k), z = pos.getZ(k);
+    const inside = x > x0 + 1 && x < x1 - 1 && z > z0 + 1 && z < z1 - 1;
+    pos.setY(k, map.heightAt(x, z) - (inside ? 6 : 0));   // hide under the core mesh
+  }
+  g.computeVertexNormals();
+  const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();
+  for (let k = 0; k < pos.count; k++) {
+    const y = pos.getY(k);
+    groundColor(c, y, nrm.getY(k), y < map.sea ? 0 : 200, map.sea, pos.getX(k), pos.getZ(k)).toArray(col, k * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+export function buildTerrain(map) {
+  const dist = seaDistance(map);
+  const mat = paintedMaterial({ amp: 0.3, scale: 18 });
+  const core = new THREE.Mesh(coreMesh(map, dist), mat);
+  core.receiveShadow = true;
+  core.name = 'terrain-core';
+  const outer = new THREE.Mesh(outerMesh(map), mat);
+  outer.receiveShadow = true;
+  outer.name = 'terrain-outer';
+  const group = new THREE.Group();
+  group.add(core, outer);
+  return { group, seaDist: dist };
+}

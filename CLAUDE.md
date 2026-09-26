@@ -103,7 +103,7 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
     ├── core/      input.js, shaderPatch.js, audio.js, loop.js
     ├── shared/    progress.js, items.js, i18n.js (TH/EN strings), palette.js
     ├── world/     render.js, postfx.js, haze.js, sky.js, water.js, materials.js, textures.js
-    ├── town/      main.js, data.js, terrain.js, roads.js, buildings.js, nature.js,
+    ├── town/      main.js, data.js, terrain.js, freecam.js (M1 orbit camera + ?view= presets), roads.js, buildings.js, nature.js,
     │              grass.js, player.js, hud.js, travel.js, quests.js, bag.js, kid/ (model.js, index.js),
     │              people/ (npc.js, talk.js), assets/ (kit.js, trees.js, shophouse.js, house.js, stall.js, props.js),
     │              data/ (bangsaen.json, bangsaen-core.bin)
@@ -291,7 +291,7 @@ Finish and test one milestone before starting the next.
 ## 9. Quick Start for a New Session
 
 ```bash
-python3 -m http.server 8000      # then open http://localhost:8000
+python3 tools/serve.py 8000      # no-cache dev server (python3 -m http.server also works); open http://localhost:8000
 # debug overlay:        http://localhost:8000/?debug=1
 # jump to a mini-game:  http://localhost:8000/?game=crab
 ```

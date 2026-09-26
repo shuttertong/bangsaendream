@@ -193,19 +193,25 @@ class Coast:
 
 
 def apply_coast_mask(cfg, hts, coast):
+    """Sea vs land from the OSM coastline, with a continuous shore profile so the
+    waterline sits exactly on the coastline (no grid staircase)."""
     if not coast.grid:
         print('  warning: no coastline in area, mask skipped', file=sys.stderr)
         return
-    land_min = (SEA + 0.4) / cfg.hscale
+    sea = SEA / cfg.hscale          # sea level in real metres
     n = cfg.n
     for j in range(n):
         for i in range(n):
-            dist, side = coast.nearest(-cfg.half + i * cfg.step, -cfg.half + j * cfg.step)
+            d, side = coast.nearest(-cfg.half + i * cfg.step, -cfg.half + j * cfg.step)
             k = j * n + i
             if side < 0:
-                hts[k] = min(hts[k], -min(12.0, 1 + dist * 0.02))
+                hts[k] = min(hts[k], sea - min(12.0, d * 0.05))
             else:
-                hts[k] = max(hts[k], land_min + min(1.0, dist / 40) / cfg.hscale)
+                # SRTM-style DEMs include canopy/roofs: remove the bias, then keep the
+                # beach between a gentle floor and a slope cap that relaxes after ~25 m
+                floor = sea + min(0.8, d * 0.04)
+                cap = sea + 0.5 + d * 0.12 + max(0.0, d - 25) * 2.0
+                hts[k] = min(max(hts[k] - cfg.dem_bias, floor), cap)
 
 
 def densify(p, step=10.0):
@@ -285,6 +291,7 @@ def main():
     ap.add_argument('--step', type=float, default=8)
     ap.add_argument('--hscale', type=float, default=1.5)
     ap.add_argument('--zoom', type=int, default=14)
+    ap.add_argument('--dem-bias', type=float, default=6.0, help='metres of canopy/roof bias removed from land')
     ap.add_argument('--inland', type=float, default=100, help='keep features within this many m of the coast (0 = all)')
     ap.add_argument('--name', default='bangsaen')
     ap.add_argument('--refresh', action='store_true', help='ignore the download cache')

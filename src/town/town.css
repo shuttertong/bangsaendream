@@ -1,0 +1,17 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe6f2; font-family: 'Sarabun', system-ui, sans-serif; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#hud { position: fixed; inset: 0; pointer-events: none; color: #2d2a26; }
+#loading {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: 'Kanit', sans-serif; font-size: 22px; padding: 12px 22px; border-radius: 14px;
+  background: rgba(255, 250, 240, .82); box-shadow: 0 4px 18px rgba(60, 40, 10, .15);
+}
+#loading:empty { display: none; }
+#debug {
+  position: absolute; left: 10px; top: 10px; font: 12px/1.4 ui-monospace, monospace;
+  background: rgba(255, 255, 255, .78); padding: 6px 9px; border-radius: 8px; white-space: pre;
+}
+#credit {
+  position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: rgba(40, 40, 40, .75);
+  text-shadow: 0 0 4px rgba(255, 255, 255, .8);
+}
