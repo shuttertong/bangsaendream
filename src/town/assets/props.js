@@ -55,7 +55,7 @@ export function umbrellaPole() {
 export function deckChair() {
   return mergeGeometries([
     box(0.62, 0.05, 1.2, 0, 0.32, 0.15),                    // seat
-    box(0.62, 0.05, 0.75, 0, 0.62, -0.62, '#ffffff', -1.0),  // back rest
+    box(0.62, 0.05, 0.75, 0, 0.58, -0.72, '#ffffff', 0.8),   // back rest, reclined ~45°
     box(0.04, 0.32, 0.04, -0.28, 0.16, 0.65, '#bdbdb8'), box(0.04, 0.32, 0.04, 0.28, 0.16, 0.65, '#bdbdb8'),
     box(0.04, 0.32, 0.04, -0.28, 0.16, -0.4, '#bdbdb8'), box(0.04, 0.32, 0.04, 0.28, 0.16, -0.4, '#bdbdb8'),
   ]);

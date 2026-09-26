@@ -57,7 +57,7 @@ export const ROSTER = [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
         : s.quests.playAll === 'active'
-        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ทกับโซฟาโบ๊ทของพี่ต้อม', en: "Try it all! Squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana and sofa boats." } }
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana boat, sofa boat and jet ski." } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },
@@ -121,6 +121,7 @@ export const ROSTER = [
       { ask: [
         { label: { th: '🍌 บานาน่าโบ๊ท', en: '🍌 Banana boat' }, then: [{ game: 'banana' }] },
         { label: { th: '🛋️ โซฟาโบ๊ท', en: '🛋️ Sofa boat' }, then: [{ game: 'sofa' }] },
+        { label: { th: '🌊 ขับเจ็ทสกี', en: '🌊 Ride the jet ski' }, then: [{ game: 'jetski' }] },
         { label: { th: 'ไว้ก่อนนะพี่', en: 'Maybe later' }, then: [] },
       ] },
     ],

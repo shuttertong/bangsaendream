@@ -11,16 +11,17 @@ import { createTravel } from './travel.js';
 import { updateQuests, questText } from './quests.js';
 import { Kit } from './assets/kit.js';
 import { somTamCart } from './assets/stall.js';
-import { speedboatGeometry, bananaGeometry, sofaGeometry } from '../boats/models.js';
+import { speedboatGeometry, bananaGeometry, sofaGeometry, jetskiGeometry } from '../boats/models.js';
 import { paintedMaterial } from '../world/materials.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { showEnding } from './title.js';
 import { createSongthaews } from './songthaew.js';
+import { createSeats } from './seats.js';
 
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
@@ -51,6 +52,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     put(speedboatGeometry(), sb.x + fx * 9, sb.z + fz * 9, sb.yaw + Math.PI / 2, map.sea - 0.25);
     put(bananaGeometry(), sb.x + fx * 3 + ax * 3.2, sb.z + fz * 3 + az * 3.2, sb.yaw + 0.3);
     put(sofaGeometry(), sb.x + fx * 2.5 - ax * 3.4, sb.z + fz * 2.5 - az * 3.4, sb.yaw + Math.PI);
+    put(jetskiGeometry(), sb.x + fx * 6 - ax * 6.5, sb.z + fz * 6 - az * 6.5, sb.yaw + 0.4, map.sea - 0.1);   // in the shallows
     const landing = new THREE.Mesh(mergeGeometries(parts), paintedMaterial({ amp: 0.05, scale: 1 }));
     landing.castShadow = landing.receiveShadow = true;
     scene.add(landing);
@@ -93,12 +95,18 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     setTimeout(() => { tk.hold = false; }, 1200);
   }
 
+  // deck chairs (rented) and public benches (free)
+  const seats = createSeats({ list: beach.seats, player, collision, toast });
+  let nearSeat = null, seatT = 0;
+
   let near = null, talkingTo = null;
   const act = () => {
     if (talk.active || travel.open) return;
     if (riding) hopOff();
+    else if (seats.seated) seats.stand();
     else if (near) startTalk();
     else if (nearTruck) board(nearTruck);
+    else if (nearSeat && seats.sit(nearSeat)) audio?.play('thud');
   };
   const startTalk = () => {
     if (!near || talk.active || travel.open) return;
@@ -109,7 +117,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   };
   talk.onEnd = () => { talkingTo = null; hud.hideDuringTalk(false); document.body.classList.remove('talking'); };
 
-  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { riding.hold = false; riding = null; } travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act });
+  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { riding.hold = false; riding = null; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act });
   let quest = updateQuests(toast);
   hud.setGoal(() => questText(quest));
   P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
@@ -132,8 +140,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       engine: riding ? 1 : clamp01(1 - truckD / 30) });
   }
   return {
-    places, people, talk, travel, hud, trucks,
+    places, people, talk, travel, hud, trucks, seats,
     get riding() { return riding; },
+    /** Riding a truck or sitting down: the hub poses the kid, player.update() is skipped. */
+    get seated() { return !!(riding || seats.seated); },
     /** A mini-game finished: pay out, put catches in the bag, keep the best result. */
     finishGame(id, res) {
       if (res.baht) { P.addBaht(res.baht); toast(t('gotBaht', { n: res.baht })); }
@@ -163,12 +173,22 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
           }
         }
       }
+      if (seats.seated) {
+        seats.update();
+        seatT += dt;                                   // a moment's grace, so holding W while pressing F doesn't pop you back up
+        const { mag } = input ? input.axis() : { mag: 0 };
+        if (seatT > 0.6 && !talk.active && !travel.open && (mag > 0.5 || input?.jump || input?.down('Space'))) seats.stand();
+      } else seatT = 0;
       people.update(dt, p);
       talk.update(dt);
       if (talkingTo) player.faceTo(talkingTo.state.x, talkingTo.state.z, dt);
-      near = talk.active || riding ? null : people.nearest(p);
-      nearTruck = near || riding || talk.active ? null : trucks.nearest(p);
-      hud.setPrompt(riding ? (alighting ? null : 'alight') : near ? 'talk' : nearTruck ? 'board' : null, near ? near.def.name : null);
+      const busy = talk.active || riding || seats.seated;
+      near = busy ? null : people.nearest(p);
+      nearTruck = near || busy ? null : trucks.nearest(p);
+      nearSeat = near || nearTruck || busy ? null : seats.nearest(p);
+      const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : [null, null];
+      hud.setPrompt(riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : seatKey,
+        near ? near.def.name : null, seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;

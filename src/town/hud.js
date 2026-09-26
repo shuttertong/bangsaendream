@@ -30,7 +30,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, audio }) {
   root.appendChild(el);
   const $ = s => el.querySelector(s);
   const baht = $('.baht'), goal = $('.goal'), prompt = $('.prompt'), toasts = $('.toasts');
-  let goalFn = () => '', promptKey = null, promptName = null;
+  let goalFn = () => '', promptKey = null, promptName = null, promptVars = null;
 
   const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(); };
   $('.b-travel').addEventListener('pointerdown', stop(onTravel));
@@ -61,7 +61,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, audio }) {
     const g = goalFn();
     $('.goal-t').textContent = g;
     goal.classList.toggle('on', !!g);
-    if (promptKey) prompt.innerHTML = `${t(promptKey, { name: promptName ? tr(promptName) : '' })} <kbd>${t('talkKey')}</kbd>`;
+    if (promptKey) prompt.innerHTML = `${t(promptKey, { name: promptName ? tr(promptName) : '', ...promptVars })} <kbd>${t('talkKey')}</kbd>`;
   }
   P.onChange(refresh);
   onLang(refresh);
@@ -70,9 +70,9 @@ export function createHUD(root, { onTravel, onBag, onTalk, audio }) {
     refresh,
     setGoal(fn) { goalFn = fn; refresh(); },
     /** Show the action prompt: an i18n key ('talk', 'board', 'alight') + optional name, or null to hide. */
-    setPrompt(key, name = null) {
-      if (key === promptKey && name === promptName) return;
-      promptKey = key; promptName = name;
+    setPrompt(key, name = null, vars = null) {
+      if (key === promptKey && name === promptName && JSON.stringify(vars) === JSON.stringify(promptVars)) return;
+      promptKey = key; promptName = name; promptVars = vars;
       prompt.classList.toggle('on', !!key);
       refresh();
     },

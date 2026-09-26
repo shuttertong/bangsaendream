@@ -80,13 +80,26 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
     p.yaw += d * Math.min(1, dt * 8);
   }
 
-  /** Sit on a bench (riding a songthaew): hips at `seat`, facing `yaw`. */
-  function sit(seat, yaw) {
+  /**
+   * Sit with the hips at `seat`, facing `yaw`. pose 'bench' = upright (songthaew, park
+   * bench); 'lounge' = lying back in a deck chair, hands behind the head.
+   */
+  function sit(seat, yaw, pose = 'bench') {
     const B = kid.bones;
     p.x = seat.x; p.z = seat.z; p.y = seat.y - 0.55; p.yaw = yaw; p.speed = 0; p.vx = p.vz = 0;
     kid.mesh.position.set(seat.x, p.y, seat.z);
     kid.mesh.rotation.y = yaw;
-    B.hips.position.y = 0.55; B.hips.rotation.set(0, 0, 0);
+    B.hips.position.y = 0.55;
+    if (pose === 'lounge') {
+      const back = 0.8;                                            // matches the chair's backrest
+      B.hips.rotation.set(-back, 0, 0);
+      for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.5 + back, 0, s === 'L' ? 0.06 : -0.06); B[`shin${s}`].rotation.x = 0.15; B[`foot${s}`].rotation.x = -0.3; }
+      B.armL.rotation.set(-2.7, 0, 0.9); B.armR.rotation.set(-2.7, 0, -0.9);
+      B.foreL.rotation.x = -2.0; B.foreR.rotation.x = -2.0;
+      B.spine.rotation.set(0, 0, 0); B.head.rotation.set(0.55, 0, 0);
+      return;
+    }
+    B.hips.rotation.set(0, 0, 0); B.head.rotation.set(0, 0, 0);
     for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.45, 0, 0); B[`shin${s}`].rotation.x = 1.45; B[`foot${s}`].rotation.x = 0; }
     B.armL.rotation.set(-0.3, 0, 0.35); B.armR.rotation.set(-2.9, 0, -0.2);   // one hand on the rail
     B.foreR.rotation.x = -0.3; B.spine.rotation.set(0, 0, 0);

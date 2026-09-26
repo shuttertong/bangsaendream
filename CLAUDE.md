@@ -288,6 +288,8 @@ They share `src/boats/` (`scene.js` open sea + speedboat + wake, `tow.js` tow pa
 - `src/banana/`: keep the banana boat upright by leaning (roll physics). 3 capsizes allowed.
 - `src/sofa/`: press as the sofa lands off the wake. The combo multiplier is capped at ×3; a miss throws off a friend.
 Tunables live in each game's `rules.js`. The `playAll` quest counts 7 games. Hub draw calls peak at about 275 at the landing, after merging umbrella poles into canopies, merging the songthaew decals and hiding trucks beyond 260 m.
+Jet ski (2026-09-26, `src/jetski/`, also through Tom): the kid drives through a buoy slalom (`course.js` lays gates, net-float lines, moored longtails and bottles out ahead; `rules.js` RIDE / COURSE / SCORE). `boats/scene.js` takes `{ tow: false }` and a `wakeFrom` source for self-driven craft. Bot balance: sharp ≈ ฿200, sloppy ≈ ฿70–120. `playAll` now counts 8 games.
+Seats (`town/seats.js`): every deck chair under the umbrellas is a vendor's chair, rented for ฿5 (it stays yours until you rent another one). Concrete public benches (`beach.js` buildBenches, static kit geometry, so they add no draw calls) are free. `player.sit(seat, yaw, 'bench' | 'lounge')`; `hub.seated` covers both the songthaew and the seats.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 

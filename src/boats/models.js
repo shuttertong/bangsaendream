@@ -65,3 +65,29 @@ export function sofaGeometry() {
   }
   return mergeGeometries(parts);
 }
+
+/** Sit-down jet ski (bow toward +z): white hull, teal stripe, black seat, handlebar. */
+export function jetskiGeometry() {
+  const hull = new THREE.Shape();                    // side profile, length along x
+  hull.moveTo(-1.4, 0.55); hull.lineTo(1.0, 0.55); hull.quadraticCurveTo(1.6, 0.52, 1.65, 0.3);
+  hull.quadraticCurveTo(1.2, -0.05, 0.4, -0.1); hull.lineTo(-1.4, -0.05); hull.lineTo(-1.4, 0.55);
+  const g = new THREE.ExtrudeGeometry(hull, { depth: 0.8, bevelEnabled: true, bevelSize: 0.1, bevelThickness: 0.12, bevelSegments: 2 });
+  g.translate(0, 0, -0.4).rotateY(-Math.PI / 2);
+  const p = g.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) {
+    const z = p.getZ(i), y = p.getY(i);
+    p.setX(i, p.getX(i) * (z > 0 ? 1 - (z / 1.75) * 0.65 : 1) * (y < 0.1 ? 0.8 : 1));   // pointed bow, narrower keel
+    c.set(y > 0.42 ? (z > 0.35 ? '#1fa3a0' : '#f4f2ec') : y > 0.22 ? '#e8541e' : '#3a3f44').toArray(col, i * 3);
+  }
+  g.computeVertexNormals();
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.deleteAttribute('uv');
+  const bar = new THREE.CylinderGeometry(0.025, 0.025, 0.72, 6).rotateZ(Math.PI / 2).translate(0, 1.02, 0.5);
+  return mergeGeometries([
+    g.index ? g.toNonIndexed() : g,
+    paint(new THREE.CapsuleGeometry(0.24, 0.9, 4, 10).rotateX(Math.PI / 2).scale(1, 0.55, 1).translate(0, 0.72, -0.4), '#26282b'),   // seat
+    paint(new THREE.BoxGeometry(0.42, 0.3, 0.42).rotateX(-0.4).translate(0, 0.8, 0.6), '#1fa3a0'),                                       // steering column
+    paint(bar, '#2a2a2a'),
+    paint(new THREE.BoxGeometry(0.5, 0.06, 0.3).rotateX(-0.5).translate(0, 0.98, 0.78), '#6a8a9a'),                                     // little windscreen
+  ]);
+}

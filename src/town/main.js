@@ -115,7 +115,7 @@ async function boot() {
     }).catch(e => { loading = false; console.error(e); document.body.classList.remove('in-game', 'fading'); });
     return true;
   };
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -135,7 +135,7 @@ async function boot() {
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
     else {
-      if (!hub.riding) player.update(dt, tpc.state.yaw, hub.frozen);
+      if (!hub.seated) player.update(dt, tpc.state.yaw, hub.frozen);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
       tpc.update(dt, player.state); focus = tpc.target;
     }

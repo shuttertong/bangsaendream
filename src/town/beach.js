@@ -17,7 +17,10 @@ const BEACH = {
   chairColors: ['#f4f2ec', '#3f7fb5', '#e8e4da'],
   tableChance: 0.3,              // blocks that use plastic tables instead of deck chairs
   rentalChance: 0.5,             // blocks that start with an inner-tube stall
+  bench: { row: 16.5, every: 26, color: '#cfc8b8' },   // free public benches behind the umbrellas
 };
+// where the kid's hips go when sitting (chair / bench local frame: +z = front, toward the sea)
+export const SEAT_AT = { chair: { u: 0, v: 0.43, w: -0.2 }, bench: { u: 0.42, v: 0.5, w: 0.02 } };
 const CHUNK = 384;
 const STREET = { roads: ['secondary', 'tertiary'], poleEvery: 34, sag: 0.7, cableColor: '#2e2e2e' };
 
@@ -86,11 +89,37 @@ export function buildBeach(map, ctx, kit) {
   make(P.tableSet(), lists.table);
   make(P.tubeStack(), lists.rental);
 
+  const benches = buildBenches(map, ctx, kit);
   const poles = buildPoles(map, ctx, kit, r);
   make(P.powerPole(), poles);
 
   const rentals = lists.rental.map(it => ({ x: it.x, z: it.z, yaw: it.ry }));
-  return { group, poles, rentals, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
+  // seats: owners' deck chairs (rented) + public benches (free, two places each)
+  const seatAt = (x, y, z, ry, o, kind) => ({ kind, yaw: ry, x: x + Math.cos(ry) * o.u + Math.sin(ry) * o.w, y: y + o.v, z: z - Math.sin(ry) * o.u + Math.cos(ry) * o.w });
+  const seats = lists.chair.map(it => seatAt(it.x, it.m.elements[13], it.z, it.ry, SEAT_AT.chair, 'chair'));
+  for (const b of benches) for (const s of [-1, 1]) seats.push(seatAt(b.x, b.y, b.z, b.ry, { ...SEAT_AT.bench, u: SEAT_AT.bench.u * s }, 'bench'));
+  return { group, poles, rentals, seats, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
+}
+
+/** Concrete public benches facing the sea, in a row behind the umbrellas. Static kit geometry. */
+function buildBenches(map, ctx, kit) {
+  const { occ, seaDist, roadIdx } = ctx, B = BEACH.bench, out = [];
+  for (const coast of map.coast) {
+    walkLine(coast.p, B.every, (x, z, dx, dz) => {
+      const nx = dz, nz = -dx, px = x + nx * B.row, pz = z + nz * B.row;
+      const y = map.heightAt(px, pz);
+      if (Math.abs(seaDist(px, pz) - B.row) > 5 || roadIdx.clearance(px, pz, 6) < 1.5 || occ.test(px, pz, 2.2, 1.2)
+        || Math.abs(map.heightAt(px + dx, pz + dz) - map.heightAt(px - dx, pz - dz)) > 0.5 || Math.abs(y - map.sea) > 3) return;
+      const ry = Math.atan2(-nx, -nz), f = kit.frame(px, y, pz, ry);
+      for (const u of [-0.75, 0.75]) f.box('wall', u, 0.22, 0, 0.14, 0.44, 0.42, B.color);   // legs
+      f.box('wall', 0, 0.46, 0, 1.9, 0.08, 0.46, B.color);                                     // seat slab
+      f.box('wall', 0, 0.8, -0.24, 1.9, 0.3, 0.06, B.color, 0);                               // backrest
+      for (const u of [-0.75, 0.75]) f.box('wall', u, 0.62, -0.24, 0.1, 0.34, 0.08, B.color);
+      occ.mark(px, pz, 2.2, 1.2);
+      out.push({ x: px, y, z: pz, ry });
+    }, B.every / 2);
+  }
+  return out;
 }
 
 /** Power poles on the land side of main roads, with three sagging cables between them. */

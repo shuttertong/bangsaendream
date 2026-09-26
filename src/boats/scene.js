@@ -78,7 +78,8 @@ function oceanMaterial() {
   });
 }
 
-export function buildScene(r = rng(8)) {
+/** tow: false leaves out the speedboat + rope (the jet ski drives itself). */
+export function buildScene(r = rng(8), { tow = true } = {}) {
   const scene = new THREE.Scene();
   scene.add(createSky());
   scene.fog = new THREE.FogExp2(PALETTE.haze, 0.0012);
@@ -114,12 +115,12 @@ export function buildScene(r = rng(8)) {
   driver.mesh.position.set(0, 0.05, -0.2);
   driver.bones.armL.rotation.set(-1.1, 0, 0.2); driver.bones.armR.rotation.set(-1.1, 0, -0.2);
   boat.add(driver.mesh);
-  scene.add(boat);
+  if (tow) scene.add(boat);
 
   // tow rope + foam wake ribbon
   const ropeGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
   const rope = new THREE.Line(ropeGeo, new THREE.LineBasicMaterial({ color: '#f0e8d0' }));
-  scene.add(rope);
+  if (tow) scene.add(rope);
   const N = 60, trail = [];
   const wakeGeo = new THREE.BufferGeometry();
   wakeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 2 * 3), 3));
@@ -146,29 +147,36 @@ export function buildScene(r = rng(8)) {
   scene.add(wake);
   let trailTimer = 0;
 
-  /** t: time; tow: createTow() state; towPoint: where the rope attaches on the inflatable. */
-  function update(t, dt, T, towPoint, cam) {
+  /**
+   * t: time; T: createTow() state (or null); towPoint: where the rope attaches on the
+   * inflatable; wakeFrom: {x, z, yaw, strength} when there's no tow boat (jet ski).
+   */
+  function update(t, dt, T, towPoint, cam, wakeFrom = null) {
     oceanMat.uniforms.time.value = t;
     ocean.position.set(Math.round(cam.x / 1.3) * 1.3, 0, Math.round(cam.z / 1.3) * 1.3);
-    const b = T.boat, w = swellAt(b.x, b.z, t);
-    boat.position.set(b.x, w.h - 0.2 + Math.abs(Math.sin(t * 7)) * 0.05, b.z);
-    boat.rotation.set(-0.08 - w.gz * 0.3, b.yaw, -b.turn * 0.25 + w.gx * 0.3, 'YXZ');
-    const st = T.stern();
-    ropeGeo.attributes.position.setXYZ(0, st.x, w.h + 0.7, st.z);
-    ropeGeo.attributes.position.setXYZ(1, towPoint.x, towPoint.y, towPoint.z);
-    ropeGeo.attributes.position.needsUpdate = true;
-    ropeGeo.computeBoundingSphere();
+    let st = wakeFrom, yaw = wakeFrom?.yaw ?? 0;
+    if (T) {
+      const b = T.boat, w = swellAt(b.x, b.z, t);
+      boat.position.set(b.x, w.h - 0.2 + Math.abs(Math.sin(t * 7)) * 0.05, b.z);
+      boat.rotation.set(-0.08 - w.gz * 0.3, b.yaw, -b.turn * 0.25 + w.gx * 0.3, 'YXZ');
+      st = T.stern(); yaw = b.yaw;
+      ropeGeo.attributes.position.setXYZ(0, st.x, w.h + 0.7, st.z);
+      ropeGeo.attributes.position.setXYZ(1, towPoint.x, towPoint.y, towPoint.z);
+      ropeGeo.attributes.position.needsUpdate = true;
+      ropeGeo.computeBoundingSphere();
+    }
+    const strength = wakeFrom?.strength ?? 1;
     // wake: record the stern every 0.1 s; the ribbon widens and fades with age
     trailTimer -= dt;
-    if (trailTimer <= 0) { trailTimer = 0.1; trail.unshift({ x: st.x, z: st.z, yaw: b.yaw }); if (trail.length > N) trail.pop(); }
+    if (trailTimer <= 0) { trailTimer = 0.1; trail.unshift({ x: st.x, z: st.z, yaw, k: strength }); if (trail.length > N) trail.pop(); }
     const pos = wakeGeo.attributes.position, al = wakeGeo.attributes.alpha;
     for (let i = 0; i < N; i++) {
-      const p = trail[Math.min(i, trail.length - 1)] || { x: st.x, z: st.z, yaw: b.yaw };
+      const p = trail[Math.min(i, trail.length - 1)] || { x: st.x, z: st.z, yaw, k: 0 };
       const half = 0.6 + i * 0.12, rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
       const hh = swellAt(p.x, p.z, t).h + 0.04;
       pos.setXYZ(i * 2, p.x + rx * half, hh, p.z + rz * half);
       pos.setXYZ(i * 2 + 1, p.x - rx * half, hh, p.z - rz * half);
-      const a = i < trail.length ? Math.max(0, 1 - i / N) * 0.8 : 0;
+      const a = i < trail.length ? Math.max(0, 1 - i / N) * 0.8 * p.k : 0;
       al.setX(i * 2, a); al.setX(i * 2 + 1, a);
     }
     pos.needsUpdate = al.needsUpdate = true;
