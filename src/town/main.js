@@ -131,8 +131,12 @@ async function boot() {
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
-    else { player.update(dt, tpc.state.yaw, hub.frozen); tpc.update(dt, player.state); focus = tpc.target; }
-    hub.update(dt);
+    else {
+      if (!hub.riding) player.update(dt, tpc.state.yaw, hub.frozen);
+      hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
+      tpc.update(dt, player.state); focus = tpc.target;
+    }
+    if (free) hub.update(dt);
     // near plane grows with height: keeps depth precision for the sea/shore from the air
     const above = camera.position.y - Math.max(map.heightAt(camera.position.x, camera.position.z), map.sea);
     const near = Math.min(40, Math.max(0.3, above * 0.02));

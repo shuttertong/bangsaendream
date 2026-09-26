@@ -79,5 +79,17 @@ export function createPlayer(scene, map, collision, input) {
     p.yaw += d * Math.min(1, dt * 8);
   }
 
-  return { state: p, kid, place, update, faceTo };
+  /** Sit on a bench (riding a songthaew): hips at `seat`, facing `yaw`. */
+  function sit(seat, yaw) {
+    const B = kid.bones;
+    p.x = seat.x; p.z = seat.z; p.y = seat.y - 0.55; p.yaw = yaw; p.speed = 0; p.vx = p.vz = 0;
+    kid.mesh.position.set(seat.x, p.y, seat.z);
+    kid.mesh.rotation.y = yaw;
+    B.hips.position.y = 0.55; B.hips.rotation.set(0, 0, 0);
+    for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.45, 0, 0); B[`shin${s}`].rotation.x = 1.45; B[`foot${s}`].rotation.x = 0; }
+    B.armL.rotation.set(-0.3, 0, 0.35); B.armR.rotation.set(-2.9, 0, -0.2);   // one hand on the rail
+    B.foreR.rotation.x = -0.3; B.spine.rotation.set(0, 0, 0);
+  }
+
+  return { state: p, kid, place, update, faceTo, sit };
 }

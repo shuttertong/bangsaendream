@@ -78,8 +78,18 @@ export function createAudio() {
       }
       return out;
     },
+    engine() {     // diesel pickup idle: low buzz + rumble
+      const out = ctx.createGain(); out.gain.value = 0;
+      const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 38; lp.type = 'lowpass'; lp.frequency.value = 220; g.gain.value = 0.35;
+      lfo(9, 0.12, g.gain);
+      o.connect(lp).connect(g).connect(out); o.start();
+      const n = noiseSource(), nl = ctx.createBiquadFilter(); nl.type = 'lowpass'; nl.frequency.value = 160;
+      n.connect(nl).connect(out);
+      return out;
+    },
   };
-  const BED_LEVEL = { surf: 0.5, breeze: 0.25, cicadas: 0.07, crickets: 0.5 };
+  const BED_LEVEL = { surf: 0.5, breeze: 0.25, cicadas: 0.07, crickets: 0.5, engine: 0.35 };
 
   function unlock() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }

@@ -54,7 +54,9 @@ export const ROSTER = [
     name: { th: 'ต้นกล้า', en: 'Tonkla' },
     look: { shirt: '#f0b43a', bottomColor: '#3a6a4a', hat: 'cap', hatColor: '#d8443a', hatBand: '#f4f1e8', skin: '#c68f66' },
     script: s => s.met.tonkla ? [
-      s.quests.playAll === 'active'
+      !s.flags.rodDaeng
+        ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
+        : s.quests.playAll === 'active'
         ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ แล้วก็จับปูลม', en: 'Try it all! Squid, monkeys, the tube, helping Aunt Nuan, and ghost crabs.' } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
