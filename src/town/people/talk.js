@@ -19,7 +19,7 @@ export function mouthFor(g) {
   return 'half';
 }
 
-export function createTalk(root, { onGame, onToast }) {
+export function createTalk(root, { onGame, onToast, onEnding, audio }) {
   const box = document.createElement('div');
   box.id = 'talk';
   box.innerHTML = '<div class="who"></div><div class="line"></div><div class="choices"></div><div class="more">▼</div>';
@@ -41,6 +41,8 @@ export function createTalk(root, { onGame, onToast }) {
       if (st.say) { type(tr(st.say)); return; }
       if (st.give?.baht) { P.addBaht(st.give.baht); onToast(t('gotBaht', { n: st.give.baht })); }
       if (st.flag) P.setFlag(st.flag);
+      if (st.take) P.addItem(st.take, -1);
+      if (st.ending) { close(); onEnding?.(); return; }
       if (st.quest) P.setQuest(st.quest[0], st.quest[1]);
       if (st.game) { close(); onGame(st.game); return; }
       if (st.ask) {
@@ -97,6 +99,7 @@ export function createTalk(root, { onGame, onToast }) {
       const g = typing.gs[typing.i++];
       line.textContent += g;
       npc.setMouth(mouthFor(g));
+      if (typing.i % 2 && !/\s/.test(g)) audio?.play('blip');
       typing.acc -= 1;
     }
     if (typing.i >= typing.gs.length) { npc.setMouth('closed'); box.classList.add('done'); }

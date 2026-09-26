@@ -47,8 +47,9 @@ export function start(ctx) {
   resize();
 
   const customers = createCustomers(scene, r);
-  const ui = createGameUI(ctx.root, { title: t('stallTitle'), how: t('stallHow'), keys: t('stallKeys') });
+  const ui = createGameUI(ctx.root, { title: t('stallTitle'), how: t('stallHow'), keys: t('stallKeys'), audio: ctx.audio });
   const root = document.getElementById('game-ui');
+  ctx.audio?.ambience({ surf: 0.4, breeze: 0.3, cicadas: 0.4 });
 
   // prep panel
   const panel = document.createElement('div');
@@ -86,6 +87,7 @@ export function start(ctx) {
     else if (id === 'pound' && p.pounded < ROUND.pounds) {
       p.pounded++;
       s.pound = 1;
+      ctx.audio?.play('thud');
       const m = s.meter;
       if (m >= ROUND.zone[0] && m <= ROUND.zone[1]) { p.good++; if (p.good === ROUND.pounds) ui.pop(t('stallPerfect'), 'good'); }
     }

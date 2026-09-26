@@ -18,4 +18,5 @@
 | three.js r170 (incl. examples/jsm) | MIT |
 
 ## Sounds
-None yet. Every CC0 sound file added must be listed here (title, author, URL, license).
+All sound is synthesised in code (`src/core/audio.js`, Web Audio API); no sound files are used.
+If recorded CC0 sounds are added later, list each one here (title, author, URL, license).

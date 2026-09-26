@@ -22,6 +22,26 @@ export const QUESTS = {
     title: { th: 'ลองเล่นมินิเกมกับเพื่อนบ้าน', en: 'Try a mini-game with a neighbour' },
     check: s => Object.keys(s.best).length > 0,
     reward: { baht: 40 },
+    next: 'playAll',
+  },
+  playAll: {
+    title: { th: 'ลองทำให้ครบทุกอย่างในบางแสน ({n}/{of})', en: 'Try everything in Bang Saen ({n}/{of})' },
+    of: 5,
+    count: s => Object.keys(s.best).length,
+    reward: { baht: 100 },
+    next: 'dinner',
+  },
+  dinner: {
+    title: { th: 'เอาหมึกหรือปูไปให้ยายทำกับข้าวเย็น', en: 'Bring Grandma a squid or crab for dinner' },
+    place: 'grandma',
+    check: s => !!s.flags.gaveDinner,
+    reward: { baht: 50 },
+    next: 'ending',
+  },
+  ending: {
+    title: { th: 'กลับไปกินข้าวเย็นกับยาย', en: 'Go home for dinner with Grandma' },
+    place: 'grandma',
+    check: s => !!s.flags.ending,
   },
 };
 
@@ -29,6 +49,8 @@ export const QUESTS = {
 export function updateQuests(onToast) {
   const s = P.get();
   if (!s.quests.visitGrandma) P.setQuest('visitGrandma', 'active');
+  // saves from before a quest was added: open the follow-up of any finished quest
+  for (const [id, q] of Object.entries(QUESTS)) if (s.quests[id] === 'done' && q.next && !s.quests[q.next]) P.setQuest(q.next, 'active');
   for (const [id, q] of Object.entries(QUESTS)) {
     if (s.quests[id] !== 'active') continue;
     const done = q.count ? q.count(s) >= q.of : q.check ? q.check(s) : false;

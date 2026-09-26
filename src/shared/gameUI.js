@@ -19,7 +19,7 @@ export function summarize(catches, species) {
   return { rows: Object.values(by), total, biggest };
 }
 
-export function createGameUI(root, { title, how, keys }) {
+export function createGameUI(root, { title, how, keys, audio }) {
   const el = document.createElement('div');
   el.id = 'game-ui';
   el.innerHTML = `
@@ -46,7 +46,7 @@ export function createGameUI(root, { title, how, keys }) {
 
   const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(); };
   let onStart = null, onQuit = null, onBack = null;
-  $('.g-go').addEventListener('pointerdown', stop(() => { $('.g-intro').hidden = true; onStart?.(); }));
+  $('.g-go').addEventListener('pointerdown', stop(() => { $('.g-intro').hidden = true; audio?.play('click'); onStart?.(); }));
   $('.g-quit').addEventListener('pointerdown', stop(() => onQuit?.()));
   $('.g-back').addEventListener('pointerdown', stop(() => onBack?.()));
 
@@ -64,6 +64,7 @@ export function createGameUI(root, { title, how, keys }) {
       $('.g-baht').textContent = `฿${baht}`;
     },
     pop(text, kind = '') {
+      audio?.play({ good: 'coin', wow: 'catch', bad: 'fail' }[kind] || 'click');
       const d = document.createElement('div');
       d.className = `g-pop ${kind}`;
       d.textContent = text;
@@ -73,6 +74,7 @@ export function createGameUI(root, { title, how, keys }) {
     /** rows: [{ icon, name: {th,en}, count, best (cm) | detail (text), baht }] */
     results(rows, total, record) {
       $('.g-top').hidden = true;
+      audio?.play('fanfare');
       const r = $('.g-results');
       r.hidden = false;
       r.querySelector('h2').textContent = t('results');

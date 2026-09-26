@@ -58,12 +58,13 @@ export function start(ctx) {
   const squids = createSquids(scene, mat, r);
 
   // UI: shared round card + depth gauge + tension meter
-  const ui = createGameUI(ctx.root, { title: t('squidTitle'), how: t('squidHow'), keys: t('squidKeys') });
+  const ui = createGameUI(ctx.root, { title: t('squidTitle'), how: t('squidHow'), keys: t('squidKeys'), audio: ctx.audio });
   const gauge = document.createElement('div'); gauge.className = 'g-depth'; gauge.innerHTML = '<i></i><b></b>';
   const tens = document.createElement('div'); tens.className = 'g-tension'; tens.hidden = true;
   tens.innerHTML = `<div class="zone" style="left:${ROUND.zone[0] * 100}%;width:${(ROUND.zone[1] - ROUND.zone[0]) * 100}%"></div><div class="fill"></div><span></span>`;
   document.getElementById('game-ui').append(gauge, tens);
   ctx.touch?.setAction('reel');
+  ctx.audio?.ambience({ surf: 0.35, breeze: 0.3, crickets: 0.5 });
 
   const s = {
     phase: 'intro', time: ROUND.time, elapsed: 0, clock: 0,
@@ -104,12 +105,12 @@ export function start(ctx) {
       // depth control + jigging
       const { f } = playing ? input.axis() : { f: 0 };
       s.depth = THREE.MathUtils.clamp(s.depth - f * ROUND.lureSpeed * dt, 0.6, ROUND.bottom - 0.5);
-      if (tap) { s.jigOff = ROUND.jigLift; s.jigAge = 0; }
+      if (tap) { s.jigOff = ROUND.jigLift; s.jigAge = 0; ctx.audio?.play('whoosh'); }
       s.jigOff = Math.max(0, s.jigOff - dt * 1.4);            // the jig sinks back after each jerk
     } else {
       // the fight: hold to reel (tension rises), let go to ease off; the squid surges
       const sp = s.hooked.sp;
-      if (act) { s.depth -= ROUND.reelSpeed * dt; s.tension += ROUND.tensionUp * dt * (0.7 + sp.strength * 0.5); }
+      if (act) { s.depth -= ROUND.reelSpeed * dt; s.tension += ROUND.tensionUp * dt * (0.7 + sp.strength * 0.5); if ((s.clock * 14 | 0) !== ((s.clock - dt) * 14 | 0)) ctx.audio?.play('reel'); }
       else { s.tension -= ROUND.tensionDown * dt; s.depth += ROUND.drift * sp.strength * dt; }
       // surges are telegraphed; ease off (let go) when the bar shakes
       s.surgeIn -= dt;
@@ -130,7 +131,7 @@ export function start(ctx) {
 
     const lure = { x: BOAT.lureX, y: -s.depth + s.jigOff, jigAge: s.jigAge, hooked: s.hooked };
     const bite = squids.update(dt, s.clock, lure, Math.round(THREE.MathUtils.lerp(ROUND.maxSquid[0], ROUND.maxSquid[1], s.elapsed / ROUND.time)));
-    if (bite && playing) { s.hooked = bite; s.tension = 0.45; s.slack = 0; s.surgeIn = 0.5; ui.pop(t('squidBite'), 'wow'); }
+    if (bite && playing) { ctx.audio?.play('splash'); s.hooked = bite; s.tension = 0.45; s.slack = 0; s.surgeIn = 0.5; ui.pop(t('squidBite'), 'wow'); }
 
     // jig, rod (bends with tension) and line
     jig.position.set(lure.x, lure.y, 0);

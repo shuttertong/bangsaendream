@@ -215,3 +215,20 @@ body.touch-on #game-ui .g-stamina { bottom: calc(130px + env(safe-area-inset-bot
 #game-ui .s-bubble kbd { font: 600 10px ui-monospace, monospace; background: #efe6d4; border-radius: 4px; padding: 0 4px; margin-left: 4px; color: #8a7a66; }
 @media (max-width: 520px) { #game-ui .s-btns button { font-size: 10px; } #game-ui .s-btns button b { font-size: 19px; } #game-ui .s-bubble { font-size: 12px; } #game-ui .s-panel { padding: 7px; } }
 body.in-game.stall #touch { display: none !important; }
+/* credits */
+#ui .credits .panel { text-align: left; }
+#ui .credits h3 { font: 600 15px 'Kanit', sans-serif; color: var(--accent); margin: 14px 4px 4px; }
+#ui .credits p { margin: 2px 4px; font-size: 15px; line-height: 1.45; }
+#ui .modal.credits { z-index: 12; }
+#ui .modal button { pointer-events: auto; }
+/* title + ending cards */
+#title, #ending { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; pointer-events: auto;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255, 236, 200, .35), rgba(40, 60, 90, .45)); transition: opacity .6s; font-family: 'Sarabun', sans-serif; color: var(--ink); }
+#title.out, #ending.out { opacity: 0; pointer-events: none; }
+#title .t-card, #ending .t-card { text-align: center; background: rgba(255, 250, 240, .9); border-radius: 26px; padding: 28px 30px 22px; width: min(440px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 16px 50px rgba(20, 20, 40, .35); }
+#title h1, #ending h1 { font: 600 clamp(30px, 8vw, 44px)/1.15 'Kanit', sans-serif; margin: 0; color: #c9573f; letter-spacing: .01em; }
+#title .t-sub, #ending .t-sub { font: 500 16px/1.5 'Sarabun', sans-serif; color: #6a5a4a; margin: 8px 0 18px; }
+#title .t-go, #ending .t-go { border: 0; background: var(--accent); color: #fff; border-radius: 16px; padding: 13px 40px; font: 600 21px 'Kanit', sans-serif; cursor: pointer; box-shadow: 0 6px 16px rgba(200, 100, 40, .35); }
+#title .t-hint { font-size: 13px; color: #8a7a66; margin: 14px 0 0; }
+#ending .e-sun { font-size: 44px; margin: 0 0 6px; }
+#ending .e-stats { font: 500 15px 'Kanit', sans-serif; color: #3a6a7a; margin: -6px 0 18px; }

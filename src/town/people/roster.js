@@ -15,26 +15,48 @@ export const ROSTER = [
     name: { th: 'ยาย', en: 'Grandma' },
     look: { ...ADULT, scale: 1.2, skin: '#c99a74', hair: '#d9d6d0', hairStyle: 'bun', shirt: '#b98fb8', shirtTrim: '#e9dfe8',
       bottom: 'skirt', bottomColor: '#6a4a7a', hat: 'none', glasses: true, shoe: '#6a5040', belly: 0.4 },
-    script: s => s.met.grandma ? [
-      { say: { th: 'กินข้าวหรือยังหลาน? อย่าลืมกลับมาก่อนมืดนะ', en: 'Have you eaten yet, dear? Be home before dark.' } },
-      ...(s.quests.meetFriends === 'done' && !s.flags.grandmaThanks ? [
-        { say: { th: 'ได้ยินว่าหลานรู้จักคนทั้งหาดแล้ว เก่งมาก! ยายให้ค่าขนมเพิ่ม', en: 'I hear you know the whole beach now. Here, a little extra pocket money!' } },
-        { give: { baht: 50 } }, { flag: 'grandmaThanks' },
-      ] : []),
-    ] : [
-      { say: { th: 'มาถึงแล้วเหรอหลาน! ปิดเทอมนี้อยู่กับยายที่บางแสนนะ', en: 'You made it! This school break you\'re staying with me in Bang Saen.' } },
-      { say: { th: 'แถวนี้มีแต่คนใจดี ลองไปทักทายเพื่อนบ้านดูสิ', en: 'Everyone around here is friendly. Go and say hello to the neighbours.' } },
-      { say: { th: 'เอ้า เอาเงินนี่ไปซื้อขนมกินนะ', en: 'Here, take this for snacks.' } },
-      { give: { baht: 100 } },
-      { quest: ['visitGrandma', 'done'] }, { quest: ['meetFriends', 'active'] },
-    ],
+    script: s => {
+      const has = pre => Object.keys(s.bag).find(k => k.startsWith(pre) && s.bag[k] > 0);
+      if (!s.met.grandma) return [
+        { say: { th: 'มาถึงแล้วเหรอหลาน! ปิดเทอมนี้อยู่กับยายที่บางแสนนะ', en: 'You made it! This school break you\'re staying with me in Bang Saen.' } },
+        { say: { th: 'แถวนี้มีแต่คนใจดี ลองไปทักทายเพื่อนบ้านดูสิ', en: 'Everyone around here is friendly. Go and say hello to the neighbours.' } },
+        { say: { th: 'เอ้า เอาเงินนี่ไปซื้อขนมกินนะ', en: 'Here, take this for snacks.' } },
+        { give: { baht: 100 } },
+        { quest: ['visitGrandma', 'done'] }, { quest: ['meetFriends', 'active'] },
+      ];
+      if (s.quests.dinner === 'active') {
+        const item = has('squid_') || has('crab_');
+        return item ? [
+          { say: { th: 'โอ้โห ได้ของทะเลมาด้วย! คืนนี้ยายจะทำกับข้าวอร่อย ๆ ให้กินนะ', en: 'Oh my, you brought something from the sea! I\'ll cook us something delicious tonight.' } },
+          { take: item }, { flag: 'gaveDinner' },
+          { say: { th: 'ไปเล่นก่อน เดี๋ยวพระอาทิตย์ตกแล้วกลับมากินข้าวนะ', en: 'Go and play. Come back for dinner when the sun goes down.' } },
+        ] : [
+          { say: { th: 'ยายอยากทำหมึกผัดไข่ ลองไปตกหมึกกับลุงเปี๊ยก หรือจับปูลมกับลุงแดงมาให้ยายหน่อยสิ', en: 'I\'d love to make squid with egg. Go jigging with Uncle Piak, or catch crabs with Uncle Daeng, and bring me some?' } },
+        ];
+      }
+      if (s.quests.ending === 'active') return [
+        { say: { th: 'มาแล้วเหรอ ข้าวเสร็จพอดีเลย กินเยอะ ๆ นะหลาน', en: 'There you are, dinner\'s just ready. Eat up!' } },
+        { say: { th: 'ปิดเทอมนี้หลานได้เพื่อนเยอะ ได้เที่ยวทั่วบางแสนเลยนะ', en: 'You made so many friends this break, and saw all of Bang Saen.' } },
+        { say: { th: 'ยายดีใจมากที่หลานมาอยู่ด้วย ปิดเทอมหน้ามาอีกนะ', en: 'I\'m so happy you came to stay. Come back next break, won\'t you?' } },
+        { flag: 'ending' }, { ending: true },
+      ];
+      return [
+        { say: { th: 'กินข้าวหรือยังหลาน? อย่าลืมกลับมาก่อนมืดนะ', en: 'Have you eaten yet, dear? Be home before dark.' } },
+        ...(s.quests.meetFriends === 'done' && !s.flags.grandmaThanks ? [
+          { say: { th: 'ได้ยินว่าหลานรู้จักคนทั้งหาดแล้ว เก่งมาก! ยายให้ค่าขนมเพิ่ม', en: 'I hear you know the whole beach now. Here, a little extra pocket money!' } },
+          { give: { baht: 50 } }, { flag: 'grandmaThanks' },
+        ] : []),
+      ];
+    },
   },
   {
     id: 'tonkla', place: 'beach',
     name: { th: 'ต้นกล้า', en: 'Tonkla' },
     look: { shirt: '#f0b43a', bottomColor: '#3a6a4a', hat: 'cap', hatColor: '#d8443a', hatBand: '#f4f1e8', skin: '#c68f66' },
     script: s => s.met.tonkla ? [
-      { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
+      s.quests.playAll === 'active'
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ แล้วก็จับปูลม', en: 'Try it all! Squid, monkeys, the tube, helping Aunt Nuan, and ghost crabs.' } }
+        : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },
       { say: { th: 'ที่นี่สนุกนะ มีทั้งลิงที่เขาสามมุข ปูลม แล้วก็ส้มตำป้านวลอร่อยสุด ๆ', en: 'It\'s fun here: monkeys on Khao Sam Muk, ghost crabs, and Aunt Nuan\'s som tam is the best.' } },

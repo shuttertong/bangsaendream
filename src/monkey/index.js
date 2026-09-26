@@ -39,8 +39,9 @@ export function start(ctx) {
   const snacks = createSnacks(scene, mat);
   const monkeys = createMonkeys(scene, mat, snacks, r);
 
-  const ui = createGameUI(ctx.root, { title: t('monkeyTitle'), how: t('monkeyHow'), keys: t('monkeyKeys') });
+  const ui = createGameUI(ctx.root, { title: t('monkeyTitle'), how: t('monkeyHow'), keys: t('monkeyKeys'), audio: ctx.audio });
   ctx.touch?.setAction('dash');
+  ctx.audio?.ambience({ cicadas: 1, breeze: 0.8 });
 
   const s = {
     phase: 'intro', clock: 0, wave: 0, spawned: 0, spawnIn: 1, breakIn: 1.5,
@@ -99,6 +100,7 @@ export function start(ctx) {
     s.cool = Math.max(0, s.cool - dt);
     if (act && !s.wasAct && s.dash <= 0 && s.cool <= 0) {
       s.dash = K.dashTime; s.cool = K.cool + K.dashTime; s.swing = 1;
+      ctx.audio?.play('whoosh');
       // aim the dash at the nearest monkey in front-ish (forgiving on touch screens)
       let best = null, bd = 4;
       for (const m of monkeys.list) {
@@ -119,7 +121,7 @@ export function start(ctx) {
       for (const m of monkeys.list) {
         if (m.state === 'gone' || m.state === 'scared' || Math.hypot(m.x - hx, m.z - hz) > K.reach * m.sp.size) continue;
         const res = monkeys.hit(m, { x: s.x, z: s.z });
-        if (res === 'shoo') { s.shooed++; ui.pop(t('monkeyShoo'), 'good'); }
+        if (res === 'shoo') { s.shooed++; ui.pop(t('monkeyShoo'), 'good'); ctx.audio?.play('monkey'); }
         else if (res === 'stagger') ui.pop(t('monkeyStagger'));
       }
     }

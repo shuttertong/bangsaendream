@@ -57,8 +57,9 @@ export function start(ctx) {
   holes.receiveShadow = true;
   scene.add(holes);
 
-  const ui = createGameUI(ctx.root, { title: t('crabTitle'), how: t('crabHow'), keys: t('crabKeys') });
+  const ui = createGameUI(ctx.root, { title: t('crabTitle'), how: t('crabHow'), keys: t('crabKeys'), audio: ctx.audio });
   ctx.touch?.setAction('dash');
+  ctx.audio?.ambience({ surf: 0.7, breeze: 0.4, crickets: 0.2 });
 
   const s = {
     phase: 'intro', time: ROUND.time, elapsed: 0, clock: 0,
@@ -124,7 +125,7 @@ export function start(ctx) {
     // dash: edge-triggered on Space / action button
     const want = playing && (input.down('Space') || input.jump);
     s.cool = Math.max(0, s.cool - dt);
-    if (want && !s.wasDash && s.dash <= 0 && s.cool <= 0) { s.dash = KID.dashTime; s.cool = KID.dashCool + KID.dashTime; }
+    if (want && !s.wasDash && s.dash <= 0 && s.cool <= 0) { s.dash = KID.dashTime; s.cool = KID.dashCool + KID.dashTime; ctx.audio?.play('whoosh'); }
     s.wasDash = want;
     let mvx = s.vx, mvz = s.vz;
     if (s.dash > 0) {

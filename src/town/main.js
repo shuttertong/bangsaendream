@@ -10,6 +10,7 @@ import { createTouchControls } from '../core/touch.js';
 import { addSystem, startLoop, tick } from '../core/loop.js';
 import { U } from '../core/shaderPatch.js';
 import { createQuality } from '../core/quality.js';
+import { createAudio } from '../core/audio.js';
 import { t } from '../shared/i18n.js';
 import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
@@ -24,6 +25,7 @@ import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
+import { showTitle } from './title.js';
 import * as P from '../shared/progress.js';
 import { GAMES } from '../games.js';
 
@@ -71,6 +73,11 @@ async function boot() {
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles });
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
+  // audio can only start after a user gesture (iOS / Chrome autoplay rules)
+  const audio = createAudio();
+  const unlock = () => audio.unlock();
+  addEventListener('pointerdown', unlock, { capture: true });
+  addEventListener('keydown', unlock, { capture: true });
   const player = createPlayer(scene, map, collision, input);
   player.place(START.x, START.z, START.yaw);
   const tpc = createThirdPersonCamera(camera, input, map, collision);
@@ -89,11 +96,12 @@ async function boot() {
     def.load().then(mod => {
       gameMod = mod; gameId = id;
       game = mod.start({
-        renderer, input, touch, progress: P, root: $('hud'),
+        renderer, input, touch, audio, progress: P, root: $('hud'),
         onExit: res => {
           document.body.classList.add('fading');
           setTimeout(() => {
             gameMod.stop(); game = null;
+            audio.play('coin');
             hub.finishGame(gameId, res);
             document.body.classList.remove('in-game');
             setTimeout(() => document.body.classList.remove('fading'), 60);
@@ -104,7 +112,7 @@ async function boot() {
     }).catch(e => { console.error(e); document.body.classList.remove('in-game', 'fading'); });
     return true;
   };
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -145,6 +153,7 @@ async function boot() {
     dbg?.(dt, quality.ratio);
   });
   $('loading').textContent = '';
+  if (!params.has('view') && !params.has('notitle')) showTitle($('hud'), { onStart: () => audio.unlock() });
 
   // bench(n): median GPU+CPU ms per full frame, measured synchronously (not limited by rAF throttling)
   const bench = (n = 20, warm = 30) => {
@@ -161,7 +170,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

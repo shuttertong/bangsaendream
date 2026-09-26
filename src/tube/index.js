@@ -64,11 +64,12 @@ export function start(ctx) {
   scene.add(rig);
 
   const finds = createFinds(scene, mat, r);
-  const ui = createGameUI(ctx.root, { title: t('tubeTitle'), how: t('tubeHow'), keys: t('tubeKeys') });
+  const ui = createGameUI(ctx.root, { title: t('tubeTitle'), how: t('tubeHow'), keys: t('tubeKeys'), audio: ctx.audio });
   const stam = document.createElement('div'); stam.className = 'g-stamina'; stam.innerHTML = '<i></i>';
   document.getElementById('game-ui').append(stam);
   document.body.classList.toggle('touch-on', !!document.querySelector('#touch.on'));
   ctx.touch?.setAction('dash');
+  ctx.audio?.ambience({ surf: 1, breeze: 0.5 });
 
   const s = {
     phase: 'intro', time: ROUND.time, elapsed: 0, clock: 0,
@@ -109,6 +110,7 @@ export function start(ctx) {
       const dx = mag ? rr / len : Math.sin(s.yaw), dz = mag ? -f / len : Math.cos(s.yaw);
       s.vx += dx * TB.burst; s.vz += dz * TB.burst;
       s.stamina -= TB.burstCost; s.stroke = 1;
+      ctx.audio?.play('splash');
     }
     s.wasAct = act;
     s.stamina = Math.min(1, s.stamina + TB.regen * dt);
@@ -150,6 +152,7 @@ export function start(ctx) {
       const dx = s.x - sting.x, dz = s.z - sting.z, d = Math.hypot(dx, dz) || 1;
       s.vx = (dx / d) * 3; s.vz = (dz / d) * 3;
       ui.pop(t('tubeSting'), 'bad');
+      ctx.audio?.play('sting');
     }
 
     world.update(s.clock, rig.position);

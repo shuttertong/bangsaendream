@@ -10,10 +10,11 @@ import { createTravel } from './travel.js';
 import { updateQuests, questText } from './quests.js';
 import { Kit } from './assets/kit.js';
 import { somTamCart } from './assets/stall.js';
+import { showEnding } from './title.js';
 
 const SAVE_POS_EVERY = 1.0;   // seconds
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
@@ -33,9 +34,11 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   const people = createPeople(scene, map, places, collision);
 
   let hud = null;
-  const toast = msg => hud?.toast(msg);
+  const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
+    audio,
     onToast: toast,
+    onEnding: () => showEnding(root, audio),
     onGame: id => { if (!startGame(id)) { toast(t('comingSoon')); P.setFlag(`asked_${id}`); } },
   });
   const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id) });
@@ -50,7 +53,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   };
   talk.onEnd = () => { talkingTo = null; hud.hideDuringTalk(false); document.body.classList.remove('talking'); };
 
-  hud = createHUD(root, { onTravel: () => travel.openTravel(), onBag: () => travel.openBag(), onTalk: startTalk });
+  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: startTalk });
   let quest = updateQuests(toast);
   hud.setGoal(() => questText(quest));
   P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
@@ -63,7 +66,13 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     camera.setYaw(saved.yaw + Math.PI);
   }
 
-  let posTimer = 0;
+  // ambience follows where you are: surf by the water, cicadas inland and on the hill
+  let posTimer = 0, ambTimer = 0;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  function ambience() {
+    const p = player.state, d = seaDist(p.x, p.z), h = map.heightAt(p.x, p.z);
+    audio?.ambience({ surf: clamp01(1.1 - d / 90), breeze: 0.5 + clamp01(h / 60) * 0.5, cicadas: clamp01((d - 20) / 50) + clamp01(h / 30) });
+  }
   return {
     places, people, talk, travel, hud,
     /** A mini-game finished: pay out, put catches in the bag, keep the best result. */
@@ -82,6 +91,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       if (talkingTo) player.faceTo(talkingTo.state.x, talkingTo.state.z, dt);
       near = talk.active ? null : people.nearest(p);
       hud.setPrompt(near ? near.def.name : null);
+      ambTimer -= dt;
+      if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;
       if (posTimer > SAVE_POS_EVERY) { posTimer = 0; P.setPos(p.x, p.z, p.yaw); }
     },
