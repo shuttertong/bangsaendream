@@ -1,7 +1,23 @@
 // DOM overlay for a mini-game round: intro card, top bar (time, catches, baht),
 // pop-up messages, quit button and the results screen. Generic enough for the other
 // mini-games to reuse (texts come from i18n / species tables).
-import { t, tr } from '../shared/i18n.js';
+import { t, tr } from './i18n.js';
+
+/**
+ * Summarise catches for results(): catches [{ id, size, price }] + species table →
+ * { rows for the results list, total baht, biggest catch }.
+ */
+export function summarize(catches, species) {
+  const by = {};
+  for (const c of catches) {
+    const sp = species.find(s => s.id === c.id);
+    const b = by[c.id] || (by[c.id] = { icon: sp.icon, name: sp.name, count: 0, best: 0, baht: 0 });
+    b.count++; b.best = Math.max(b.best, c.size); b.baht += c.price;
+  }
+  const total = catches.reduce((s, c) => s + c.price, 0);
+  const biggest = catches.reduce((m, c) => (c.size > (m?.size || 0) ? c : m), null);
+  return { rows: Object.values(by), total, biggest };
+}
 
 export function createGameUI(root, { title, how, keys }) {
   const el = document.createElement('div');

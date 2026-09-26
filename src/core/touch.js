@@ -59,6 +59,7 @@ export function createTouchControls(root, input) {
     jump: '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 4l-7 8h4.5v7h5v-7H19z" fill="currentColor"/></svg>',
     dash: '<svg viewBox="0 0 24 24" width="32" height="32"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11V4.5a1.5 1.5 0 0 1 3 0V11V5.5a1.5 1.5 0 0 1 3 0V12V8.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7l-3.3-5a1.5 1.5 0 0 1 2.4-1.8z" fill="currentColor"/></svg>',
   };
+  ICON.reel = '<svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 4a8 8 0 1 0 8 8h-2.5A5.5 5.5 0 1 1 12 6.5V9l4-3.5L12 2z" fill="currentColor"/></svg>';
   const show = on => ui.classList.toggle('on', on);
   show(hasTouch());
   addEventListener('pointerdown', e => { if (e.pointerType === 'touch') show(true); }, { capture: true });

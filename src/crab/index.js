@@ -6,7 +6,7 @@ import { buildScene, heightAt, BEACH } from './scene.js';
 import { createCrabs } from './crabs.js';
 import { SPECIES, ROUND, priceOf } from './species.js';
 import { flashlightGeometry, holesGeometry } from './models.js';
-import { createGameUI } from './ui.js';
+import { createGameUI } from '../shared/gameUI.js';
 import { createKid } from '../town/kid/index.js';
 import { createPostFX } from '../world/postfx.js';
 import { paintedMaterial } from '../world/materials.js';

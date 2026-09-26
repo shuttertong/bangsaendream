@@ -42,6 +42,16 @@ const STRINGS = {
     crabDark: 'ฟ้ามืดแล้ว ปูออกมาเยอะขึ้น!',
     crabEnd: 'หมดเวลา!',
     cm: '{n} ซม.',
+    // ตกหมึก
+    squidTitle: 'ตกหมึก',
+    squidHow: 'ปล่อยเหยื่อตกหมึกลงไปให้ถึงระดับที่หมึกว่าย กดกระตุกเหยื่อแล้วรอ หมึกจะเข้ามากิน! จากนั้นกดค้างม้วนสาย รักษาแรงตึงให้อยู่ในช่องสีเขียว',
+    squidKeys: 'ขึ้น/ลง: W/S / จอยสติ๊ก · กระตุก/ม้วนสาย: Space / ปุ่ม',
+    depth: 'ลึก {n} ม.',
+    tension: 'แรงตึง',
+    squidBite: 'หมึกกินเหยื่อ! กดค้างม้วนสาย!',
+    squidSnap: 'สายขาด!',
+    squidLoose: 'หมึกหลุดไปแล้ว!',
+    squidGot: 'ได้! {name} {size} ซม.',
   },
   en: {
     loading: 'Loading map…',
@@ -81,6 +91,15 @@ const STRINGS = {
     crabDark: "It's dark now: more crabs are coming out!",
     crabEnd: "Time's up!",
     cm: '{n} cm',
+    squidTitle: 'Squid jigging',
+    squidHow: 'Lower the jig to where the squid swim. Tap to jig, then wait: a squid will grab it! Then hold to reel in, keeping the tension in the green band.',
+    squidKeys: 'Up/down: W/S / joystick · Jig/reel: Space / button',
+    depth: '{n} m deep',
+    tension: 'Tension',
+    squidBite: 'A squid took the jig! Hold to reel!',
+    squidSnap: 'The line snapped!',
+    squidLoose: 'It got away!',
+    squidGot: 'Got it! {name} {size} cm',
   },
 };
 

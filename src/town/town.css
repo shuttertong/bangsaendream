@@ -178,3 +178,14 @@ body.fading #fade { opacity: 1; }
 #game-ui .g-sum { font: 500 20px 'Kanit', sans-serif; margin-bottom: 14px; } #game-ui .g-sum .rec { color: var(--accent); font-size: 15px; margin-left: 6px; }
 #game-ui .g-none { color: #8a7a66; text-align: center; }
 #game-ui [hidden] { display: none !important; }
+/* squid gauges */
+#game-ui .g-depth { position: absolute; left: calc(14px + env(safe-area-inset-left)); top: 22%; bottom: 30%; width: 14px; border-radius: 8px; background: linear-gradient(#5ac8d8, #0a3a5a); box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+#game-ui .g-depth i { position: absolute; left: -6px; right: -6px; height: 6px; border-radius: 3px; background: #ffb84a; box-shadow: 0 0 6px #ffb84a; }
+#game-ui .g-depth b { position: absolute; left: 22px; white-space: nowrap; font: 600 14px 'Kanit', sans-serif; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.7); transform: translateY(-50%); }
+#game-ui .g-tension { position: absolute; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(340px, 70vw); height: 18px; border-radius: 10px; background: rgba(20, 30, 50, .6); box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+#game-ui .g-tension .zone { position: absolute; top: 0; bottom: 0; background: rgba(90, 200, 110, .55); border-radius: 6px; }
+#game-ui .g-tension .fill { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 6px; background: #f4efe4; }
+#game-ui .g-tension.hot .fill { background: #ff6a4a; }
+#game-ui .g-tension span { position: absolute; left: 0; right: 0; top: -22px; text-align: center; font: 600 14px 'Kanit', sans-serif; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+#game-ui .g-tension.warn { animation: gshake .08s infinite; box-shadow: 0 0 0 2px #ffb84a, 0 2px 10px rgba(0,0,0,.35); }
+@keyframes gshake { 50% { transform: translateX(calc(-50% + 3px)); } }

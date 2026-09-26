@@ -161,7 +161,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, startGame, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
