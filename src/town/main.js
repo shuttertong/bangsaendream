@@ -12,6 +12,12 @@ import { t } from '../shared/i18n.js';
 import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
+import { Kit } from './assets/kit.js';
+import { RoadIndex, Occupancy, seaDistSampler } from './layout.js';
+import { buildRoads, roadWidth } from './roads.js';
+import { buildBuildings } from './buildings.js';
+import { buildNature } from './nature.js';
+import { buildBeach } from './beach.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -36,6 +42,20 @@ async function boot() {
   const sea = createSea(map);
   scene.add(sea.group);
 
+  // static town geometry, merged per (chunk, material)
+  const t0 = performance.now();
+  const kit = new Kit();
+  const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
+  buildRoads(kit, map);
+  const counts = buildBuildings(kit, map, layout);
+  const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
+  scene.add(beach.group);
+  const town = kit.build();
+  scene.add(town);
+  const nature = buildNature(map, layout);
+  scene.add(nature.group);
+  if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
+
   const input = createInput($('c'));
   const cam = createFreeCam(camera, input, map);
   cam.setView(params.get('view') || 'beach');
@@ -57,6 +77,7 @@ async function boot() {
     if (Math.abs(near - camera.near) > 0.01) { camera.near = near; camera.updateProjectionMatrix(); }
     lights.follow(cam.target, camera.position.y - cam.target.y);
     sea.update(camera);
+    nature.update(camera.position);
     fx.setTiltShift(cam.state.tilt && cam.state.pitch > 0.7, 0.5);
     input.endFrame();
   });
@@ -69,7 +90,20 @@ async function boot() {
   });
   $('loading').textContent = '';
 
-  window.__game = { THREE, renderer, scene, camera, map, cam, fx, sea, lights };
+  // bench(n): median GPU+CPU ms per full frame, measured synchronously (not limited by rAF throttling)
+  const bench = (n = 20) => {
+    const gl = renderer.getContext(), px = new Uint8Array(4), ms = [];
+    for (let i = 0; i < n; i++) {
+      const t = performance.now();
+      renderer.info.reset();
+      fx.render(1 / 60);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      ms.push(performance.now() - t);
+    }
+    ms.sort((a, b) => a - b);
+    return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
+  };
+  window.__game = { THREE, renderer, scene, camera, map, cam, fx, sea, lights, layout, town, nature, bench };
 }
 
 function debugOverlay(renderer, camera) {

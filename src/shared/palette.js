@@ -32,6 +32,24 @@ export const PALETTE = {
   wallCream: '#eee3cc',
 };
 
+// Building colour sets (picked per row / per unit)
+export const BUILDING = {
+  walls: ['#eee3cc', '#e6dcc4', '#cfe3d4', '#d9ecdf', '#f1d6d2', '#eed9c4', '#dfe4ea', '#f3ead2', '#e9d3b0'],
+  houseWalls: ['#f2ebdc', '#e8e0cf', '#dde6d6', '#f0dccb', '#e4d4bd'],
+  trim: ['#f7f3ea', '#d8d0c0', '#bfb6a6'],
+  awnings: ['#3f7fb5', '#2f8f78', '#c9573f', '#d69a3a', '#6d8fa6', '#9a5a8a', '#e0dcd2'],
+  signs: ['#c94a3a', '#2f6fa8', '#e5b23a', '#3c8a5a', '#f0ebe0', '#d9723a', '#6a4f9a'],
+  shutter: '#9aa0a3',
+  interior: '#8c7b66',
+  tileRoofs: ['#b8583a', '#a44e36', '#c06a42', '#8f4a3a'],
+  metalRoofs: ['#8d9aa3', '#9aa7a0', '#a36f52', '#7d8e9c', '#b0b4b0'],
+  glass: '#4d6470',
+  frame: '#e9e6df',
+  rail: '#d8d6d0',
+  concrete: '#c4bfb4',
+  spirit: ['#d4a94a', '#e8e0d0', '#c9463a'],
+};
+
 // Atmosphere and grading numbers live next to the colours.
 export const ATMOS = {
   fogDensity: 0.00055,       // base FogExp2 density at the ground

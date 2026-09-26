@@ -5,13 +5,24 @@ import { paintedMaterial } from '../world/materials.js';
 import { PALETTE } from '../shared/palette.js';
 
 const OUTER_HALF = 8000, OUTER_STEP = 40;
-const BEACH_W = 22;     // metres of sand behind the waterline
+const BEACH_W = 34;     // metres of sand behind the waterline (up to the promenade)
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
 function seaDistance(map) {
   const { nx, nz, step } = map.core, h = map.heights, sea = map.sea;
   const d = new Float32Array(nx * nz).fill(1e9);
   for (let k = 0; k < d.length; k++) if (h[k] < sea) d[k] = 0;
+  // seed shore cells with the sub-cell distance to the interpolated waterline
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const k = j * nx + i;
+    if (h[k] < sea) continue;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ii = i + di, jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= nx || jj >= nz) continue;
+      const hn = h[jj * nx + ii];
+      if (hn < sea) d[k] = Math.min(d[k], (h[k] - sea) / (h[k] - hn) * step);
+    }
+  }
   const s1 = step, s2 = step * Math.SQRT2;
   const relax = (k, k2, w) => { if (d[k2] + w < d[k]) d[k] = d[k2] + w; };
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
