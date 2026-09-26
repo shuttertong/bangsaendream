@@ -25,6 +25,7 @@ import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
 import * as P from '../shared/progress.js';
+import { GAMES } from '../games.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -69,7 +70,7 @@ async function boot() {
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles });
   const input = createInput($('c'));
-  createTouchControls($('hud'), input);
+  const touch = createTouchControls($('hud'), input);
   const player = createPlayer(scene, map, collision, input);
   player.place(START.x, START.z, START.yaw);
   const tpc = createThirdPersonCamera(camera, input, map, collision);
@@ -79,7 +80,31 @@ async function boot() {
   let free = params.has('view');
   if (free) cam.setView(params.get('view'));
   if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud') });
+  // mini-games: while one runs, the hub pauses and the game renders its own scene
+  let game = null, gameMod = null, gameId = null;
+  const startGame = id => {
+    const def = GAMES[id];
+    if (!def) return false;
+    document.body.classList.add('in-game', 'fading');
+    def.load().then(mod => {
+      gameMod = mod; gameId = id;
+      game = mod.start({
+        renderer, input, touch, progress: P, root: $('hud'),
+        onExit: res => {
+          document.body.classList.add('fading');
+          setTimeout(() => {
+            gameMod.stop(); game = null;
+            hub.finishGame(gameId, res);
+            document.body.classList.remove('in-game');
+            setTimeout(() => document.body.classList.remove('fading'), 60);
+          }, 350);
+        },
+      });
+      setTimeout(() => document.body.classList.remove('fading'), 120);
+    }).catch(e => { console.error(e); document.body.classList.remove('in-game', 'fading'); });
+    return true;
+  };
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame });
 
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -95,6 +120,7 @@ async function boot() {
 
   addSystem((dt, time) => {
     U.time.value = time;
+    if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
     else { player.update(dt, tpc.state.yaw, hub.frozen); tpc.update(dt, player.state); focus = tpc.target; }
@@ -114,7 +140,7 @@ async function boot() {
   const dbg = DEBUG ? debugOverlay(renderer, camera) : null;
   startLoop(dt => {
     renderer.info.reset();
-    fx.render(dt);
+    if (game) game.render(dt); else fx.render(dt);
     quality.update(dt);
     dbg?.(dt, quality.ratio);
   });
@@ -135,7 +161,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, startGame, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

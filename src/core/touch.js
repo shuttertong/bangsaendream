@@ -55,8 +55,12 @@ export function createTouchControls(root, input) {
   jump.addEventListener('pointerdown', press(true));
   for (const t of ['pointerup', 'pointercancel', 'pointerleave']) jump.addEventListener(t, press(false));
 
+  const ICON = {
+    jump: '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 4l-7 8h4.5v7h5v-7H19z" fill="currentColor"/></svg>',
+    dash: '<svg viewBox="0 0 24 24" width="32" height="32"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11V4.5a1.5 1.5 0 0 1 3 0V11V5.5a1.5 1.5 0 0 1 3 0V12V8.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7l-3.3-5a1.5 1.5 0 0 1 2.4-1.8z" fill="currentColor"/></svg>',
+  };
   const show = on => ui.classList.toggle('on', on);
   show(hasTouch());
   addEventListener('pointerdown', e => { if (e.pointerType === 'touch') show(true); }, { capture: true });
-  return { el: ui, show, stickArea: STICK.area };
+  return { el: ui, show, stickArea: STICK.area, setAction: kind => { jump.innerHTML = ICON[kind] || ICON.jump; } };
 }

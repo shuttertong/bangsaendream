@@ -13,7 +13,7 @@ import { somTamCart } from './assets/stall.js';
 
 const SAVE_POS_EVERY = 1.0;   // seconds
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
@@ -36,8 +36,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   const toast = msg => hud?.toast(msg);
   const talk = createTalk(root, {
     onToast: toast,
-    // M4+: start the mini-game here (start(ctx) / stop()); for now it's announced
-    onGame: id => { toast(t('comingSoon')); P.setFlag(`asked_${id}`); },
+    onGame: id => { if (!startGame(id)) { toast(t('comingSoon')); P.setFlag(`asked_${id}`); } },
   });
   const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id) });
 
@@ -67,6 +66,13 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   let posTimer = 0;
   return {
     places, people, talk, travel, hud,
+    /** A mini-game finished: pay out, put catches in the bag, keep the best result. */
+    finishGame(id, res) {
+      if (res.baht) { P.addBaht(res.baht); toast(t('gotBaht', { n: res.baht })); }
+      for (const c of res.catches || []) P.addItem(`${id}_${c.id}`);
+      const prev = P.get().best[id];
+      P.setBest(id, { baht: Math.max(prev?.baht || 0, res.baht), biggest: Math.max(prev?.biggest || 0, res.biggest?.size || 0), plays: (prev?.plays || 0) + 1 });
+    },
     /** True while the player shouldn't move (dialogue, menus). */
     get frozen() { return talk.active || travel.open; },
     update(dt) {
