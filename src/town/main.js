@@ -6,8 +6,9 @@ import { createFog } from '../world/haze.js';
 import { createSea } from '../world/water.js';
 import { createPostFX } from '../world/postfx.js';
 import { createInput } from '../core/input.js';
-import { addSystem, startLoop } from '../core/loop.js';
+import { addSystem, startLoop, tick } from '../core/loop.js';
 import { U } from '../core/shaderPatch.js';
+import { createQuality } from '../core/quality.js';
 import { t } from '../shared/i18n.js';
 import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
@@ -18,10 +19,15 @@ import { buildRoads, roadWidth } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
 import { buildBeach } from './beach.js';
+import { buildCollision } from './collision.js';
+import { createPlayer } from './player.js';
+import { createThirdPersonCamera } from './camera.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
 const $ = id => document.getElementById(id);
+// where the kid starts: on the sand mid-beach, looking up the coast to Khao Sam Muk
+const START = { x: 318, z: 985, yaw: Math.atan2(-0.318, -0.948) };
 
 async function boot() {
   $('loading').textContent = t('loading');
@@ -56,29 +62,42 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles });
   const input = createInput($('c'));
+  const player = createPlayer(scene, map, collision, input);
+  player.place(START.x, START.z, START.yaw);
+  const tpc = createThirdPersonCamera(camera, input, map, collision);
+  tpc.setYaw(START.yaw + Math.PI);
+  // ?view=beach|town|air → fixed free-camera shots for before/after screenshots
   const cam = createFreeCam(camera, input, map);
-  cam.setView(params.get('view') || 'beach');
+  let free = params.has('view');
+  if (free) cam.setView(params.get('view'));
+  if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
 
   const fx = createPostFX(renderer, scene, camera);
-  addEventListener('resize', () => {
+  const resize = () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight, false);
     fx.setSize(innerWidth, innerHeight);
-  });
+  };
+  addEventListener('resize', resize);
+  const quality = createQuality(renderer, resize);
 
   addSystem((dt, time) => {
     U.time.value = time;
-    cam.update(dt);
+    let focus;
+    if (free) { cam.update(dt); focus = cam.target; }
+    else { player.update(dt, tpc.state.yaw); tpc.update(dt, player.state); focus = tpc.target; }
     // near plane grows with height: keeps depth precision for the sea/shore from the air
     const above = camera.position.y - Math.max(map.heightAt(camera.position.x, camera.position.z), map.sea);
     const near = Math.min(40, Math.max(0.3, above * 0.02));
     if (Math.abs(near - camera.near) > 0.01) { camera.near = near; camera.updateProjectionMatrix(); }
-    lights.follow(cam.target, camera.position.y - cam.target.y);
+    lights.follow(focus, camera.position.y - focus.y);
+    fx.setFocus(focus, camera.position.y - focus.y);
     sea.update(camera);
     nature.update(camera.position);
-    fx.setTiltShift(cam.state.tilt && cam.state.pitch > 0.7, 0.5);
+    fx.setTiltShift(free && cam.state.tilt && cam.state.pitch > 0.7, 0.5);
     input.endFrame();
   });
 
@@ -86,14 +105,17 @@ async function boot() {
   startLoop(dt => {
     renderer.info.reset();
     fx.render(dt);
-    dbg?.(dt);
+    quality.update(dt);
+    dbg?.(dt, quality.ratio);
   });
   $('loading').textContent = '';
 
   // bench(n): median GPU+CPU ms per full frame, measured synchronously (not limited by rAF throttling)
-  const bench = (n = 20) => {
+  const bench = (n = 20, warm = 30) => {
     const gl = renderer.getContext(), px = new Uint8Array(4), ms = [];
+    for (let i = 0; i < warm; i++) tick(1 / 60);          // let camera/LOD settle at the new spot
     for (let i = 0; i < n; i++) {
+      tick(1 / 60);
       const t = performance.now();
       renderer.info.reset();
       fx.render(1 / 60);
@@ -103,7 +125,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, fx, sea, lights, layout, town, nature, bench };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, bench };
 }
 
 function debugOverlay(renderer, camera) {
@@ -111,12 +133,12 @@ function debugOverlay(renderer, camera) {
   el.hidden = false;
   renderer.info.autoReset = false;
   let acc = 0, frames = 0;
-  return dt => {
+  return (dt, ratio) => {
     acc += dt; frames++;
     if (acc < 0.5) return;
     const i = renderer.info.render, p = camera.position;
     el.textContent = `${(frames / acc).toFixed(0)} fps\ncalls ${i.calls}  tris ${(i.triangles / 1e6).toFixed(2)}M\n`
-      + `cam ${p.x.toFixed(0)}, ${p.y.toFixed(1)}, ${p.z.toFixed(0)}`;
+      + `cam ${p.x.toFixed(0)}, ${p.y.toFixed(1)}, ${p.z.toFixed(0)}  res ×${ratio.toFixed(2)}`;
     acc = frames = 0;
   };
 }

@@ -11,6 +11,7 @@ import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftS
 import { ATMOS } from '../shared/palette.js';
 
 const AO_SCALE = 0.5;
+const AO_RANGE = 160, AO_MAX_HEIGHT = 350;   // AO only near the focus; off from high up
 
 const GradeShader = {
   uniforms: {
@@ -48,6 +49,8 @@ export function createPostFX(renderer, scene, camera) {
   gtao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.5, thickness: 1.2, scale: 1.0, samples: 12 });
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
   gtao.blendIntensity = 0.85;
+  // reuse the main pass's depth (normals rebuilt from it) instead of re-rendering the scene
+  gtao.setGBuffer(target.depthTexture);
   const gtaoSetSize = gtao.setSize.bind(gtao);
   gtao.setSize = (w, h) => gtaoSetSize(Math.ceil(w * AO_SCALE), Math.ceil(h * AO_SCALE));
   composer.addPass(gtao);
@@ -77,5 +80,21 @@ export function createPostFX(renderer, scene, camera) {
     tiltH.uniforms.r.value = tiltV.uniforms.r.value = focusY;
   }
 
-  return { composer, gtao, grade, setSize, setTiltShift, render: dt => composer.render(dt) };
+  // AO is a close-up effect; far away the depth-rebuilt normals just make streaks
+  const box = new THREE.Box3();
+  function setFocus(p, camHeight) {
+    gtao.enabled = camHeight < AO_MAX_HEIGHT;
+    box.min.set(p.x - AO_RANGE, p.y - 60, p.z - AO_RANGE);
+    box.max.set(p.x + AO_RANGE, p.y + 80, p.z + AO_RANGE);
+    gtao.setSceneClipBox(box);
+  }
+
+  function render(dt) {
+    // the composer swaps its two targets; point GTAO at the depth the RenderPass is about to write
+    const depth = composer.readBuffer.depthTexture;
+    gtao.gtaoMaterial.uniforms.tDepth.value = gtao.pdMaterial.uniforms.tDepth.value = depth;
+    composer.render(dt);
+  }
+
+  return { composer, gtao, grade, setSize, setTiltShift, setFocus, render };
 }

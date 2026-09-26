@@ -17,7 +17,7 @@ const RULES = [
 ];
 const HILL = { height: 14, bonus: { rainTree: 0.5, casuarina: 0.25 } };   // forest on Khao Sam Muk
 const VARIANTS = 2;
-const LOD = { near: 260, rebuild: 20 };   // metres
+const LOD = { near: 150, rebuild: 15 };   // metres
 const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
 
 export function buildNature(map, ctx) {

@@ -17,6 +17,7 @@ const BEACH = {
   tableChance: 0.3,              // blocks that use plastic tables instead of deck chairs
   rentalChance: 0.5,             // blocks that start with an inner-tube stall
 };
+const CHUNK = 384;
 const STREET = { roads: ['secondary', 'tertiary'], poleEvery: 34, sag: 0.7, cableColor: '#2e2e2e' };
 
 export function buildBeach(map, ctx, kit) {
@@ -63,13 +64,20 @@ export function buildBeach(map, ctx, kit) {
   }
 
   const group = new THREE.Group(), mat = getMaterial('wall');
+  // one InstancedMesh per map chunk, so off-screen chunks are culled (main and shadow pass)
   const make = (geo, list, shadow = true) => {
-    if (!list.length) return;
-    const mesh = new THREE.InstancedMesh(geo, mat, list.length);
-    list.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, it.c); });
-    mesh.castShadow = shadow; mesh.receiveShadow = true;
-    mesh.computeBoundingSphere();
-    group.add(mesh);
+    const chunks = new Map();
+    for (const it of list) {
+      const e = it.m.elements, k = `${Math.floor(e[12] / CHUNK)},${Math.floor(e[14] / CHUNK)}`;
+      (chunks.get(k) || chunks.set(k, []).get(k)).push(it);
+    }
+    for (const items of chunks.values()) {
+      const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+      items.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, it.c); });
+      mesh.castShadow = shadow; mesh.receiveShadow = true;
+      mesh.computeBoundingSphere();
+      group.add(mesh);
+    }
   };
   make(P.umbrellaCanopy(), lists.canopy);
   make(P.umbrellaPole(), lists.pole);
@@ -80,7 +88,7 @@ export function buildBeach(map, ctx, kit) {
   const poles = buildPoles(map, ctx, kit, r);
   make(P.powerPole(), poles);
 
-  return { group, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
+  return { group, poles, counts: Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.length]).concat([['poles', poles.length]])) };
 }
 
 /** Power poles on the land side of main roads, with three sagging cables between them. */

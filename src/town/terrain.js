@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { paintedMaterial } from '../world/materials.js';
 import { PALETTE } from '../shared/palette.js';
 
-const OUTER_HALF = 8000, OUTER_STEP = 40;
+const OUTER_HALF = 8000, OUTER_STEP = 80;
+const TILE = 75;        // core terrain tile size in grid cells (600 m) for frustum culling
 const BEACH_W = 34;     // metres of sand behind the waterline (up to the promenade)
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
@@ -97,16 +98,45 @@ function outerMesh(map) {
   return g;
 }
 
+/** Cut the full core grid into TILE×TILE tiles (shared edge vertices, normals from the full grid). */
+function tiles(g, nx, nz) {
+  const out = [], P = g.attributes.position.array, N = g.attributes.normal.array, C = g.attributes.color.array;
+  for (let tj = 0; tj < nz - 1; tj += TILE) for (let ti = 0; ti < nx - 1; ti += TILE) {
+    const w = Math.min(TILE, nx - 1 - ti) + 1, h = Math.min(TILE, nz - 1 - tj) + 1;
+    const pos = new Float32Array(w * h * 3), nrm = new Float32Array(w * h * 3), col = new Float32Array(w * h * 3), idx = [];
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const src = ((tj + j) * nx + ti + i) * 3, dst = (j * w + i) * 3;
+      pos.set(P.subarray(src, src + 3), dst); nrm.set(N.subarray(src, src + 3), dst); col.set(C.subarray(src, src + 3), dst);
+    }
+    for (let j = 0; j < h - 1; j++) for (let i = 0; i < w - 1; i++) {
+      const a = j * w + i, b = a + w;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    const t = new THREE.BufferGeometry();
+    t.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    t.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+    t.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    t.setIndex(idx);
+    t.computeBoundingSphere();
+    out.push(t);
+  }
+  return out;
+}
+
 export function buildTerrain(map) {
   const dist = seaDistance(map);
   const mat = paintedMaterial({ amp: 0.3, scale: 18 });
-  const core = new THREE.Mesh(coreMesh(map, dist), mat);
-  core.receiveShadow = true;
-  core.name = 'terrain-core';
+  const group = new THREE.Group();
+  for (const t of tiles(coreMesh(map, dist), map.core.nx, map.core.nz)) {
+    const m = new THREE.Mesh(t, mat);
+    m.receiveShadow = true;
+    m.matrixAutoUpdate = false;
+    m.name = 'terrain-core';
+    group.add(m);
+  }
   const outer = new THREE.Mesh(outerMesh(map), mat);
   outer.receiveShadow = true;
   outer.name = 'terrain-outer';
-  const group = new THREE.Group();
-  group.add(core, outer);
+  group.add(outer);
   return { group, seaDist: dist };
 }

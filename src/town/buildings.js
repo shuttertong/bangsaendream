@@ -90,9 +90,12 @@ function placeRun(kit, map, r, run, kind, occ, counts) {
   y = Math.max(y, map.sea);
   const main = kind === 'secondary' || kind === 'tertiary';
   const W = FRONTAGE.lot * n;
-  counts.rows.push({ x, z: zz, ry, n, D, road: kind });
+  const row = { x, z: zz, ry, n, D, road: kind, top: y + 14 - map.heightAt(x, zz) };
+  counts.rows.push(row);
   if (main && n >= 5 && D >= 12 && r.chance(FRONTAGE.condoChance)) {
-    condoBlock(kit, r, { x, y, z: zz, ry, width: W - 1, D, floors: 6 + Math.floor(r() * 7) });
+    const floors = 6 + Math.floor(r() * 7);
+    condoBlock(kit, r, { x, y, z: zz, ry, width: W - 1, D, floors });
+    row.top = floors * 3.2 + 3;
     counts.condo++;
   } else if (n === 2 && r.chance(FRONTAGE.houseChance)) {
     // detached house set back a little, with a yard

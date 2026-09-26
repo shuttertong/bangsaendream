@@ -5,6 +5,9 @@ let last = 0, time = 0, running = false;
 
 export function addSystem(fn) { systems.push(fn); }
 
+/** Advance all systems by dt without rendering (tests / benchmarks). */
+export function tick(dt) { time += dt; for (const fn of systems) fn(dt, time); }
+
 export function startLoop(render) {
   if (running) return;
   running = true;
