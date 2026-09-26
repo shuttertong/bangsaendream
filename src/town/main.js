@@ -6,6 +6,7 @@ import { createFog } from '../world/haze.js';
 import { createSea } from '../world/water.js';
 import { createPostFX } from '../world/postfx.js';
 import { createInput } from '../core/input.js';
+import { createTouchControls } from '../core/touch.js';
 import { addSystem, startLoop, tick } from '../core/loop.js';
 import { U } from '../core/shaderPatch.js';
 import { createQuality } from '../core/quality.js';
@@ -64,6 +65,7 @@ async function boot() {
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles });
   const input = createInput($('c'));
+  createTouchControls($('hud'), input);
   const player = createPlayer(scene, map, collision, input);
   player.place(START.x, START.z, START.yaw);
   const tpc = createThirdPersonCamera(camera, input, map, collision);
@@ -77,11 +79,13 @@ async function boot() {
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
     camera.aspect = innerWidth / innerHeight;
+    camera.fov = camera.aspect < 1 ? 64 : 50;          // portrait phones: see more around the kid
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight, false);
     fx.setSize(innerWidth, innerHeight);
   };
   addEventListener('resize', resize);
+  resize();
   const quality = createQuality(renderer, resize);
 
   addSystem((dt, time) => {

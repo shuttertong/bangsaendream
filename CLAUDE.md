@@ -100,7 +100,7 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
 │   ├── bake_map.py          # OSM + DEM → json/bin
 │   └── bangsaen-map.html    # standalone map viewer + exporter
 └── src/
-    ├── core/      input.js, shaderPatch.js, audio.js, loop.js (tick() for tests), rng.js, quality.js (dynamic resolution)
+    ├── core/      input.js (keys, mouse, touch, pinch), touch.js (on-screen joystick + jump), shaderPatch.js, audio.js, loop.js (tick() for tests), rng.js, quality.js (dynamic resolution)
     ├── shared/    progress.js, items.js, i18n.js (TH/EN strings), palette.js
     ├── world/     render.js, postfx.js, haze.js, sky.js, water.js, materials.js, textures.js, foliage.js (leaf atlas + billboard cards)
     ├── town/      main.js, data.js, terrain.js, freecam.js (M1 orbit camera + ?view= presets), roads.js, buildings.js, nature.js,
@@ -297,6 +297,9 @@ Use it instead of the FPS counter when the browser tab is not focused, because t
 
 ```bash
 python3 tools/serve.py 8000      # no-cache dev server (python3 -m http.server also works); open http://localhost:8000
+# phone / iPad on the same Wi-Fi: http://<this Mac's IP>:8000 (ipconfig getifaddr en0)
+#   touch: left thumb = floating joystick (push to the rim to run), right side drag = camera,
+#   pinch = zoom, round button = jump. Desktop: WASD / arrows, Shift run, Space jump, drag, wheel, Q/E
 # debug overlay:        http://localhost:8000/?debug=1
 # jump to a mini-game:  http://localhost:8000/?game=crab
 ```

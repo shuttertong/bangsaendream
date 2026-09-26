@@ -8,6 +8,7 @@ const MOVE = {
   turn: 11,                     // rad/s toward the move direction
   jump: 4.4, gravity: 13,
   radius: 0.28,
+  runStick: 0.8,                // joystick push (0..1) that switches to running
 };
 
 export function createPlayer(scene, map, collision, input) {
@@ -22,10 +23,11 @@ export function createPlayer(scene, map, collision, input) {
 
   /** camYaw: the camera's yaw, so "forward" means away from the camera. */
   function update(dt, camYaw) {
-    const f = (input.down('KeyW') || input.down('ArrowUp') ? 1 : 0) - (input.down('KeyS') || input.down('ArrowDown') ? 1 : 0);
-    const r = (input.down('KeyD') || input.down('ArrowRight') ? 1 : 0) - (input.down('KeyA') || input.down('ArrowLeft') ? 1 : 0);
+    const { f, r, mag } = input.axis();                       // keys or on-screen joystick
     const len = Math.hypot(f, r);
-    const top = input.down('ShiftLeft') || input.down('ShiftRight') ? MOVE.run : MOVE.walk;
+    // Shift runs; on the joystick, pushing past `runStick` runs and less walks slower
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    const top = shift || mag > MOVE.runStick ? MOVE.run : MOVE.walk * Math.max(0.45, mag / MOVE.runStick);
     // forward = away from camera
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
     const wx = len ? (fx * f + rx * r) / len * top : 0, wz = len ? (fz * f + rz * r) / len * top : 0;
@@ -53,7 +55,7 @@ export function createPlayer(scene, map, collision, input) {
 
     // vertical: jump and gravity
     const g = ground(p.x, p.z);
-    if (p.grounded && input.down('Space')) { p.vy = MOVE.jump; p.grounded = false; }
+    if (p.grounded && (input.down('Space') || input.jump)) { p.vy = MOVE.jump; p.grounded = false; }
     if (!p.grounded) {
       p.vy -= MOVE.gravity * dt;
       p.y += p.vy * dt;
