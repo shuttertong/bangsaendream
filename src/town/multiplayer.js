@@ -1,17 +1,20 @@
 // Local Wi-Fi multiplayer in the hub: other players on the same network appear as kids
-// in their chosen looks, with name tags, preset-phrase speech bubbles and emotes. Needs
+// in their chosen looks, with name tags, preset-phrase speech bubbles and emotes. The red
+// trucks are shared: the host player's game drives them (snapshots 10×/s), everyone else
+// follows, riders are drawn on each viewer's own copy of the truck. Needs
 // the relay in tools/serve.py; without it the game stays single-player and none of this
 // UI shows. Names, looks and phrases travel as indices (see shared/avatar.js).
 import * as THREE from 'three';
 import { connect } from '../core/net.js';
 import { createKid } from './kid/index.js';
-import { seatPose } from './player.js';
+import { seatPose, SEAT_HIP } from './player.js';
 import { lookOf, nameOf, wearLook, saveProfile, reroll } from '../shared/avatar.js';
 import { PHRASES, EMOTES } from '../shared/phrases.js';
 import { t, tr, onLang } from '../shared/i18n.js';
 
 const MP = {
   sendHz: 10, keepAlive: 2,          // state updates per second; resend when idle
+  truckHz: 10,                       // host: truck snapshots per second
   delay: 0.15,                       // interpolation delay (s) — smooths out network jitter
   tagRange: 40, maxTags: 16,         // name tags for the nearest players within this range
   bubble: 4,                         // seconds a phrase bubble stays up
@@ -20,7 +23,14 @@ const MP = {
 
 export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy }) {
   const remotes = new Map();
-  let myId = null, sendT = 0, keepT = 0, last = '';
+  let myId = null, hostId = null, sendT = 0, keepT = 0, truckT = 0, last = '';
+  const trucks = hub.trucks, slotOf = id => id % trucks.seats;
+  trucks.onHoldRequest = (i, on) => net?.send({ t: 'hold', i, on });
+  document.addEventListener('visibilitychange', () => net?.send({ t: 'vis', on: document.visibilityState === 'visible' }));
+  function setHost(id) {
+    hostId = id;
+    trucks.setMode(id == null || !myId ? 'local' : id === myId ? 'host' : 'follow');
+  }
   const ground = (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea - collision.wade);
   const now = () => performance.now() / 1000;
 
@@ -121,15 +131,19 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   }
   function push(r, s) {
     r.buf.push({ ...s, t: now() });
+    r.last = r.buf[r.buf.length - 1];
     if (r.buf.length > 30) r.buf.shift();
   }
 
   const net = connect({
     onOpen: () => net.send({ t: 'hello', ...profile }),
-    onClose: () => { for (const id of [...remotes.keys()]) remove(id); myId = null; btn.classList.remove('on'); },
+    onClose: () => { for (const id of [...remotes.keys()]) remove(id); myId = null; hub.seatSlot = 0; setHost(null); btn.classList.remove('on'); },
     onMessage: m => {
       if (m.t === 'welcome') {
         myId = m.id; btn.classList.add('on');
+        hub.seatSlot = slotOf(myId);
+        net.send({ t: 'vis', on: document.visibilityState === 'visible' });   // hidden tabs can't host the trucks
+        setHost(m.host);
         for (const p of m.players) add(p);
         last = '';                                            // send our state right away
       } else if (m.t === 'join') {
@@ -142,6 +156,14 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
         const r = remotes.get(m.id);
         if (r) hub.hud?.toast(t('mpLeft', { name: nameOf(r.n1, r.n2) }));
         remove(m.id);
+        for (const tk of trucks.trucks) tk.holds.delete(m.id);           // their pull-over requests go with them
+      } else if (m.t === 'host') {
+        setHost(m.id);
+      } else if (m.t === 'trucks') {
+        if (trucks.mode === 'follow') trucks.sync(m.s);
+      } else if (m.t === 'hold') {
+        const tk = trucks.trucks[m.i];
+        if (tk && trucks.mode === 'host') trucks.setHold(tk, m.on, m.id);
       } else if (m.t === 'state') {
         const r = remotes.get(m.id);
         if (r) { push(r, m); r.kid.mesh.visible = true; }
@@ -200,18 +222,32 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     sendT -= dt; keepT -= dt;
     if (net?.online && myId && sendT <= 0) {
       sendT = 1 / MP.sendHz;
-      const p = player.state, s = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pose: hub.pose, busy: busy() || null, air: !p.grounded };
+      const p = player.state, s = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pose: hub.pose, busy: busy() || null, air: !p.grounded, ride: hub.ride };
       const key = JSON.stringify(s);
       if (key !== last || keepT <= 0) { net.send({ t: 'state', ...s }); last = key; keepT = MP.keepAlive; }
     }
+    // host: keep the shared trucks running (also while we're in a mini-game) and broadcast them
+    if (trucks.mode === 'host') {
+      if (!active) trucks.update(dt, trucks.extra);
+      truckT -= dt;
+      if (truckT <= 0) { truckT = 1 / MP.truckHz; net.send({ t: 'trucks', s: trucks.snapshot() }); }
+    }
+    // the trucks brake for other players in the road too
+    trucks.extra = [...remotes.values()].filter(r => r.last && !r.last.busy).map(r => ({ x: r.last.x, z: r.last.z, ride: r.last.ride != null ? trucks.trucks[r.last.ride] : null }));
     layer.hidden = !active;
     if (!active) return;
 
     for (const r of remotes.values()) {
       const s = sample(r);
       if (!s) continue;
-      const B = r.kid.bones;
-      if (s.pose) {
+      const B = r.kid.bones, tk = s.ride != null ? trucks.trucks[s.ride] : null;
+      if (tk) {
+        // riding: sit in their seat on OUR copy of the truck (no lag behind it)
+        trucks.seat(tk, v, slotOf(r.id));
+        r.kid.mesh.position.set(v.x, v.y - SEAT_HIP, v.z); r.kid.mesh.rotation.y = trucks.seatYaw(tk, slotOf(r.id));
+        seatPose(B, 'bench');
+        r.prev = null;
+      } else if (s.pose) {
         r.kid.mesh.position.set(s.x, s.y, s.z); r.kid.mesh.rotation.y = s.yaw;
         seatPose(B, s.pose);
         r.prev = null;
@@ -244,5 +280,5 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     me.bubble.classList.toggle('on', me.bubbleT > 0);
   }
 
-  return { update, remotes, get online() { return !!(net?.online && myId); }, say, emote, debug: { net, sample } };
+  return { update, remotes, get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
 }

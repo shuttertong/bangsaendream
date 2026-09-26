@@ -92,7 +92,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
 
   // red songthaews on the beach road
   const trucks = createSongthaews(scene, map);
-  let riding = null, nearTruck = null, alighting = 0;
+  let riding = null, nearTruck = null, alighting = 0, seatSlot = 0;
   const seatPos = new THREE.Vector3();
   function board(tk) {
     riding = tk;
@@ -104,7 +104,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   function hopOff() {
     if (!riding) return;
-    riding.hold = true;                       // the driver pulls over; we step off once it has stopped
+    trucks.setHold(riding, true);             // the driver pulls over; we step off once it has stopped
     alighting = 1;
   }
   function finishHopOff() {
@@ -113,7 +113,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     for (let r = 0; r < 6 && !collision.free(x, z, 0.3); r += 0.5) { x = d.x + Math.cos(r * 3) * r; z = d.z + Math.sin(r * 3) * r; }
     player.place(x, z, tk.yaw + Math.PI / 2);
     riding = null; alighting = 0;
-    setTimeout(() => { tk.hold = false; }, 1200);
+    setTimeout(() => trucks.setHold(tk, false), 1200);
   }
 
   // deck chairs (rented) and public benches (free)
@@ -138,7 +138,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   };
   talk.onEnd = () => { talkingTo = null; hud.hideDuringTalk(false); document.body.classList.remove('talking'); };
 
-  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { riding.hold = false; riding = null; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act });
+  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { trucks.setHold(riding, false); riding = null; alighting = 0; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act });
   let quest = updateQuests(toast);
   hud.setGoal(() => questText(quest));
   P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
@@ -163,6 +163,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   return {
     places, people, talk, travel, hud, trucks, seats,
     get riding() { return riding; },
+    /** Which truck we ride (index, for other players) and which bench seat we take. */
+    get ride() { return riding ? riding.i : null; },
+    set seatSlot(v) { seatSlot = v; },
     /** Riding a truck or sitting down: the hub poses the kid, player.update() is skipped. */
     get seated() { return !!(riding || seats.seated); },
     /** Sitting pose for other players to see: null, 'bench' or 'lounge'. */
@@ -178,10 +181,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     get frozen() { return talk.active || travel.open; },
     update(dt) {
       const p = player.state;
-      trucks.update(dt, p, riding, camera.cam?.position);
+      trucks.update(dt, [{ x: p.x, z: p.z, ride: riding }, ...trucks.extra], camera.cam?.position);
       if (riding) {
-        // sit on the bench; hop off once the truck has pulled over
-        player.sit(trucks.seat(riding, seatPos), riding.yaw - Math.PI / 2);
+        // sit on the bench (our own seat when friends ride too); hop off once the truck has pulled over
+        player.sit(trucks.seat(riding, seatPos, seatSlot), trucks.seatYaw(riding, seatSlot));
         if (alighting && riding.v < 0.3) finishHopOff();
       } else {
         // trucks are solid: push the kid out of any truck's footprint

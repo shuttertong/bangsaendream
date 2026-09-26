@@ -142,9 +142,14 @@ async function boot() {
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
 
+  // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
+  let bots = null;
+  if (params.has('bots')) import('./mpbots.js').then(m => { bots = m.createBots(+params.get('bots') || 3, { map, lift, collision, trucks: hub.trucks, player }); });
+
   addSystem((dt, time) => {
     U.time.value = time;
     mp.update(dt, !game && !free);
+    bots?.update(dt);
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
@@ -191,7 +196,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
