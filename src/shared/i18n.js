@@ -68,6 +68,14 @@ const STRINGS = {
     shooed: 'ไล่ลิง',
     saved: 'เหลือ {n} ชิ้น',
     times: '{n} ตัว',
+    // ห่วงยาง
+    tubeTitle: 'ลอยห่วงยาง',
+    tubeHow: 'พายห่วงยางเก็บเปลือกหอยและของที่ลอยมากับคลื่น ขี่ยอดคลื่นเข้าหาฝั่งจะไปได้เร็วขึ้น ระวังแมงกะพรุน!',
+    tubeKeys: 'พาย: WASD / จอยสติ๊ก · พายแรง ๆ: Space / ปุ่ม (ใช้แรง)',
+    tubeGot: 'เก็บได้! {name}',
+    tubeSting: 'โดนแมงกะพรุน! โอ๊ย!',
+    tubeSurf: 'โต้คลื่น!',
+    stamina: 'แรง',
   },
   en: {
     loading: 'Loading map…',
@@ -131,6 +139,13 @@ const STRINGS = {
     shooed: 'Monkeys shooed',
     saved: '{n} left',
     times: '{n}',
+    tubeTitle: 'Inner-tube float',
+    tubeHow: 'Paddle your tube to collect shells and treasures bobbing in the waves. Ride a crest toward the shore to go faster. Watch out for jellyfish!',
+    tubeKeys: 'Paddle: WASD / joystick · Big stroke: Space / button (uses stamina)',
+    tubeGot: 'Found: {name}',
+    tubeSting: 'Jellyfish sting! Ouch!',
+    tubeSurf: 'Surfing!',
+    stamina: 'Stamina',
   },
 };
 

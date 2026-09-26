@@ -4,14 +4,17 @@ import { ITEMS } from './shared/items.js';
 import { SPECIES as CRABS } from './crab/species.js';
 import { SPECIES as SQUID } from './squid/species.js';
 import { SNACKS } from './monkey/species.js';
+import { FINDS } from './tube/species.js';
 
 export const GAMES = {
   crab: { load: () => import('./crab/index.js') },
   squid: { load: () => import('./squid/index.js') },
   monkey: { load: () => import('./monkey/index.js') },
-  // tube, stall: M5
+  tube: { load: () => import('./tube/index.js') },
+  // stall: M5
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
 for (const s of SQUID) ITEMS[`squid_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
 for (const s of SNACKS) ITEMS[`monkey_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
+for (const s of FINDS) ITEMS[`tube_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };
