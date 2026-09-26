@@ -15,8 +15,8 @@ const TUNE = {
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 
-export function createKid(scene) {
-  const { mesh, bones: B } = buildKid();
+export function createKid(scene, look) {
+  const { mesh, bones: B } = buildKid(look);
   scene.add(mesh);
   const s = {
     phase: 0, speed: 0, lean: 0, side: 0, t: 0,

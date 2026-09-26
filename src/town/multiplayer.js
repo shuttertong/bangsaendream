@@ -1,0 +1,248 @@
+// Local Wi-Fi multiplayer in the hub: other players on the same network appear as kids
+// in their chosen looks, with name tags, preset-phrase speech bubbles and emotes. Needs
+// the relay in tools/serve.py; without it the game stays single-player and none of this
+// UI shows. Names, looks and phrases travel as indices (see shared/avatar.js).
+import * as THREE from 'three';
+import { connect } from '../core/net.js';
+import { createKid } from './kid/index.js';
+import { seatPose } from './player.js';
+import { lookOf, nameOf, wearLook, saveProfile, reroll } from '../shared/avatar.js';
+import { PHRASES, EMOTES } from '../shared/phrases.js';
+import { t, tr, onLang } from '../shared/i18n.js';
+
+const MP = {
+  sendHz: 10, keepAlive: 2,          // state updates per second; resend when idle
+  delay: 0.15,                       // interpolation delay (s) — smooths out network jitter
+  tagRange: 40, maxTags: 16,         // name tags for the nearest players within this range
+  bubble: 4,                         // seconds a phrase bubble stays up
+  emote: { wave: 2.2, dance: 3.5, cheer: 1.6, heart: 2 },
+};
+
+export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy }) {
+  const remotes = new Map();
+  let myId = null, sendT = 0, keepT = 0, last = '';
+  const ground = (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea - collision.wade);
+  const now = () => performance.now() / 1000;
+
+  // ---------- UI: chat button, phrase / emote / profile panel, tags, bubbles ----------
+  const layer = document.createElement('div');
+  layer.className = 'mp-layer';
+  root.appendChild(layer);
+  const btn = document.createElement('button');
+  btn.className = 'b-chat';
+  btn.innerHTML = '💬<i></i>';
+  const btns = root.querySelector('#ui .btns');
+  btns?.insertBefore(btn, btns.querySelector('.b-info'));
+  const panel = document.createElement('div');
+  panel.className = 'modal mp-panel';
+  root.appendChild(panel);
+  const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(e); };
+  btn.addEventListener('pointerdown', stop(() => { audio?.play('click'); toggle(); }));
+  panel.addEventListener('pointerdown', e => { if (e.target === panel) toggle(false); });
+  addEventListener('keydown', e => {
+    if (e.code === 'KeyT' && net?.online && !hub.frozen) toggle();
+    else if (e.code === 'Escape') toggle(false);
+  });
+
+  function drawPanel() {
+    const looks = [['shirt', '👕'], ['bottom', '🩳'], ['hat', '👒'], ['hatColor', '🎨'], ['hair', '💇'], ['skin', '🧒']];
+    panel.innerHTML = `<div class="panel">
+      <h2>${t('mpTitle')} <small>${t('mpOnline', { n: remotes.size + 1 })}</small></h2>
+      <div class="mp-me"><b>${nameOf(profile.n1, profile.n2)}</b><button data-r="name">🎲 ${t('mpNewName')}</button>
+        ${looks.map(([k, ic]) => `<button data-r="${k}" title="${k}">${ic}</button>`).join('')}</div>
+      <div class="mp-phrases">${PHRASES.map((p, i) => `<button data-p="${i}">${p.icon} ${tr(p)}</button>`).join('')}</div>
+      <div class="mp-emotes">${EMOTES.map(e => `<button data-e="${e.id}">${e.icon}</button>`).join('')}</div>
+      <button class="close">${t('close')}</button></div>`;
+    panel.querySelector('.close').addEventListener('pointerdown', stop(() => toggle(false)));
+    for (const b of panel.querySelectorAll('[data-p]')) b.addEventListener('pointerdown', stop(() => { say(+b.dataset.p); toggle(false); }));
+    for (const b of panel.querySelectorAll('[data-e]')) b.addEventListener('pointerdown', stop(() => { emote(b.dataset.e); toggle(false); }));
+    for (const b of panel.querySelectorAll('[data-r]')) b.addEventListener('pointerdown', stop(() => {
+      reroll(profile, b.dataset.r);
+      saveProfile(profile);
+      if (b.dataset.r !== 'name') { wearLook(profile.look); player.setLook(lookOf(profile.look)); }
+      net?.send({ t: 'hello', ...profile });
+      audio?.play('click');
+      drawPanel();
+    }));
+  }
+  function toggle(on = !panel.classList.contains('on')) {
+    if (on) drawPanel();
+    panel.classList.toggle('on', on);
+  }
+  const refreshCount = () => { btn.querySelector('i').textContent = remotes.size ? remotes.size + 1 : ''; };
+  onLang(() => { for (const r of remotes.values()) r.tag.firstChild.textContent = nameOf(r.n1, r.n2); if (panel.classList.contains('on')) drawPanel(); });
+
+  function bubbleFor(owner, text) {
+    owner.bubble.textContent = text;
+    owner.bubble.classList.add('on');
+    owner.bubbleT = MP.bubble;
+  }
+
+  // ---------- local player ----------
+  const me = { bubble: Object.assign(document.createElement('div'), { className: 'mp-bubble' }), bubbleT: 0, emote: null, emoteT: 0 };
+  layer.appendChild(me.bubble);
+  function say(i) {
+    net?.send({ t: 'say', p: i });
+    bubbleFor(me, `${PHRASES[i].icon} ${tr(PHRASES[i])}`);
+    audio?.play('click');
+  }
+  function emote(e) {
+    net?.send({ t: 'emote', e });
+    Object.assign(me, { emote: e, emoteT: MP.emote[e] });
+    if (e === 'heart') bubbleFor(me, '❤️');
+  }
+
+  // ---------- remote players ----------
+  function add(p) {
+    remove(p.id);
+    const kid = createKid(scene, lookOf(p.look));
+    const tag = document.createElement('div');
+    tag.className = 'mp-tag';
+    tag.innerHTML = `<span></span><i></i>`;
+    tag.firstChild.textContent = nameOf(p.n1, p.n2);
+    const bubble = document.createElement('div');
+    bubble.className = 'mp-bubble';
+    layer.append(tag, bubble);
+    const r = { id: p.id, n1: p.n1, n2: p.n2, kid, tag, bubble, bubbleT: 0, emote: null, emoteT: 0, buf: [], shown: null, prev: null };
+    remotes.set(p.id, r);
+    if (p.state) push(r, p.state);
+    kid.mesh.visible = !!p.state;
+    refreshCount();
+    return r;
+  }
+  function remove(id) {
+    const r = remotes.get(id);
+    if (!r) return;
+    scene.remove(r.kid.mesh);
+    r.kid.mesh.traverse(o => o.geometry?.dispose?.());
+    r.tag.remove(); r.bubble.remove();
+    remotes.delete(id);
+    refreshCount();
+  }
+  function push(r, s) {
+    r.buf.push({ ...s, t: now() });
+    if (r.buf.length > 30) r.buf.shift();
+  }
+
+  const net = connect({
+    onOpen: () => net.send({ t: 'hello', ...profile }),
+    onClose: () => { for (const id of [...remotes.keys()]) remove(id); myId = null; btn.classList.remove('on'); },
+    onMessage: m => {
+      if (m.t === 'welcome') {
+        myId = m.id; btn.classList.add('on');
+        for (const p of m.players) add(p);
+        last = '';                                            // send our state right away
+      } else if (m.t === 'join') {
+        const r = remotes.get(m.id);
+        if (r && r.n1 === m.n1 && r.n2 === m.n2) { add(m); return; }   // look changed
+        add(m);
+        hub.hud?.toast(t('mpJoined', { name: nameOf(m.n1, m.n2) }));
+        audio?.play('coin');
+      } else if (m.t === 'leave') {
+        const r = remotes.get(m.id);
+        if (r) hub.hud?.toast(t('mpLeft', { name: nameOf(r.n1, r.n2) }));
+        remove(m.id);
+      } else if (m.t === 'state') {
+        const r = remotes.get(m.id);
+        if (r) { push(r, m); r.kid.mesh.visible = true; }
+      } else if (m.t === 'say') {
+        const r = remotes.get(m.id), p = PHRASES[m.p];
+        if (r && p) { bubbleFor(r, `${p.icon} ${tr(p)}`); audio?.play('click'); }
+      } else if (m.t === 'emote') {
+        const r = remotes.get(m.id);
+        if (r && MP.emote[m.e]) { Object.assign(r, { emote: m.e, emoteT: MP.emote[m.e] }); if (m.e === 'heart') bubbleFor(r, '❤️'); }
+      }
+    },
+  });
+
+  /** Interpolated state `delay` seconds in the past. */
+  function sample(r) {
+    const rt = now() - MP.delay, b = r.buf;
+    if (!b.length) return null;
+    let i = b.length - 1;
+    while (i > 0 && b[i - 1].t > rt) i--;
+    const B = b[i], A = b[Math.max(0, i - 1)];
+    if (A === B || B.t <= A.t || rt >= B.t) return B;
+    const k = Math.max(0, Math.min(1, (rt - A.t) / (B.t - A.t)));
+    let dy = B.yaw - A.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    return { ...B, x: A.x + (B.x - A.x) * k, y: A.y + (B.y - A.y) * k, z: A.z + (B.z - A.z) * k, yaw: A.yaw + dy * k };
+  }
+
+  /** Emote bones on top of the walk/idle pose. */
+  function applyEmote(o, bones, dt, t) {
+    if (!o.emote) return;
+    o.emoteT -= dt;
+    if (o.emoteT <= 0) { o.emote = null; return; }
+    const B = bones, k = Math.min(1, o.emoteT * 3);
+    if (o.emote === 'wave') { B.armR.rotation.set(-2.6 * k, 0, -0.4 + Math.sin(t * 14) * 0.45); B.foreR.rotation.x = -0.5; }
+    else if (o.emote === 'dance') {
+      B.hips.rotation.z = Math.sin(t * 8) * 0.18; B.spine.rotation.z = -Math.sin(t * 8) * 0.25;
+      B.armL.rotation.set(-2.4 + Math.sin(t * 8) * 0.5, 0, 0.5); B.armR.rotation.set(-2.4 - Math.sin(t * 8) * 0.5, 0, -0.5);
+    } else if (o.emote === 'cheer') { B.armL.rotation.set(-2.9 * k, 0, 0.3); B.armR.rotation.set(-2.9 * k, 0, -0.3); B.foreL.rotation.x = B.foreR.rotation.x = 0; }
+  }
+
+  const v = new THREE.Vector3();
+  function place(el, obj, lift2) {
+    obj.mesh.updateMatrixWorld();
+    obj.bones.head.getWorldPosition(v);
+    v.y += lift2;
+    const d = v.distanceTo(camera.position);
+    v.project(camera);
+    const vis = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+    if (vis) { el.style.left = `${(v.x * 0.5 + 0.5) * innerWidth}px`; el.style.top = `${(-v.y * 0.5 + 0.5) * innerHeight}px`; }
+    return vis ? d : Infinity;
+  }
+
+  /** active = the hub is on screen (not in a mini-game). */
+  function update(dt, active) {
+    const tt = now();
+    // send our state (also while in a mini-game, so others see the 🎮 badge)
+    sendT -= dt; keepT -= dt;
+    if (net?.online && myId && sendT <= 0) {
+      sendT = 1 / MP.sendHz;
+      const p = player.state, s = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pose: hub.pose, busy: busy() || null, air: !p.grounded };
+      const key = JSON.stringify(s);
+      if (key !== last || keepT <= 0) { net.send({ t: 'state', ...s }); last = key; keepT = MP.keepAlive; }
+    }
+    layer.hidden = !active;
+    if (!active) return;
+
+    for (const r of remotes.values()) {
+      const s = sample(r);
+      if (!s) continue;
+      const B = r.kid.bones;
+      if (s.pose) {
+        r.kid.mesh.position.set(s.x, s.y, s.z); r.kid.mesh.rotation.y = s.yaw;
+        seatPose(B, s.pose);
+        r.prev = null;
+      } else {
+        const moved = r.prev ? Math.hypot(s.x - r.prev.x, s.z - r.prev.z) : 0;
+        let turn = r.prev ? s.yaw - r.prev.yaw : 0; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1);
+        const speed = dt > 0 ? Math.min(8, moved / dt) : 0;
+        r.kid.update(dt, { x: s.x, y: s.y, z: s.z, yaw: s.yaw, speed, dist: moved, accel: 0, turn, grounded: !s.air, vy: 0, groundAt: ground });
+        r.prev = { x: s.x, z: s.z, yaw: s.yaw };
+      }
+      applyEmote(r, B, dt, tt);
+      r.busy = s.busy;
+    }
+    applyEmote(me, player.kid.bones, dt, tt);
+
+    // name tags for the nearest players; bubbles
+    const tagged = [...remotes.values()].map(r => ({ r, d: r.kid.mesh.visible ? place(r.tag, r.kid, 0.55) : Infinity }))
+      .sort((a, b) => a.d - b.d);
+    tagged.forEach(({ r, d }, i) => {
+      const on = d < MP.tagRange && i < MP.maxTags;
+      r.tag.classList.toggle('on', on);
+      r.tag.lastChild.textContent = r.busy ? '🎮' : '';
+      r.bubbleT -= dt;
+      const bOn = r.bubbleT > 0 && d < MP.tagRange * 1.5;
+      if (bOn) place(r.bubble, r.kid, 0.95);
+      r.bubble.classList.toggle('on', bOn);
+    });
+    me.bubbleT -= dt;
+    if (me.bubbleT > 0) place(me.bubble, player.kid, 0.95);
+    me.bubble.classList.toggle('on', me.bubbleT > 0);
+  }
+
+  return { update, remotes, get online() { return !!(net?.online && myId); }, say, emote, debug: { net, sample } };
+}

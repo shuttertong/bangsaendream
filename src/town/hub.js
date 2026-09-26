@@ -165,6 +165,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     get riding() { return riding; },
     /** Riding a truck or sitting down: the hub poses the kid, player.update() is skipped. */
     get seated() { return !!(riding || seats.seated); },
+    /** Sitting pose for other players to see: null, 'bench' or 'lounge'. */
+    get pose() { return riding ? 'bench' : seats.seated ? (seats.seated.kind === 'chair' ? 'lounge' : 'bench') : null; },
     /** A mini-game finished: pay out, put catches in the bag, keep the best result. */
     finishGame(id, res) {
       if (res.baht) { P.addBaht(res.baht); toast(t('gotBaht', { n: res.baht })); }

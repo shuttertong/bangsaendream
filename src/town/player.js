@@ -12,8 +12,31 @@ const MOVE = {
 };
 
 /** lift(x, z): extra height of the walkable surface (road / pavement) above the terrain. */
+export const SEAT_HIP = 0.55;          // hips above the feet when sitting
+
+/**
+ * Bones for sitting: 'bench' = upright (songthaew, park bench, one hand on the rail);
+ * 'lounge' = lying back in a deck chair, hands behind the head. Also used for other players.
+ */
+export function seatPose(B, pose = 'bench') {
+  B.hips.position.y = SEAT_HIP;
+  if (pose === 'lounge') {
+    const back = 0.8;                                            // matches the chair's backrest
+    B.hips.rotation.set(-back, 0, 0);
+    for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.5 + back, 0, s === 'L' ? 0.06 : -0.06); B[`shin${s}`].rotation.x = 0.15; B[`foot${s}`].rotation.x = -0.3; }
+    B.armL.rotation.set(-2.7, 0, 0.9); B.armR.rotation.set(-2.7, 0, -0.9);
+    B.foreL.rotation.x = -2.0; B.foreR.rotation.x = -2.0;
+    B.spine.rotation.set(0, 0, 0); B.head.rotation.set(0.55, 0, 0);
+    return;
+  }
+  B.hips.rotation.set(0, 0, 0); B.head.rotation.set(0, 0, 0);
+  for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.45, 0, 0); B[`shin${s}`].rotation.x = 1.45; B[`foot${s}`].rotation.x = 0; }
+  B.armL.rotation.set(-0.3, 0, 0.35); B.armR.rotation.set(-2.9, 0, -0.2);
+  B.foreR.rotation.x = -0.3; B.spine.rotation.set(0, 0, 0);
+}
+
 export function createPlayer(scene, map, collision, input, lift = () => 0) {
-  const kid = createKid(scene);
+  let kid = createKid(scene);
   const p = { x: 0, y: 0, z: 0, yaw: 0, vx: 0, vz: 0, vy: 0, grounded: true, speed: 0, prevSpeed: 0, prevYaw: 0 };
   const ground = (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea - collision.wade);
 
@@ -80,30 +103,22 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
     p.yaw += d * Math.min(1, dt * 8);
   }
 
-  /**
-   * Sit with the hips at `seat`, facing `yaw`. pose 'bench' = upright (songthaew, park
-   * bench); 'lounge' = lying back in a deck chair, hands behind the head.
-   */
+  /** Sit with the hips at `seat`, facing `yaw` (see seatPose for the poses). */
   function sit(seat, yaw, pose = 'bench') {
-    const B = kid.bones;
-    p.x = seat.x; p.z = seat.z; p.y = seat.y - 0.55; p.yaw = yaw; p.speed = 0; p.vx = p.vz = 0;
+    p.x = seat.x; p.z = seat.z; p.y = seat.y - SEAT_HIP; p.yaw = yaw; p.speed = 0; p.vx = p.vz = 0;
     kid.mesh.position.set(seat.x, p.y, seat.z);
     kid.mesh.rotation.y = yaw;
-    B.hips.position.y = 0.55;
-    if (pose === 'lounge') {
-      const back = 0.8;                                            // matches the chair's backrest
-      B.hips.rotation.set(-back, 0, 0);
-      for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.5 + back, 0, s === 'L' ? 0.06 : -0.06); B[`shin${s}`].rotation.x = 0.15; B[`foot${s}`].rotation.x = -0.3; }
-      B.armL.rotation.set(-2.7, 0, 0.9); B.armR.rotation.set(-2.7, 0, -0.9);
-      B.foreL.rotation.x = -2.0; B.foreR.rotation.x = -2.0;
-      B.spine.rotation.set(0, 0, 0); B.head.rotation.set(0.55, 0, 0);
-      return;
-    }
-    B.hips.rotation.set(0, 0, 0); B.head.rotation.set(0, 0, 0);
-    for (const s of ['L', 'R']) { B[`leg${s}`].rotation.set(-1.45, 0, 0); B[`shin${s}`].rotation.x = 1.45; B[`foot${s}`].rotation.x = 0; }
-    B.armL.rotation.set(-0.3, 0, 0.35); B.armR.rotation.set(-2.9, 0, -0.2);   // one hand on the rail
-    B.foreR.rotation.x = -0.3; B.spine.rotation.set(0, 0, 0);
+    seatPose(kid.bones, pose);
   }
 
-  return { state: p, kid, place, update, faceTo, sit };
+  /** Swap the kid's look (multiplayer profile): rebuild the mesh in place. */
+  function setLook(look) {
+    const old = kid;
+    kid = createKid(scene, look);
+    kid.mesh.position.copy(old.mesh.position); kid.mesh.rotation.copy(old.mesh.rotation);
+    scene.remove(old.mesh);
+    old.mesh.traverse(o => o.geometry?.dispose?.());
+  }
+
+  return { state: p, get kid() { return kid; }, place, update, faceTo, sit, setLook };
 }

@@ -272,3 +272,25 @@ body.touch-on #game-ui .b-tilt { bottom: calc(130px + env(safe-area-inset-bottom
 #game-ui .k-panel .k-count { position: absolute; top: -9px; right: -2px; font: 600 11px Kanit, sans-serif; font-style: normal; background: #4a7a9a; color: #fff; border-radius: 8px; padding: 0 6px; }
 #game-ui .k-panel .k-count:empty { display: none; }
 @media (max-aspect-ratio: 1/1) { #game-ui .k-meter { top: 40%; height: 26vh; } }
+
+/* multiplayer: chat button, panel, name tags, speech bubbles */
+#ui .b-chat { display: none; position: relative; }
+#ui .b-chat.on { display: inline-flex; align-items: center; justify-content: center; }
+#ui .b-chat i { position: absolute; top: -4px; right: -4px; font: 600 11px Kanit, sans-serif; font-style: normal; background: #3a9a6a; color: #fff; border-radius: 9px; padding: 0 5px; }
+#ui .b-chat i:empty { display: none; }
+.mp-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mp-tag { position: absolute; transform: translate(-50%, -100%); font: 600 13px Kanit, sans-serif; color: #fff; background: rgba(30, 40, 50, .55); border-radius: 10px; padding: 1px 8px; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.mp-tag.on { opacity: 1; }
+.mp-tag i { font-style: normal; margin-left: 3px; }
+.mp-bubble { position: absolute; transform: translate(-50%, -100%); font: 600 15px Kanit, sans-serif; color: var(--ink, #3a3228); background: #fff; border-radius: 14px; padding: 5px 11px; white-space: nowrap; box-shadow: 0 3px 12px rgba(40, 20, 10, .3); opacity: 0; transition: opacity .2s; }
+.mp-bubble:after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: #fff; }
+.mp-bubble.on { opacity: 1; }
+.mp-panel .panel { max-width: 520px; }
+.mp-panel h2 small { font: 400 13px Sarabun, sans-serif; color: #8a7a66; margin-left: 6px; }
+.mp-panel .mp-me { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 10px; }
+.mp-panel .mp-me b { font: 600 17px Kanit, sans-serif; margin-right: auto; }
+.mp-panel .mp-phrases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.mp-panel .mp-emotes { display: flex; gap: 8px; justify-content: center; margin: 10px 0 4px; }
+.mp-panel .mp-emotes button { font-size: 26px; padding: 4px 12px; }
+.mp-panel button { border: 1.5px solid #e2c89a; background: #fff; border-radius: 12px; padding: 7px 8px; font: 500 14px Kanit, sans-serif; color: var(--ink, #3a3228); text-align: left; }
+.mp-panel button.close { text-align: center; }

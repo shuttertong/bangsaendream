@@ -7,4 +7,4 @@ export const KID_LOOK = {
   shirt: '#7fc4e8', bottom: 'shorts', bottomColor: '#34507a', hat: 'straw',
 };
 
-export const buildKid = () => buildPerson(KID_LOOK);
+export const buildKid = (look = KID_LOOK) => buildPerson(look);

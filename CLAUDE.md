@@ -294,6 +294,7 @@ Khao lam (2026-09-26, `src/khaolam/`, offered by Grandma): pick the kind custome
 Beach layout (2026-09-26, from the user's photos + satellite view), back from the waterline: open pale sand (0–13 m) → three rows of blue-and-white umbrella sets (`beach.js` rows 14/17.5/21; umbrella + chairs or table baked into one instance) → a dense palm band leaning seaward (rows 25/29/33; instance shear adds lean) with benches and tall floodlights → the brick promenade (the OSM `pedestrian` way; `roads.js` PROMENADE, and a generated one on the sea side of beachfront roads) lined with palms and stalls (`promenade.js`). Casuarinas and rain trees now start further back.
 Welcome sign roundabout (วงเวียนบางแสน / วงเวียนโลมา): `town/landmarks.js` + `assets/landmark.js`, centre fitted to the OSM ring ways (615.9, 1236.5). The bake clips the ring's inland arc; `completeRoundabout()` restores it. Travel stop `welcome`. A floating pontoon sits at Tom's landing.
 Occupancy boxes along the shore must be rotated to the shore direction (`occ.mark/test(..., ry)`), otherwise diagonal coast spots block each other.
+Multiplayer (2026-09-26, the user's choice: **local Wi-Fi only**, shared hub, preset-phrase chat): `tools/serve.py` relays WebSocket messages on `/mp` (stdlib only; whitelisted, type-checked fields). `core/net.js` connects only when served by it (static hosts stay single-player). `town/multiplayer.js` shows other players as kids with name tags, speech bubbles and emotes, interpolated 150 ms behind; the 💬 button / T opens phrases, emotes and the profile (name + look re-rolls). Names, looks and phrases are preset lists sent as indices (`shared/avatar.js`, `shared/phrases.js`), so no free text reaches other players. Mini-games stay single-player; players in one show 🎮. Online play would need a hosted relay (ask the user first).
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 
@@ -317,7 +318,7 @@ Use it instead of the FPS counter when the browser tab is not focused, because t
 ## 9. Quick Start for a New Session
 
 ```bash
-python3 tools/serve.py 8000      # no-cache dev server (python3 -m http.server also works); open http://localhost:8000
+python3 tools/serve.py 8000      # no-cache dev server + local Wi-Fi multiplayer relay (/mp); open http://localhost:8000
 # phone / iPad on the same Wi-Fi: http://<this Mac's IP>:8000 (ipconfig getifaddr en0)
 #   touch: left thumb = floating joystick (push to the rim to run), right side drag = camera,
 #   pinch = zoom, round button = jump. Desktop: WASD / arrows, Shift run, Space jump, drag, wheel, Q/E

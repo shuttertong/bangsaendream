@@ -27,6 +27,8 @@ import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
+import { createMultiplayer } from './multiplayer.js';
+import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
 import * as P from '../shared/progress.js';
 import { GAMES } from '../games.js';
@@ -85,6 +87,8 @@ async function boot() {
   addEventListener('pointerdown', unlock, { capture: true });
   addEventListener('keydown', unlock, { capture: true });
   const lift = (x, z) => surfaceLift(layout.roadIdx, x, z);
+  const profile = loadProfile();
+  wearLook(profile.look);                                            // the kid (and mini-game kids) wear the chosen look
   const player = createPlayer(scene, map, collision, input, lift);
   player.place(START.x, START.z, START.yaw);
   const tpc = createThirdPersonCamera(camera, input, map, collision);
@@ -135,8 +139,12 @@ async function boot() {
   resize();
   const quality = createQuality(renderer, resize);
 
+  // local Wi-Fi multiplayer (only when served by tools/serve.py)
+  const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
+
   addSystem((dt, time) => {
     U.time.value = time;
+    mp.update(dt, !game && !free);
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
@@ -183,7 +191,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
