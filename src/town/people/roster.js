@@ -57,7 +57,7 @@ export const ROSTER = [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
         : s.quests.playAll === 'active'
-        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ แล้วก็จับปูลม', en: 'Try it all! Squid, monkeys, the tube, helping Aunt Nuan, and ghost crabs.' } }
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ทกับโซฟาโบ๊ทของพี่ต้อม', en: "Try it all! Squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana and sofa boats." } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },
@@ -109,6 +109,19 @@ export const ROSTER = [
       { ask: [
         { label: { th: 'เล่นห่วงยาง', en: 'Ride a tube' }, then: [{ game: 'tube' }] },
         { label: { th: 'ไว้คราวหน้า', en: 'Next time' }, then: [] },
+      ] },
+    ],
+  },
+  {
+    id: 'tom', place: 'speedboat', game: 'banana',
+    name: { th: 'พี่ต้อม', en: 'Tom' },
+    look: { ...ADULT, skin: '#a8764f', shirt: '#2f6fc4', sleeves: 'none', bottom: 'shorts', bottomColor: '#f4f1e8', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#e8541e', vest: '#e8541e' },
+    script: () => [
+      { say: { th: 'มาเล่นเครื่องเล่นทางน้ำกันไหม? ใส่เสื้อชูชีพก่อนนะ!', en: 'Up for a ride on the water? Life vest on first!' } },
+      { ask: [
+        { label: { th: '🍌 บานาน่าโบ๊ท', en: '🍌 Banana boat' }, then: [{ game: 'banana' }] },
+        { label: { th: '🛋️ โซฟาโบ๊ท', en: '🛋️ Sofa boat' }, then: [{ game: 'sofa' }] },
+        { label: { th: 'ไว้ก่อนนะพี่', en: 'Maybe later' }, then: [] },
       ] },
     ],
   },

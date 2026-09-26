@@ -3,6 +3,7 @@
 // route lettering. Built once as a template (front = +z) and cloned per truck.
 import * as THREE from 'three';
 import { Kit } from './kit.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const TRUCK = {
   red: '#d8392f', darkRed: '#a8281f', steel: '#d4d8dc', tyre: '#262626', glass: '#3a4a56',
@@ -86,12 +87,9 @@ export function songthaewTemplate({ route = 42, rack = false } = {}) {
   // lettering on both sides of the lower body
   const tex = decal(route);
   const dm = new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
-  for (const s of [-1, 1]) {
-    const d = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.75), dm);
-    d.position.set(s * 0.885, 0.82, -0.9);
-    d.rotation.y = s * Math.PI / 2;
-    group.add(d);
-  }
+  // both sides in one mesh (one draw call)
+  const sides = [-1, 1].map(s => new THREE.PlaneGeometry(2.4, 0.75).rotateY(s * Math.PI / 2).translate(s * 0.885, 0.82, -0.9));
+  group.add(new THREE.Mesh(mergeGeometries(sides), dm));
   group.traverse(o => { o.matrixAutoUpdate = true; o.castShadow = o.receiveShadow = !!o.geometry; });
   return group;
 }

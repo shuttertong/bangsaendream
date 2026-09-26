@@ -16,7 +16,7 @@ export const DEFAULT_LOOK = {
   skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | bald
   shirt: '#7fc4e8', shirtTrim: '#f4f1e8', sleeves: 'short',  // short | long | none
   bottom: 'shorts', bottomColor: '#34507a',                   // shorts | pants | skirt
-  shoe: '#8a5a3a', apron: null, glasses: false,
+  shoe: '#8a5a3a', apron: null, vest: null, glasses: false,
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
   eye: '#1e1a18', mouth: '#9a4a3a', cheek: '#e8958a',
 };
@@ -106,6 +106,10 @@ function parts(K) {
     colored(at(sc(cyl(0.06, 0.07, 0.03), 1, 1, 0.8), 0, B.torso - 0.1, 0), K.shirtTrim),        // collar
     colored(at(cyl(0.04, 0.045, 0.08, 8), 0, B.torso - 0.08, 0), K.skin),                      // neck
   ];
+  if (K.vest) {                                              // life vest over the shirt
+    spine.push(colored(at(sc(cap(0.155 + K.belly * 0.03, 0.1), 1, 1, 0.8 + K.belly * 0.3), 0, 0.14, K.belly * 0.03), K.vest));
+    for (const y of [0.06, 0.16]) spine.push(colored(at(sc(cyl(0.162 + K.belly * 0.03, 0.162 + K.belly * 0.03, 0.025, 16), 1, 1, 0.82 + K.belly * 0.3), 0, y, K.belly * 0.03), '#1a1a1a'));
+  }
   if (K.apron) spine.push(colored(at(new THREE.BoxGeometry(0.22, 0.34, 0.02), 0, 0.02, 0.1 + K.belly * 0.05), K.apron));
   const hips = [colored(at(sc(cyl(0.125, 0.12, 0.2, 14), 1, 1, 0.8), 0, 0.02, 0), K.bottomColor)];
   if (K.bottom === 'skirt') hips.push(colored(at(sc(cyl(0.13, 0.17, 0.52, 16), 1, 1, 0.8), 0, -0.26, 0), K.bottomColor));

@@ -5,6 +5,7 @@ import { rng, walkLine } from './layout.js';
 import { roadWidth } from './roads.js';
 import { getMaterial } from '../world/materials.js';
 import * as P from './assets/props.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const BEACH = {
   rows: [9, 12.5],               // metres from the waterline
@@ -79,8 +80,8 @@ export function buildBeach(map, ctx, kit) {
       group.add(mesh);
     }
   };
-  make(P.umbrellaCanopy(), lists.canopy);
-  make(P.umbrellaPole(), lists.pole);
+  // canopy (tinted per instance) and pole in one geometry → one instanced draw per chunk
+  make(mergeGeometries([P.umbrellaCanopy(), P.umbrellaPole()]), lists.canopy);
   make(P.deckChair(), lists.chair);
   make(P.tableSet(), lists.table);
   make(P.tubeStack(), lists.rental);

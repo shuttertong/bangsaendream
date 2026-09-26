@@ -7,6 +7,7 @@ export const PLACES = {
   beach:     { name: { th: 'หาดบางแสน', en: 'Bang Saen Beach' }, icon: 'beach', anchor: { near: 'start', sea: 16 } },
   rental:    { name: { th: 'ร้านเช่าห่วงยาง', en: 'Inner-tube rental' }, icon: 'tube', anchor: 'rental' },
   shop:      { name: { th: 'ร้านส้มตำป้านวล', en: "Aunt Nuan's som tam" }, icon: 'food', anchor: 'shop' },
+  speedboat: { name: { th: 'ท่าเรือสปีดโบ๊ท', en: 'Speedboat landing' }, icon: 'speedboat', anchor: { near: [150, 760], sea: 7 } },
   crabBeach: { name: { th: 'หาดปูลม', en: 'Ghost-crab beach' }, icon: 'crab', anchor: { near: [-560, 20], sea: 9 } },
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
   viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: { near: [-655, -1942] } },

@@ -12,6 +12,7 @@ const RUN = {
   lane: 2.2,                                           // metres left of the centre line (Thailand drives on the left)
   stopEvery: [180, 320], stopTime: [3, 6],             // metres between stops, seconds stopped
   yieldDist: 7, boardDist: 4.2, lift: 0.12,
+  drawDist: 260,                                       // hide trucks further than this from the camera
 };
 
 function buildRoutes(map) {
@@ -66,8 +67,9 @@ export function createSongthaews(scene, map) {
   };
 
   /** player: { x, z } (feet). riding: the truck the kid is on (it never yields to its own passenger). */
-  function update(dt, player, riding) {
+  function update(dt, player, riding, cam) {
     for (const t of trucks) {
+      if (cam) t.g.visible = Math.hypot(t.x - cam.x, t.z - cam.z) < RUN.drawDist;
       const { fx, fz } = place(t);
       // brake for the kid standing in front, or when told to hold (boarding / hopping off)
       const px = player.x - t.x, pz = player.z - t.z, ahead = px * fx + pz * fz, side = Math.abs(-px * fz + pz * fx);

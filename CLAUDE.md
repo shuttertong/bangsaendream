@@ -283,6 +283,11 @@ Balance testing: `__game.tick(1/60)` advances the game logic without rendering, 
 Payout targets for a good round: about ฿100–250.
 M6 (2026-09-26): audio is procedural Web Audio (`core/audio.js`: ambient beds + effect recipes) instead of CC0 files, so there is nothing to download or license. Also added: the credits screen (`shared/credits.js`), the quest chain through to the ending (`quests.js`, grandma's script), and the title and ending cards (`town/title.js`). Still to do: deploy to GitHub Pages (needs the user's OK for a public repo).
 Red songthaews (รถแดง, `town/songthaew.js` + `assets/songthaew.js`): 6 trucks drive the long main roads on the left, stop now and then, and yield to the kid. The F key or the prompt button boards (฿10 fare, `flags.rodDaeng` on the first ride) and hops off. Painted livery only (route text); no banners showing real people.
+Towed-inflatable games (2026-09-26): two extra mini-games, played through Tom (พี่ต้อม) at the speedboat landing (`places.speedboat`).
+They share `src/boats/` (`scene.js` open sea + speedboat + wake, `tow.js` tow path and hook turns, `riders.js`, `models.js`).
+- `src/banana/`: keep the banana boat upright by leaning (roll physics). 3 capsizes allowed.
+- `src/sofa/`: press as the sofa lands off the wake. The combo multiplier is capped at ×3; a miss throws off a friend.
+Tunables live in each game's `rules.js`. The `playAll` quest counts 7 games. Hub draw calls peak at about 275 at the landing, after merging umbrella poles into canopies, merging the songthaew decals and hiding trucks beyond 260 m.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 

@@ -11,6 +11,9 @@ import { createTravel } from './travel.js';
 import { updateQuests, questText } from './quests.js';
 import { Kit } from './assets/kit.js';
 import { somTamCart } from './assets/stall.js';
+import { speedboatGeometry, bananaGeometry, sofaGeometry } from '../boats/models.js';
+import { paintedMaterial } from '../world/materials.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { showEnding } from './title.js';
 import { createSongthaews } from './songthaew.js';
 
@@ -34,6 +37,24 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     collision.rect(cx, cz, 1.7, 0.9, shop.yaw, map.heightAt(cx, cz) + 2.5);
   }
   scene.add(kit.build());
+  // Tom's speedboat landing: the boat in the shallows, a banana and a sofa on the sand
+  const sb = places.speedboat;
+  if (sb) {
+    const fx = Math.sin(sb.yaw), fz = Math.cos(sb.yaw), ax = Math.cos(sb.yaw), az = -Math.sin(sb.yaw);
+    // merged into one mesh (one draw call + one shadow call)
+    const parts = [];
+    const put = (geo, x, z, yaw, y) => {
+      const yy = y ?? map.heightAt(x, z) + 0.02;
+      parts.push(geo.applyMatrix4(new THREE.Matrix4().makeRotationY(yaw).setPosition(x, yy, z)));
+      collision.circle(x, z, 1.2, yy + 1);
+    };
+    put(speedboatGeometry(), sb.x + fx * 9, sb.z + fz * 9, sb.yaw + Math.PI / 2, map.sea - 0.25);
+    put(bananaGeometry(), sb.x + fx * 3 + ax * 3.2, sb.z + fz * 3 + az * 3.2, sb.yaw + 0.3);
+    put(sofaGeometry(), sb.x + fx * 2.5 - ax * 3.4, sb.z + fz * 2.5 - az * 3.4, sb.yaw + Math.PI);
+    const landing = new THREE.Mesh(mergeGeometries(parts), paintedMaterial({ amp: 0.05, scale: 1 }));
+    landing.castShadow = landing.receiveShadow = true;
+    scene.add(landing);
+  }
   const people = createPeople(scene, map, places, collision, lift);
 
   let hud = null;
@@ -124,7 +145,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     get frozen() { return talk.active || travel.open; },
     update(dt) {
       const p = player.state;
-      trucks.update(dt, p, riding);
+      trucks.update(dt, p, riding, camera.cam?.position);
       if (riding) {
         // sit on the bench; hop off once the truck has pulled over
         player.sit(trucks.seat(riding, seatPos), riding.yaw - Math.PI / 2);

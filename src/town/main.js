@@ -89,12 +89,14 @@ async function boot() {
   if (free) cam.setView(params.get('view'));
   if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
   // mini-games: while one runs, the hub pauses and the game renders its own scene
-  let game = null, gameMod = null, gameId = null;
+  let game = null, gameMod = null, gameId = null, loading = false;
   const startGame = id => {
     const def = GAMES[id];
-    if (!def) return false;
+    if (!def || game || loading) return false;     // one game at a time (double taps)
+    loading = true;
     document.body.classList.add('in-game', 'fading');
     def.load().then(mod => {
+      loading = false;
       gameMod = mod; gameId = id;
       game = mod.start({
         renderer, input, touch, audio, progress: P, root: $('hud'),
@@ -110,7 +112,7 @@ async function boot() {
         },
       });
       setTimeout(() => document.body.classList.remove('fading'), 120);
-    }).catch(e => { console.error(e); document.body.classList.remove('in-game', 'fading'); });
+    }).catch(e => { loading = false; console.error(e); document.body.classList.remove('in-game', 'fading'); });
     return true;
   };
   const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift });

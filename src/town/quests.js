@@ -26,7 +26,7 @@ export const QUESTS = {
   },
   playAll: {
     title: { th: 'ลองทำให้ครบทุกอย่างในบางแสน ({n}/{of})', en: 'Try everything in Bang Saen ({n}/{of})' },
-    of: 5,
+    of: 7,
     count: s => Object.keys(s.best).length,
     reward: { baht: 100 },
     next: 'dinner',

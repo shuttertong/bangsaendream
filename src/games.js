@@ -13,6 +13,8 @@ export const GAMES = {
   monkey: { load: () => import('./monkey/index.js') },
   tube: { load: () => import('./tube/index.js') },
   stall: { load: () => import('./stall/index.js') },
+  banana: { load: () => import('./banana/index.js') },
+  sofa: { load: () => import('./sofa/index.js') },
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };

@@ -54,5 +54,5 @@ export function createThirdPersonCamera(camera, input, map, collision) {
     camera.lookAt(target);
   }
 
-  return { state: s, target, update, setYaw: y => { s.yaw = y; }, snap: () => { first = true; s.cur = s.dist; } };
+  return { state: s, target, cam: camera, update, setYaw: y => { s.yaw = y; }, snap: () => { first = true; s.cur = s.dist; } };
 }
