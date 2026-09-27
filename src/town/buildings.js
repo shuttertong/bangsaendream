@@ -24,7 +24,7 @@ const FRONTAGE = {
 const GRANDMA = { roads: ['residential', 'unclassified', 'service'], lot: 12, depth: 12, maxDist: 600 };
 
 export function buildBuildings(kit, map, ctx, near) {
-  const { occ, roadIdx, seaDist } = ctx;
+  const { occ, roadIdx, seaDist, strip } = ctx;
   const r = rng(20260926);
   const counts = { osm: 0, shop: 0, condo: 0, house: 0, rows: [] };
 
@@ -34,14 +34,13 @@ export function buildBuildings(kit, map, ctx, near) {
     counts.osm++;
   }
 
-  const inland = map.inland || 100;
   const fits = (cx, cz, fx, fz, hw, D) => {
     const ax = fz, az = -fx;                   // along-road axis
     const corners = [[-hw, 0], [hw, 0], [-hw, -D], [hw, -D]].map(([u, w]) => [cx + ax * u + fx * w, cz + az * u + fz * w]);
     let lo = Infinity, hi = -Infinity;
     for (let i = 0; i < 4; i++) {
       const [x, z] = corners[i], sd = seaDist(x, z);
-      if (sd < FRONTAGE.minSeaDist || sd > inland + (i < 2 ? 0 : FRONTAGE.backOverhang)) return false;
+      if (sd < FRONTAGE.minSeaDist || strip(x, z) > (i < 2 ? 0 : FRONTAGE.backOverhang)) return false;
       if (roadIdx.clearance(x, z, 12) < 0.4) return false;
       const h = map.heightAt(x, z);
       lo = Math.min(lo, h); hi = Math.max(hi, h);
@@ -94,8 +93,9 @@ export function buildBuildings(kit, map, ctx, near) {
         const nx = -dz * side, nz = dx * side;                 // from road toward the lot
         const cx = x + nx * off, cz = z + nz * off;            // facade centre
         const fx = -nx, fz = -nz;                              // facade faces the road
-        // the sea side of a road stays open (beach, trees, stalls): no lots seaward of it
-        const seaward = seaDist(cx + nx * 6, cz + nz * 6) < seaDist(x, z) - 1.5;
+        // the sea side of a coastal road stays open (beach, trees, stalls): no lots seaward of it.
+        // Inland corridor roads (3137) get both sides.
+        const seaward = seaDist(x, z) < (map.inland || 100) && seaDist(cx + nx * 6, cz + nz * 6) < seaDist(x, z) - 1.5;
         let D = 0;
         if (!seaward) for (const d of FRONTAGE.depths) if (fits(cx, cz, fx, fz, FRONTAGE.lot / 2, d)) { D = d; break; }
         // a row is one straight block: keep it within ~5° of its first lot and on its line

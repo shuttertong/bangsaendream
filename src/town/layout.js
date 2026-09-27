@@ -131,3 +131,32 @@ export function walkLine(p, step, fn, offset = 0) {
     s += L;
   }
 }
+
+/** How far (m) a point lies outside the playable area: the coastal strip (`map.inland` m from
+ *  the sea) plus the baked corridors (inland roads, `w` m either side). ≤ 0 means inside.
+ *  The corridor part is rasterised once at CORRIDOR_CELL metres and sampled bilinearly. */
+const CORRIDOR_CELL = 4, CORRIDOR_FAR = 60;
+export function stripSampler(map, seaDist) {
+  const inland = map.inland || 100, lines = map.corridors || [];
+  const { x0, z0 } = map.core, size = (map.core.nx - 1) * map.core.step, n = Math.ceil(size / CORRIDOR_CELL) + 1;
+  const grid = new Float32Array(n * n).fill(CORRIDOR_FAR);
+  for (const c of lines) for (let k = 1; k < c.p.length; k++) {
+    const [ax, az] = c.p[k - 1], [bx, bz] = c.p[k], dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1, pad = c.w + CORRIDOR_FAR;
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad - x0) / CORRIDOR_CELL)), i1 = Math.min(n - 1, Math.ceil((Math.max(ax, bx) + pad - x0) / CORRIDOR_CELL));
+    const j0 = Math.max(0, Math.floor((Math.min(az, bz) - pad - z0) / CORRIDOR_CELL)), j1 = Math.min(n - 1, Math.ceil((Math.max(az, bz) + pad - z0) / CORRIDOR_CELL));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const x = x0 + i * CORRIDOR_CELL, z = z0 + j * CORRIDOR_CELL;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L));
+      const d = Math.hypot(ax + t * dx - x, az + t * dz - z) - c.w;
+      if (d < grid[j * n + i]) grid[j * n + i] = d;
+    }
+  }
+  const at = (i, j) => grid[Math.min(n - 1, Math.max(0, j)) * n + Math.min(n - 1, Math.max(0, i))];
+  const corridor = (x, z) => {
+    const fx = (x - x0) / CORRIDOR_CELL, fz = (z - z0) / CORRIDOR_CELL, i = Math.floor(fx), j = Math.floor(fz), a = fx - i, b = fz - j;
+    return (at(i, j) * (1 - a) + at(i + 1, j) * a) * (1 - b) + (at(i, j + 1) * (1 - a) + at(i + 1, j + 1) * a) * b;
+  };
+  const strip = (x, z) => Math.min(seaDist(x, z) - inland, corridor(x, z));
+  strip.corridor = corridor;
+  return strip;
+}

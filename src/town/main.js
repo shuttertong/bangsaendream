@@ -16,7 +16,7 @@ import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
 import { Kit } from './assets/kit.js';
-import { RoadIndex, Occupancy, seaDistSampler } from './layout.js';
+import { RoadIndex, Occupancy, seaDistSampler, stripSampler } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
@@ -73,6 +73,7 @@ async function boot() {
   const kit = new Kit();
   completeRoundabout(map);                                            // the bake clips the ring's far side
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
+  layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk)
   const promenades = buildRoads(kit, map, layout.seaDist, layout.roadIdx);
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
@@ -93,7 +94,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks] });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks], strip: layout.strip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));

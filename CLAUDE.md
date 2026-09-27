@@ -62,6 +62,7 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
 - **Center:** `lat 13.2950, lon 100.9100` (moved north from 13.2835, 100.9151 so Khao Sam Muk and Laem Thaen are inside the map)
 - **Core area:** ±2400 m (4.8 km square), terrain grid step 8 m (601 × 601)
 - **Playable strip:** only the land within **100 m of the coastline** (`inland` in the JSON). The bake keeps only buildings, roads and areas in this strip. Terrain and sea still cover the whole square as a backdrop. The player cannot walk further inland
+- **Corridors:** `CORRIDORS` in `tools/bake_map.py` reach beyond the strip: road **3137** (ถนนลงหาดบางแสน + บางแสนสาย 2, walkable ±22 m) and every road on **Khao Sam Muk** (±14 m). They are baked as `corridors[{n,w,p}]`. In the game, `layout.strip(x, z)` (metres outside strip + corridors, ≤ 0 inside) drives collision, frontage buildings and trees
 - **Outer area (optional):** ±5000 m, step 40 m, for distant hills
 - **Coordinates:** local metres, `x = (lon - lon0) * 111320 * cos(lat0)`, `z = -(lat - lat0) * 110540` (north = −z)
 - **Height scale:** `HSCALE = 1.5`. Sea level is `y = 0.4`
@@ -282,7 +283,7 @@ M5 done: ตกหมึก (`src/squid/`, uses `world/underwater.js`), ลิ�
 Balance testing: `__game.tick(1/60)` advances the game logic without rendering, so a scripted bot can play a whole round in one call. Each game returns a `debug` handle from `start()`.
 Payout targets for a good round: about ฿100–250.
 M6 (2026-09-26): audio is procedural Web Audio (`core/audio.js`: ambient beds + effect recipes) instead of CC0 files, so there is nothing to download or license. Also added: the credits screen (`shared/credits.js`), the quest chain through to the ending (`quests.js`, grandma's script), and the title and ending cards (`town/title.js`). Still to do: deploy to GitHub Pages (needs the user's OK for a public repo).
-Red songthaews (รถแดง, `town/songthaew.js` + `assets/songthaew.js`): 6 trucks drive the long main roads on the left, stop now and then, and yield to the kid. The F key or the prompt button boards (฿10 fare, `flags.rodDaeng` on the first ride) and hops off. Painted livery only (route text); no banners showing real people.
+Red songthaews (รถแดง, `town/songthaew.js` + `assets/songthaew.js`): trucks drive the long main roads on the left (OSM ways chained into whole roads, dual carriageways de-duplicated, max 5 routes × 2), stop now and then, and yield to the kid. The F key or the prompt button boards (฿10 fare, `flags.rodDaeng` on the first ride) and hops off. Painted livery only (route text); no banners showing real people.
 Towed-inflatable games (2026-09-26): two extra mini-games, played through Tom (พี่ต้อม) at the speedboat landing (`places.speedboat`).
 They share `src/boats/` (`scene.js` open sea + speedboat + wake, `tow.js` tow path and hook turns, `riders.js`, `models.js`).
 - `src/banana/`: keep the banana boat upright by leaning (roll physics). 3 capsizes allowed.

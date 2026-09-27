@@ -3,11 +3,13 @@
 // wheel = zoom, Q/E = rotate. The player camera replaces this in M2.
 import * as THREE from 'three';
 
-// Fixed views for before/after screenshots (?view=beach|town|air)
+// Fixed views for before/after screenshots (?view=beach|town|air, plus ksm|r3137)
 export const VIEWS = {
   beach: { target: [318, 985], yaw: 0.32, pitch: 0.08, dist: 14 },
   town: { target: [-1240, -700], yaw: 0.8, pitch: 0.38, dist: 150 },
   air: { target: [-250, -300], yaw: 0.3, pitch: 1.0, dist: 4600, tilt: true },
+  ksm: { target: [-560, -1750], yaw: 0.2, pitch: 0.95, dist: 1300 },        // Khao Sam Muk from above
+  r3137: { target: [1300, 1000], yaw: -1.2, pitch: 0.7, dist: 900 },        // road 3137 heading inland
 };
 
 const MIN_DIST = 4, MAX_DIST = 9000;

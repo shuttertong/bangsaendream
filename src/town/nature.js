@@ -22,9 +22,8 @@ const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
 
 /** extra: { species: [{ x, y, z, rot, s }] } planted by other modules (promenade, beach rows). */
 export function buildNature(map, ctx, extra = {}) {
-  const { occ, roadIdx, seaDist } = ctx;
+  const { occ, roadIdx, seaDist, strip } = ctx;
   const r = rng(1234);
-  const inland = map.inland || 100;
   const { x0, z0, step, nx, nz } = map.core;
   const cellArea = step * step;
   const areaAt = (x, z) => { for (const a of map.areas) if (inPoly(x, z, a.p)) return a.k; return null; };
@@ -38,7 +37,7 @@ export function buildNature(map, ctx, extra = {}) {
     for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
       const cx = x0 + (i + 0.5) * step, cz = z0 + (j + 0.5) * step;
       const sd = seaDist(cx, cz);
-      if (sd < rule.sea[0] - step || sd > Math.min(rule.sea[1], inland) + step) continue;
+      if (sd < rule.sea[0] - step || sd > rule.sea[1] + step || strip(cx, cz) > step) continue;
       const area = map.areas.length ? areaAt(cx, cz) : null;
       let dens = rule.dens + (rule.areas[area] || 0);
       if (map.heightAt(cx, cz) > HILL.height) dens += HILL.bonus[rule.sp] || 0;
@@ -47,7 +46,7 @@ export function buildNature(map, ctx, extra = {}) {
         if (r() >= Math.min(1, expect)) break;
         expect -= 1;
         const x = cx + (r() - 0.5) * step, z = cz + (r() - 0.5) * step, d = seaDist(x, z);
-        if (d < rule.sea[0] || d > Math.min(rule.sea[1], inland)) continue;
+        if (d < rule.sea[0] || d > rule.sea[1] || strip(x, z) > 0) continue;
         if (roadIdx.clearance(x, z, 8) < rule.clear) continue;
         if (occ.test(x, z, rule.space / 2, rule.space / 2)) continue;
         occ.mark(x, z, rule.space / 2, rule.space / 2);

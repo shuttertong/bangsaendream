@@ -20,21 +20,65 @@ const RUN = {
   follow: 4,                                           // how fast a follower eases into the host's positions (1/s)
   stale: 3,                                            // no snapshots this long: simulate locally again
 };
+const ROUTES = { join: 1.5, straight: 0.6, edge: 60, twin: 40, max: 5 };   // chaining ways, map-edge margin, dual-carriageway gap, route cap
 // passenger seats: [side (+1 right bench / −1 left), along the bench (local z)]
 const SEATS = [[1, -1.1], [-1, -1.1], [1, -0.4], [-1, -0.4], [1, -1.8], [-1, -1.8]];
 
-function buildRoutes(map) {
-  const routes = [];
-  for (const road of map.roads) {
-    if (!RUN.roads.includes(road.k) || road.p.length < 2) continue;
-    const pts = [];
-    walkLine(road.p, 2, (x, z) => pts.push([x, z]));
-    if (pts.length * 2 < RUN.minLength) continue;
-    const cum = [0];
-    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-    routes.push({ pts, cum, length: cum[cum.length - 1] });
+// Join the ways of one road into long chains: OSM splits a road (like 3137) into many short
+// ways; a chain continues through a shared end point when the road keeps going straight on.
+function chainWays(ways) {
+  const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < ROUTES.join;
+  const dir = (a, b) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+  const used = new Set(), chains = [];
+  const extend = (p) => {
+    for (let grown = true; grown;) {
+      grown = false;
+      const end = p[p.length - 1], out = dir(p[p.length - 2], end);
+      for (const w of ways) {
+        if (used.has(w)) continue;
+        const q = near(w[0], end) ? w : near(w[w.length - 1], end) ? [...w].reverse() : null;
+        if (!q) continue;
+        const d = dir(q[0], q[1]);
+        if (out[0] * d[0] + out[1] * d[1] < ROUTES.straight) continue;
+        used.add(w); p.push(...q.slice(1)); grown = true; break;
+      }
+    }
+    return p;
+  };
+  for (const w of ways) {
+    if (used.has(w)) continue;
+    used.add(w);
+    chains.push(extend(extend([...w]).reverse()));
   }
-  return routes;
+  return chains;
+}
+
+function buildRoutes(map) {
+  const edge = (map.core.nx - 1) * map.core.step / 2 - ROUTES.edge, inside = ([x, z]) => Math.abs(x) < edge && Math.abs(z) < edge;
+  const ways = map.roads.filter(r => RUN.roads.includes(r.k) && r.p.length >= 2).map(r => r.p);
+  const routes = [];
+  for (const chain of chainWays(ways)) {
+    const pts = [];
+    walkLine(chain, 2, (x, z) => pts.push([x, z]));
+    // keep the longest stretch inside the map (some coast roads run off its edge)
+    let best = [], cur = [];
+    for (const p of pts) { if (inside(p)) cur.push(p); else { if (cur.length > best.length) best = cur; cur = []; } }
+    if (cur.length > best.length) best = cur;
+    if (best.length * 2 < RUN.minLength) continue;
+    const cum = [0];
+    for (let i = 1; i < best.length; i++) cum.push(cum[i - 1] + Math.hypot(best[i][0] - best[i - 1][0], best[i][1] - best[i - 1][1]));
+    routes.push({ pts: best, cum, length: cum[cum.length - 1] });
+  }
+  // longest first; drop the other half of a dual carriageway (a route running alongside a kept one)
+  routes.sort((a, b) => b.length - a.length);
+  const kept = [];
+  for (const rt of routes) {
+    const mid = rt.pts[rt.pts.length >> 1];
+    if (kept.some(k => k.pts.some(p => Math.hypot(p[0] - mid[0], p[1] - mid[1]) < ROUTES.twin))) continue;
+    kept.push(rt);
+    if (kept.length >= ROUTES.max) break;
+  }
+  return kept;
 }
 
 /** Point + tangent at distance s along a route. */

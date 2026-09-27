@@ -28,6 +28,13 @@ AREA_KINDS = {'beach', 'sand', 'wood', 'scrub', 'grassland', 'park', 'pitch', 'g
               'residential', 'commercial', 'retail', 'farmland', 'cemetery', 'school', 'university'}
 TALL = {'hotel', 'apartments', 'condominium'}
 SEA = 0.4          # sea level in scene units
+# Corridors reach beyond the coastal strip: every highway matching `ref` / `name` / `box` (local x0, x1,
+# z0, z1) becomes walkable `walk` m either side, and features within `keep` m of it are baked too.
+CORRIDORS = [
+    {'n': 'road3137', 'ref': '3137', 'walk': 22, 'keep': 40},                          # ถนนลงหาดบางแสน + บางแสนสาย 2
+    {'n': 'khaosammuk', 'box': [-1100, -100, -2480, -1250], 'walk': 14, 'keep': 30,   # the roads round and up the hill
+     'kinds': ['secondary', 'tertiary', 'residential', 'unclassified', 'service', 'living_street', 'footway', 'path', 'steps']},
+]
 SIMPLIFY = 0.5     # Douglas-Peucker tolerance (m)
 
 
@@ -222,11 +229,63 @@ def densify(p, step=10.0):
     return out
 
 
-def clip_near(p, coast, inland):
-    """Split a polyline into the runs that stay within `inland` m of the coast."""
+class Lines:
+    """Nearest-distance lookup to a set of polylines (corridor centre lines)."""
+    CELL = 64.0
+
+    def __init__(self):
+        self.grid = {}
+
+    def add(self, p, reach):
+        for a, b in zip(p, p[1:]):
+            s = (a[0], a[1], b[0], b[1], reach)
+            for gx in range(int(math.floor((min(a[0], b[0]) - reach) / self.CELL)), int(math.floor((max(a[0], b[0]) + reach) / self.CELL)) + 1):
+                for gz in range(int(math.floor((min(a[1], b[1]) - reach) / self.CELL)), int(math.floor((max(a[1], b[1]) + reach) / self.CELL)) + 1):
+                    self.grid.setdefault((gx, gz), []).append(s)
+
+    def within(self, x, z):
+        """True if (x, z) is within its segment's `reach` of any line."""
+        for ax, az, bx, bz, reach in self.grid.get((int(math.floor(x / self.CELL)), int(math.floor(z / self.CELL))), ()):
+            dx, dz = bx - ax, bz - az
+            t = max(0.0, min(1.0, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz or 1.0)))
+            if (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2 <= reach * reach:
+                return True
+        return False
+
+
+def corridor_lines(els, xz, half):
+    """The centre lines of every CORRIDORS match, clipped to the map square (and the corridor's box)."""
+    out = []
+    for e in els:
+        t, geo = e.get('tags') or {}, e.get('geometry')
+        if not geo or t.get('highway') not in ROAD_KINDS:
+            continue
+        p = [xz(g) for g in geo]
+        for c in CORRIDORS:
+            if 'ref' in c and c['ref'] not in (t.get('ref') or '').split(';'):
+                continue
+            if 'name' in c and c['name'] not in (t.get('name') or ''):
+                continue
+            if 'kinds' in c and t['highway'] not in c['kinds']:
+                continue
+            b = c.get('box') or [-half, half, -half, half]
+            inside = lambda q: b[0] <= q[0] <= b[1] and b[2] <= q[1] <= b[3] and max(abs(q[0]), abs(q[1])) <= half - 20
+            run = []
+            for q in densify(p) + [None]:
+                if q is not None and inside(q):
+                    run.append(q)
+                    continue
+                if len(run) >= 2:
+                    out.append((c, clean_line(run)))
+                run = []
+    return out
+
+
+def clip_near(p, keep):
+    """Split a polyline into the runs where keep(x, z) holds."""
     runs, cur = [], []
     for q in densify(p):
-        if coast.nearest(*q)[0] <= inland:
+        if keep(*q):
             cur.append(q)
         elif cur:
             runs.append(cur)
@@ -236,8 +295,8 @@ def clip_near(p, coast, inland):
     return [r for r in runs if len(r) >= 2]
 
 
-def touches(p, coast, inland):
-    return any(coast.nearest(*q)[0] <= inland for q in densify(p + p[:1], 20.0))
+def touches(p, keep):
+    return any(keep(*q) for q in densify(p + p[:1], 20.0))
 
 
 # ---------- geometry cleanup ----------
@@ -317,8 +376,15 @@ def main():
     data = {'origin': {'lat': cfg.lat, 'lon': cfg.lon}, 'scale': 1, 'hscale': cfg.hscale, 'sea': SEA,
             'inland': cfg.inland,
             'core': {'x0': -cfg.half, 'z0': -cfg.half, 'step': cfg.step, 'nx': cfg.n, 'nz': cfg.n},
-            'buildings': [], 'roads': [], 'areas': [], 'streams': [], 'coast': []}
-    print(f'Keeping features within {cfg.inland} m of the coast...', file=sys.stderr)
+            'buildings': [], 'roads': [], 'areas': [], 'streams': [], 'coast': [], 'corridors': []}
+    walk, reach = Lines(), Lines()
+    for c, line in corridor_lines(els, xz, cfg.half):
+        data['corridors'].append({'n': c['n'], 'w': c['walk'], 'p': line})
+        walk.add(line, c['walk'])
+        reach.add(line, c['keep'])
+    keep = lambda x, z: coast.nearest(x, z)[0] <= inland or reach.within(x, z)
+    keep_line = lambda x, z: coast.nearest(x, z)[0] <= inland or walk.within(x, z)
+    print(f'Keeping features within {cfg.inland} m of the coast + {len(data["corridors"])} corridor lines...', file=sys.stderr)
     for e in els:
         t, geo = e.get('tags'), e.get('geometry')
         if not t or not geo or len(geo) < 2:
@@ -330,7 +396,7 @@ def main():
         if t.get('natural') == 'coastline':
             data['coast'].append({'p': clean_line(p)})
         elif t.get('building') and closed:
-            ring = touches(p, coast, inland) and clean_ring(p)
+            ring = touches(p, keep) and clean_ring(p)
             if ring:
                 b = {'p': ring, 'lv': levels(e, t), 'b': t['building']}
                 if t.get('name'): b['n'] = t['name']
@@ -339,10 +405,10 @@ def main():
                 data['buildings'].append(b)
         elif t.get('highway') in ROAD_KINDS or t.get('waterway'):
             key, kind = ('roads', t['highway']) if t.get('highway') in ROAD_KINDS else ('streams', t['waterway'])
-            runs = [p] if inland == math.inf else clip_near(p, coast, inland)
+            runs = [p] if inland == math.inf else clip_near(p, keep_line)
             data[key] += [{'k': kind, 'p': clean_line(r)} for r in runs]
         elif closed and area in AREA_KINDS:
-            ring = touches(p, coast, inland) and clean_ring(p)
+            ring = touches(p, keep) and clean_ring(p)
             if ring:
                 data['areas'].append({'k': area, 'p': ring})
 
