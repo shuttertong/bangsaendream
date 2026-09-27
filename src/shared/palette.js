@@ -18,7 +18,7 @@ export const PALETTE = {
   lowland: '#8aa65a',
   lowlandDry: '#a8a868',
   hill: '#4f7236',
-  rock: '#8a8272',
+  rock: '#b8a88c',                 // pale weathered granite (Khao Sam Muk)
 
   seaShallow: '#4fb3a8',
   seaMid: '#2a8f9a',

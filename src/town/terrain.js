@@ -7,6 +7,8 @@ import { PALETTE } from '../shared/palette.js';
 const OUTER_HALF = 8000, OUTER_STEP = 80;
 const TILE = 75;        // core terrain tile size in grid cells (600 m) for frustum culling
 const BEACH_W = 50;     // metres of sand behind the waterline (up to and around the beach promenade)
+// rocky shores with only a thin strip of sand: Khao Sam Muk's seawall coast
+export const ROCKY_SHORE = [{ x0: -1050, x1: -250, z0: -2480, z1: -1330, sand: 6 }];
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
 function seaDistance(map) {
@@ -45,6 +47,20 @@ const tmp = new THREE.Color();
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const hash = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
 
+/** Smooth value noise 0..1 (bilinear over hashed lattice). */
+function vnoise(x, z) {
+  const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j;
+  const u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+  const a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+/** Bare granite on the high hills (Khao Sam Muk's ridge and cliffs): 0..1. Shared with the tree placement. */
+export const ROCK = { from: 20, full: 40, scale: 55, cut: [0.42, 0.62] };
+export function rockMask(x, y, z) {
+  const n = vnoise(x / ROCK.scale, z / ROCK.scale) * 0.7 + vnoise(x / 17, z / 17) * 0.3;
+  return smooth(ROCK.from, ROCK.full, y) * smooth(ROCK.cut[0], ROCK.cut[1], n);
+}
+
 /** Ground colour from height, slope (normal.y) and distance to the sea. */
 function groundColor(out, y, ny, dist, sea, x, z) {
   if (y < sea) {                                   // seabed, darker with depth
@@ -52,10 +68,12 @@ function groundColor(out, y, ny, dist, sea, x, z) {
     return out;
   }
   const jitter = (hash(Math.floor(x / 13), Math.floor(z / 13)) - 0.5) * 10;
-  const beach = 1 - smooth(BEACH_W - 8, BEACH_W + 6, dist + jitter);
+  const rocky = ROCKY_SHORE.find(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
+  const bw = rocky ? rocky.sand : BEACH_W;
+  const beach = 1 - smooth(bw - Math.min(8, bw), bw + 6, dist + jitter);
   out.copy(C.lowland).lerp(C.lowlandDry, hash(Math.floor(x / 50), Math.floor(z / 50)) * 0.5);
   out.lerp(C.hill, smooth(12, 45, y));
-  out.lerp(C.rock, smooth(0.86, 0.7, ny) * 0.8);
+  out.lerp(C.rock, Math.max(smooth(0.86, 0.7, ny) * 0.8, rockMask(x, y, z)));
   tmp.copy(C.sand).lerp(C.wetSand, 1 - smooth(0.2, 1.4, y - sea));
   return out.lerp(tmp, beach);
 }

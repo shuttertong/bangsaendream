@@ -11,6 +11,7 @@ export class Collision {
     this.map = map;
     this.seaDist = seaDist;
     this.h = new Map();
+    this.decks = new Map();                    // walkable platforms over water (piers): cell → surface height
     this.limit = (map.inland || 100) + 4;     // metres from the sea the player may walk
     this.wade = 1.1;                           // max water depth (scene units)
   }
@@ -47,14 +48,31 @@ export class Collision {
     }
   }
 
+  /** Walkable deck (pier, plaza) — an oriented rectangle w×d at height `top`; lets you over deep water. */
+  deck(x, z, w, d, ry, top) {
+    const c = Math.cos(ry), s = Math.sin(ry), r = Math.hypot(w, d) / 2;
+    for (let i = Math.floor((x - r) / CELL); i <= Math.floor((x + r) / CELL); i++) {
+      for (let j = Math.floor((z - r) / CELL); j <= Math.floor((z + r) / CELL); j++) {
+        const px = (i + 0.5) * CELL - x, pz = (j + 0.5) * CELL - z;
+        const u = px * c - pz * s, v = px * s + pz * c;
+        const k = key(i, j);
+        if (Math.abs(u) <= w / 2 && Math.abs(v) <= d / 2 && (this.decks.get(k) ?? -Infinity) < top) this.decks.set(k, top);
+      }
+    }
+  }
+
+  /** Deck surface height at (x, z), or -Infinity. */
+  deckAt(x, z) { return this.decks.get(key(Math.floor(x / CELL), Math.floor(z / CELL))) ?? -Infinity; }
+
   /** Top height of solid stuff at (x, z), or -Infinity. */
   topAt(x, z) { return this.h.get(key(Math.floor(x / CELL), Math.floor(z / CELL))) ?? -Infinity; }
 
   /** Can a body of radius r stand at (x, z) with feet at height y? */
   free(x, z, r = 0.3, y = -Infinity) {
     const m = this.map;
-    if (this.seaDist(x, z) > this.limit) return false;
-    if (m.sea - m.heightAt(x, z) > this.wade) return false;
+    const onDeck = this.deckAt(x, z) > -Infinity;
+    if (!onDeck && this.seaDist(x, z) > this.limit) return false;
+    if (!onDeck && m.sea - m.heightAt(x, z) > this.wade) return false;
     for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) {
       if (this.topAt(x + dx, z + dz) > y + 0.35) return false;          // allow stepping onto low things
     }
@@ -63,8 +81,11 @@ export class Collision {
 }
 
 /** Fill the grid from everything the town placed. */
-export function buildCollision(map, seaDist, { buildings, nature, poles }) {
+/** extra: { solids: [{x, z, r, top}], decks: [{x, z, w, d, ry, top}] } from landmarks and places. */
+export function buildCollision(map, seaDist, { buildings, nature, poles, solids = [], decks = [] }) {
   const col = new Collision(map, seaDist);
+  for (const d of decks) col.deck(d.x, d.z, d.w, d.d, d.ry, d.top);
+  for (const s of solids) col.circle(s.x, s.z, s.r, s.top);
   const FLOOR = 3.2;
   for (const b of map.buildings) {
     let base = Infinity;
