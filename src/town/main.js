@@ -88,7 +88,7 @@ async function boot() {
   const town = kit.build();
   scene.add(town);
   const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
-  for (const set of [ksm.trees, laem.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
+  for (const set of [ksm.trees, laem.trees, landmarks.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
   const nature = buildNature(map, layout, planted);
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);

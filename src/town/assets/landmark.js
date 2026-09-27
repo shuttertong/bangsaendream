@@ -97,22 +97,33 @@ export function welcomeRoundabout(kit, map, { x, y, z, ry }) {
     const a = (i / ringN) * Math.PI * 2, u = Math.cos(a) * S.island, w = Math.sin(a) * S.island;
     f.box('wall', u, 0.15, w, 0.35, 0.3, (Math.PI * 2 * S.island) / ringN + 0.05, i % 2 ? col('#d8443a') : white, -a);
   }
-  kit.add('wall', new THREE.CylinderGeometry(S.island - 0.2, S.island - 0.2, 0.28, 40), new THREE.Matrix4().setPosition(f.P(0, 0.14, 0)), col('#6f9a4a'));
-  for (let i = 0; i < 16; i++) {                                                     // hedge ring
-    const a = (i / 16) * Math.PI * 2 + 0.2, rr = S.island - 1.6;
-    if (Math.sin(a) > 0.55) continue;                                                // leave the front open for the steps
-    f.box('wall', Math.cos(a) * rr, 0.6, Math.sin(a) * rr, 2.4, 0.7, 0.9, col(i % 3 ? '#4f8a3a' : '#5f9a44'), -a + Math.PI / 2);
-  }
+  // lawn with mowing stripes
+  kit.add('wall', new THREE.CylinderGeometry(S.island - 0.2, S.island - 0.2, 0.28, 48), new THREE.Matrix4().setPosition(f.P(0, 0.14, 0)), col('#6f9a4a'));
+  for (let k = 1; k < 10; k += 2) kit.add('wall', new THREE.RingGeometry(k * 1.5, k * 1.5 + 1.5, 48).rotateX(-Math.PI / 2), new THREE.Matrix4().setPosition(f.P(0, 0.29, 0)), col('#7aa652'));
   const rock = (u, w, s, i) => {                                                     // sandstone boulder
     const g = new THREE.DodecahedronGeometry(1, 0).scale(s * (1 + (i % 3) * 0.2), s * 0.7, s * (1.1 - (i % 2) * 0.2));
     kit.add('wall', g, new THREE.Matrix4().makeRotationY(i * 1.3).setPosition(f.P(u, s * 0.35 + 0.2, w)), col(i % 2 ? '#c9a27a' : '#b88e66'));
   };
-  for (let i = 0; i < 18; i++) {                                                     // rock beds either side of the steps
-    const sd = i < 9 ? 1 : -1, k = i % 9, a = Math.PI / 2 + sd * (0.5 + k * 0.09);
-    const rr = S.island - 3 - (k % 3) * 0.8;
-    rock(Math.cos(a) * rr, Math.sin(a) * rr, 0.5 + ((i * 7) % 5) * 0.1, i);
+  const sand = ['#c9a27a', '#b88e66', '#d6b48a', '#bf9670'], bloom = ['#d8488a', '#f0c23a', '#e8543a', '#f08ab8', '#f4f1e8'];
+  const shrub = (u, w, y, s, c) => kit.add('wall', new THREE.IcosahedronGeometry(s, 1), new THREE.Matrix4().setPosition(f.P(u, y + s * 0.8, w)), col(c));
+  // terraced sandstone walls of stacked slabs either side of the steps, planted on top
+  for (const side of [-1, 1]) for (const [rr, layers] of [[S.island - 1.6, 2], [S.island - 3.6, 4]]) {
+    const top = 0.28 + layers * 0.26;
+    for (let a = 0.62; a < 1.75; a += 0.075) {
+      const ang = Math.PI / 2 - side * a, u = Math.cos(ang) * rr, w = Math.sin(ang) * rr;
+      for (let l = 0; l < layers; l++) {
+        const j = ((a * 97 + l * 13) % 1) - 0.5;
+        f.box('wall', u + j * 0.15, 0.28 + l * 0.26 + 0.13, w, 0.95 + j * 0.3, 0.26, 0.75, col(sand[(Math.round(a * 40) + l) % 4]), -ang + Math.PI / 2 + j * 0.2);
+      }
+      f.box('wall', u, top + 0.3, w, 0.95, 0.55, 0.6, col(Math.round(a * 40) % 3 ? '#4f8a3a' : '#5f9a44'), -ang + Math.PI / 2);   // trimmed hedge
+      if (Math.round(a * 40) % 3 === 0) shrub(u * 0.97, w * 0.97, top + 0.5, 0.42, bloom[Math.round(a * 13) % bloom.length]);
+    }
   }
-
+  // round topiaries and flowering shrubs round the back of the island
+  for (let i = 0; i < 14; i++) {
+    const a = -Math.PI / 2 + (i - 6.5) * 0.2, rr = S.island - 1.8, u = Math.cos(a) * rr, w = Math.sin(a) * rr;
+    shrub(u, w, 0.1, i % 2 ? 0.8 : 0.55, i % 2 ? '#4f8a3a' : bloom[i % bloom.length]);
+  }
   // round steps up to the sign (front, +w) and a platform behind
   for (let k = 0; k < S.steps; k++) {
     const rad = 7.2 - k * 0.8, h = 0.28 + k * 0.28;
@@ -188,8 +199,14 @@ export function welcomeRoundabout(kit, map, { x, y, z, ry }) {
   kit.add('wall', shell.clone().scale(1, 1, -1), sm, col('#e0d4c0'));
   rock(5.8, 3.9, 0.9, 3);
   solids.push({ u: 5.8, w: 3.9, r: 1.4 });
-  // flag poles
-  for (const u of [-3.8, 3.8]) f.rod('metal', [u, top, 1.2], [u, top + 4.5, 1.2], 0.04, col('#d9d4c8'));
+  // a Thai flag and a yellow flag on tall poles either side of the steps
+  for (const [u, stripes] of [[-8.2, ['#a51931', '#f4f5f8', '#2d2a4a', '#2d2a4a', '#f4f5f8', '#a51931']], [8.2, ['#f2c417']]]) {
+    f.rod('metal', [u, 0.3, 6.5], [u, 9, 6.5], 0.06, col('#e8e8e4'));
+    kit.add('wall', new THREE.SphereGeometry(0.12, 8, 6), new THREE.Matrix4().setPosition(f.P(u, 9.1, 6.5)), gold);
+    const hgt = 1.2, n = stripes.length;
+    stripes.forEach((c2, k) => f.box('wall', u + 0.95, 8.8 - hgt * (k + 0.5) / n, 6.5, 1.8, hgt / n + 0.005, 0.02, col(c2)));
+    solids.push({ u, w: 6.5, r: 0.15 });
+  }
 
   // the lettered face (its own mesh: it needs the texture)
   const geo = new THREE.BufferGeometry();
@@ -201,5 +218,10 @@ export function welcomeRoundabout(kit, map, { x, y, z, ry }) {
   face.receiveShadow = true;
 
   const ca = Math.cos(ry), sa = Math.sin(ry);
-  return { face, solids: solids.map(s => ({ x: x + s.u * ca + s.w * sa, z: z - s.u * sa + s.w * ca, r: s.r, top: y + 4 })) };
+  const palms = [];
+  for (let i = 0; i < 9; i++) {                                                      // tall coconut palms behind the sign
+    const a = -Math.PI / 2 + (i - 4) * 0.33, rr = S.island - 4.5 - (i % 2) * 2.2, u = Math.cos(a) * rr, w = Math.sin(a) * rr - 1;
+    palms.push({ x: x + u * ca + w * sa, z: z - u * sa + w * ca, y: y + 0.2, rot: i * 1.7, s: 1.25 + (i % 3) * 0.12 });
+  }
+  return { face, palms, solids: solids.map(s => ({ x: x + s.u * ca + s.w * sa, z: z - s.u * sa + s.w * ca, r: s.r, top: y + 4 })) };
 }
