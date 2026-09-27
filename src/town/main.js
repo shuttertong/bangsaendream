@@ -70,7 +70,7 @@ async function boot() {
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
   const promenades = buildRoads(kit, map, layout.seaDist);
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
-  const laem = buildLaemThaen(kit, map, layout);                       // plaza, lattice pier, boulders (clears the tip)
+  const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
@@ -78,7 +78,9 @@ async function boot() {
   scene.add(beach.group);
   const town = kit.build();
   scene.add(town);
-  const nature = buildNature(map, layout, { palm: [...promenade.palms, ...beach.palms], ...ksm.trees });
+  const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
+  for (const set of [ksm.trees, laem.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
+  const nature = buildNature(map, layout, planted);
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 

@@ -9,6 +9,8 @@ const TILE = 75;        // core terrain tile size in grid cells (600 m) for frus
 const BEACH_W = 50;     // metres of sand behind the waterline (up to and around the beach promenade)
 // rocky shores with only a thin strip of sand: Khao Sam Muk's seawall coast
 export const ROCKY_SHORE = [{ x0: -1050, x1: -250, z0: -2480, z1: -1330, sand: 6 }];
+// seaside parks: lawn with only a thin strip of sand at the water (Laem Thaen)
+export const PARKS = [{ x: -1340, z: -762, r: 82, sand: 7, lawn: '#78a24c' }];
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
 function seaDistance(map) {
@@ -69,7 +71,11 @@ function groundColor(out, y, ny, dist, sea, x, z) {
   }
   const jitter = (hash(Math.floor(x / 13), Math.floor(z / 13)) - 0.5) * 10;
   const rocky = ROCKY_SHORE.find(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
-  const bw = rocky ? rocky.sand : BEACH_W;
+  let bw = rocky ? rocky.sand : BEACH_W;
+  for (const p of PARKS) {                                           // lawn fading in toward the park's middle
+    const k = 1 - smooth(p.r - 18, p.r, Math.hypot(x - p.x, z - p.z));
+    if (k > 0) { bw = bw + (p.sand - bw) * k; out.lerp(tmp.set(p.lawn), k * 0.9); }
+  }
   const beach = 1 - smooth(bw - Math.min(8, bw), bw + 6, dist + jitter);
   out.copy(C.lowland).lerp(C.lowlandDry, hash(Math.floor(x / 50), Math.floor(z / 50)) * 0.5);
   out.lerp(C.hill, smooth(12, 45, y));

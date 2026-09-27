@@ -154,6 +154,8 @@ const STRINGS = {
     khaolamSold: 'ยายขายให้ลูกค้าแล้ว!',
     khaolamAngry: 'ลูกค้ารอนานเกินไป เดินไปแล้ว',
     khaolamGift: 'ยายให้ข้าวหลามไว้กินหนึ่งกระบอก',
+    laemThaenStone: 'แหลมแท่น',
+    laemThaenStoneSub: 'บางแสน · ชลบุรี',
     // the welcome sign on the roundabout (a real bilingual sign: same text in both languages)
     signWelcome1: 'ขอต้อนรับสู่หาดบางแสน',
     signWelcome2: 'ด้วยความยินดียิ่ง',
@@ -336,6 +338,8 @@ const STRINGS = {
     khaolamAngry: 'A customer got tired of waiting',
     khaolamGift: 'Grandma gives you a khao lam to eat',
     // the welcome sign on the roundabout (a real bilingual sign: same text in both languages)
+    laemThaenStone: 'แหลมแท่น',
+    laemThaenStoneSub: 'Laem Thaen · Bang Saen',
     signWelcome1: 'ขอต้อนรับสู่หาดบางแสน',
     signWelcome2: 'ด้วยความยินดียิ่ง',
     signWelcomeEn: 'WELCOME TO BANGSAEN BEACH',
