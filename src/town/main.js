@@ -26,6 +26,9 @@ import { buildLaemThaen } from './laemthaen.js';
 import { buildKhaoSamMuk } from './khaosammuk.js';
 import { buildFishingVillage } from './fishingvillage.js';
 import { createChunkCuller } from './chunkcull.js';
+import { buildWalkingStreet } from './walkingstreet.js';
+import { buildNavyPier } from './navypier.js';
+import { createBobbingBoats } from './boats.js';
 import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
@@ -75,6 +78,9 @@ async function boot() {
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
   const village = buildFishingVillage(kit, map, layout, scene);               // stilt houses, jetties, boats, the long pier
+  const walking = buildWalkingStreet(kit, map, layout);                // market stalls, bulbs, the paved seafront lot
+  const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
+  createBobbingBoats(scene, navyFleet);
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
@@ -87,7 +93,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids], decks: [...laem.decks, ...village.decks] });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks] });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);

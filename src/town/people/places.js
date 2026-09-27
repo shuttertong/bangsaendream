@@ -9,6 +9,8 @@ export const PLACES = {
   shop:      { name: { th: 'ร้านส้มตำป้านวล', en: "Aunt Nuan's som tam" }, icon: 'food', anchor: 'shop' },
   welcome:   { name: { th: 'วงเวียนบางแสน (ป้ายบางแสน)', en: 'Bang Saen roundabout' }, icon: 'sign', anchor: 'welcome' },
   speedboat: { name: { th: 'ท่าเรือสปีดโบ๊ท', en: 'Speedboat landing' }, icon: 'speedboat', anchor: { near: [150, 760], sea: 7 } },
+  walking:   { name: { th: 'ถนนคนเดินบางแสน', en: 'Bang Saen walking street' }, icon: 'market', anchor: { near: [-1205, -930] } },
+  navyPier:  { name: { th: 'สะพานราชนาวี', en: 'Royal Navy pier' }, icon: 'anchor', anchor: { near: [-1100, -968] } },
   crabBeach: { name: { th: 'หาดปูลม', en: 'Ghost-crab beach' }, icon: 'crab', anchor: { near: [-560, 20], sea: 9 } },
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
   viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: { near: [-655, -1942] } },
