@@ -2,7 +2,7 @@
 // 2-joint IK legs that plant the feet on the terrain, arm swing, lean into acceleration
 // and turns, a spring on the hat, jump pose and idle breathing.
 import * as THREE from 'three';
-import { buildKid, KID } from './model.js';
+import { buildKid } from './model.js';
 
 const TUNE = {
   stepWalk: 0.32, stepRun: 0.62,        // step length (m); a full cycle is two steps
@@ -16,7 +16,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 const lerp = (a, b, t) => a + (b - a) * t;
 
 export function createKid(scene, look) {
-  const { mesh, bones: B } = buildKid(look);
+  const { mesh, bones: B, body: KID } = buildKid(look);            // KID: this kid's proportions (chibi legs)
   scene.add(mesh);
   const s = {
     phase: 0, speed: 0, lean: 0, side: 0, t: 0,

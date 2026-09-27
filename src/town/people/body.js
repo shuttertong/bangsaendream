@@ -23,9 +23,16 @@ export const DEFAULT_LOOK = {
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
 
+export const CHIBI_LEGS = 0.66;            // kids' leg length (× BODY) unless look.legScale says otherwise
+
+/** Proportions for one person: BODY with the legs scaled. */
+export const bodyFor = look => {
+  const ls = look.legScale ?? (look.headScale > 1 ? CHIBI_LEGS : 1);
+  return { ...BODY, hip: BODY.hip * ls, thigh: BODY.thigh * ls, shin: BODY.shin * ls };
+};
+
 // bone name → [parent, rest offset from parent]
-const B = BODY;
-const BONES = {
+const bonesFor = B => ({
   hips: [null, [0, B.hip, 0]],
   spine: ['hips', [0, 0.1, 0]],
   head: ['spine', [0, B.torso - 0.1 + B.neck, 0]],
@@ -43,7 +50,7 @@ const BONES = {
   shinR: ['legR', [0, -B.thigh, 0]],
   footL: ['shinL', [0, -B.shin, 0]],
   footR: ['shinR', [0, -B.shin, 0]],
-};
+});
 
 // soft toon shading: "wrapped" diffuse light (half-Lambert), so faces and limbs turn gently
 // from light to shade instead of going dark on the side away from the sun
@@ -58,9 +65,9 @@ const material = () => applyHaze(patch(new THREE.MeshLambertMaterial({ vertexCol
 let sharedMat = null;
 
 export function buildPerson(lookIn = {}) {
-  const look = { ...DEFAULT_LOOK, ...lookIn };
+  const look = { ...DEFAULT_LOOK, ...lookIn }, body = bodyFor(look);
   const bones = {}, list = [];
-  for (const [name, [parent, off]] of Object.entries(BONES)) {
+  for (const [name, [parent, off]] of Object.entries(bonesFor(body))) {
     const b = new THREE.Bone();
     b.name = name;
     b.position.set(...off);
@@ -72,7 +79,7 @@ export function buildPerson(lookIn = {}) {
   }
   bones.hips.updateMatrixWorld(true);
 
-  const geos = [], P = toonParts(look, BODY);
+  const geos = [], P = toonParts(look, body);
   list.forEach((b, idx) => {
     for (const g of P[b.name] || []) {
       g.applyMatrix4(b.matrixWorld);                           // rest pose in model space
@@ -88,5 +95,5 @@ export function buildPerson(lookIn = {}) {
   mesh.scale.setScalar(look.scale);
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false;
-  return { mesh, bones, look };
+  return { mesh, bones, look, body };                         // body: this person's proportions (leg IK)
 }

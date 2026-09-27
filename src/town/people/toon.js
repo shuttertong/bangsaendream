@@ -47,13 +47,14 @@ function onFace(g, R, x, y, lift = 0, dy = 0, roll = 0) {
 /** A flattened ellipsoid "decal" (rx, ry) lying on the face. */
 const patch = (rx, ry, d = 0.012) => sc(sph(1, 16, 10), rx, ry, d);
 
-/** A tapered hair lock: round at the root (top), pointed at the tip (−y). */
-function lock(w, len, d) {
-  const g = sph(1, 12, 10);
+/** A tapered hair lock: round at the root (top), pointed at the tip (−y); `wave` sways it side to side down its length. */
+function lock(w, len, d, wave = 0) {
+  const g = sph(1, 12, wave ? 16 : 10);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const y = p.getY(i), t = y < 0 ? 1 - 0.8 * (-y) ** 1.4 : 1;          // taper below the middle
-    p.setXYZ(i, p.getX(i) * w * t, y * len, p.getZ(i) * d * (0.6 + 0.4 * t));
+    const sway = wave * Math.sin((1 - y) * Math.PI * 1.5) * (1 - y) * 0.5;   // grows toward the tip
+    p.setXYZ(i, p.getX(i) * w * t + sway * w, y * len, p.getZ(i) * d * (0.6 + 0.4 * t));
   }
   g.computeVertexNormals();
   return g;
@@ -113,10 +114,12 @@ function headParts(K, R) {
       const g = lock(0.12 * R, (long ? 0.62 : 0.4) * R, 0.07 * R);
       head.push(colored(at(g.rotateZ(s * 0.08), s * 0.9 * R, (long ? -0.2 : -0.08) * R, 0.22 * R), H));
     }
-    if (long) {                                                        // long hair down the back
-      const g = lock(0.82 * R, 1.25 * R, 0.34 * R);
-      head.push(colored(at(g, 0, -0.55 * R, -0.5 * R), H));
-      for (const s of [-1, 1]) head.push(colored(at(lock(0.3 * R, 1.05 * R, 0.22 * R).rotateZ(s * 0.1), s * 0.62 * R, -0.62 * R, -0.25 * R), H));
+    if (long) {                                                        // full, wavy long hair: down the back and over the shoulders
+      head.push(colored(at(lock(0.95 * R, 1.35 * R, 0.4 * R, 0.12), 0, -0.6 * R, -0.52 * R), H));
+      for (const s of [-1, 1]) {
+        head.push(colored(at(lock(0.36 * R, 1.15 * R, 0.26 * R, 0.25 * s).rotateZ(s * 0.12), s * 0.66 * R, -0.66 * R, -0.28 * R), H));   // sides
+        head.push(colored(at(lock(0.24 * R, 1.0 * R, 0.14 * R, -0.3 * s).rotateZ(s * 0.18).rotateX(0.12), s * 0.8 * R, -0.95 * R, 0.08 * R), H));   // in front of the shoulders
+      }
     } else if (K.hairStyle === 'bun') {
       head.push(colored(at(sph(0.42 * R), 0, 0.72 * R, -0.72 * R), H));
     } else {                                                           // short: a few soft spikes at the back
