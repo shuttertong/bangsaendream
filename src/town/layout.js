@@ -139,11 +139,11 @@ export function inMap(map, x, z, margin = 6) {
 }
 
 /** How far (m) a point lies outside the playable area: the coastal strip (`map.inland` m from
- *  the sea) plus the baked corridors (inland roads, `w` m either side), minus any `closed` ones. ≤ 0 means inside.
+ *  the sea) plus the baked corridors (inland roads, `w` m either side), minus those `skip(corridor)` rejects. ≤ 0 means inside.
  *  The corridor part is rasterised once at CORRIDOR_CELL metres and sampled bilinearly. */
 const CORRIDOR_CELL = 4, CORRIDOR_FAR = 60;
-export function stripSampler(map, seaDist, closed = []) {
-  const inland = map.inland || 100, lines = (map.corridors || []).filter(c => !closed.includes(c.n));
+export function stripSampler(map, seaDist, skip = () => false) {
+  const inland = map.inland || 100, lines = (map.corridors || []).filter(c => !skip(c));
   const { x0, z0 } = map.core, size = (map.core.nx - 1) * map.core.step, n = Math.ceil(size / CORRIDOR_CELL) + 1;
   const grid = new Float32Array(n * n).fill(CORRIDOR_FAR);
   for (const c of lines) for (let k = 1; k < c.p.length; k++) {

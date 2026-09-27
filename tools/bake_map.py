@@ -34,6 +34,9 @@ CORRIDORS = [
     {'n': 'road3137', 'ref': '3137', 'walk': 22, 'keep': 40},                          # ถนนลงหาดบางแสน + บางแสนสาย 2
     {'n': 'khaosammuk', 'box': [-1100, -100, -2480, -1250], 'walk': 14, 'keep': 30,   # the roads round and up the hill
      'kinds': ['secondary', 'tertiary', 'residential', 'unclassified', 'service', 'living_street', 'footway', 'path', 'steps']},
+    # coastal links the 100 m cut breaks: ถนนบางแสนสาย 1 (Laem Thaen → Khao Sam Muk) dips to 106 m from the sea;
+    # ถนนรอบเขาสามมุข ซอย 1 → ถนนอ่างศิลา (3134) runs up to 160 m inland. Roads only ('bare': no buildings).
+    {'n': 'coastlink', 'ways': [1211716733, 154842388, 193124279, 472797692], 'walk': 12, 'keep': 12, 'bare': True},
 ]
 SIMPLIFY = 0.5     # Douglas-Peucker tolerance (m)
 
@@ -268,6 +271,8 @@ def corridor_lines(els, xz, half):
                 continue
             if 'kinds' in c and t['highway'] not in c['kinds']:
                 continue
+            if 'ways' in c and e.get('id') not in c['ways']:
+                continue
             b = c.get('box') or [-half, half, -half, half]
             inside = lambda q: b[0] <= q[0] <= b[1] and b[2] <= q[1] <= b[3] and max(abs(q[0]), abs(q[1])) <= half - 20
             run = []
@@ -379,9 +384,10 @@ def main():
             'buildings': [], 'roads': [], 'areas': [], 'streams': [], 'coast': [], 'corridors': []}
     walk, reach = Lines(), Lines()
     for c, line in corridor_lines(els, xz, cfg.half):
-        data['corridors'].append({'n': c['n'], 'w': c['walk'], 'p': line})
+        data['corridors'].append({'n': c['n'], 'w': c['walk'], 'p': line, **({'bare': 1} if c.get('bare') else {})})
         walk.add(line, c['walk'])
-        reach.add(line, c['keep'])
+        if not c.get('bare'):
+            reach.add(line, c['keep'])
     keep = lambda x, z: coast.nearest(x, z)[0] <= inland or reach.within(x, z)
     keep_line = lambda x, z: coast.nearest(x, z)[0] <= inland or walk.within(x, z)
     print(f'Keeping features within {cfg.inland} m of the coast + {len(data["corridors"])} corridor lines...', file=sys.stderr)

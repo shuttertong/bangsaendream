@@ -24,7 +24,7 @@ const FRONTAGE = {
 const GRANDMA = { roads: ['residential', 'unclassified', 'service'], lot: 12, depth: 12, maxDist: 600 };
 
 export function buildBuildings(kit, map, ctx, near) {
-  const { occ, roadIdx, seaDist, strip } = ctx;
+  const { occ, roadIdx, seaDist } = ctx, strip = ctx.buildStrip || ctx.strip;   // road-only links get no buildings
   const r = rng(20260926);
   const counts = { osm: 0, shop: 0, condo: 0, house: 0, rows: [] };
 

@@ -17,6 +17,9 @@ import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
 import { createDrone } from './drone.js';
 import { buildRoadblocks, createRoadblockNotice, ROADBLOCK } from './roadblock.js';
+import { joinRoadEnds } from './roadjoin.js';
+import { gradeRoads } from './grading.js';
+import { auditRoads } from './roadaudit.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
@@ -57,6 +60,9 @@ async function boot() {
   $('credit').textContent = t('credit');
 
   const map = await loadMap();
+  completeRoundabout(map);                                            // the bake clips the ring's far side
+  const joins = joinRoadEnds(map);                                    // close small gaps between roads
+  const graded = gradeRoads(map);                                     // smooth, level roads that never dip under the sea
   const renderer = createRenderer($('c'));
   const scene = new THREE.Scene();
   scene.fog = createFog();
@@ -74,10 +80,10 @@ async function boot() {
   // static town geometry, merged per (chunk, material)
   const t0 = performance.now();
   const kit = new Kit();
-  completeRoundabout(map);                                            // the bake clips the ring's far side
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
   layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk): dressed
-  layout.walkStrip = stripSampler(map, layout.seaDist, ROADBLOCK.closed);   // …minus the closed ones: walkable
+  layout.walkStrip = stripSampler(map, layout.seaDist, c => ROADBLOCK.closed.includes(c.n));   // …minus the closed ones: walkable
+  layout.buildStrip = stripSampler(map, layout.seaDist, c => c.bare);   // …minus road-only links: where buildings may go
   const promenades = buildRoads(kit, map, layout.seaDist, layout.roadIdx);
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
@@ -231,7 +237,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, roadblocks, drone, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
