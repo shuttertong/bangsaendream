@@ -21,7 +21,9 @@ varying vec2 vSlope;
 float groundAt(vec2 xz) {
   vec2 uv = clamp((xz - gridInfo.xy) / gridInfo.zw, 0.0, 1.0);
   uv = (uv * (gridRes - 1.0) + 0.5) / gridRes;
-  return texture2D(heightTex, uv).r;
+  // beyond the grid the seabed drops away (the clamped edge row would paint shallows and foam out to sea)
+  vec2 past = max(gridInfo.xy - xz, 0.0) + max(xz - gridInfo.xy - gridInfo.zw, 0.0);
+  return texture2D(heightTex, uv).r - length(past) * 0.1;
 }
 
 // 4 directional swells, mostly rolling in from the south-west (Gulf of Thailand)
@@ -66,7 +68,9 @@ ${HAZE_GLSL}
 float groundAt(vec2 xz) {
   vec2 uv = clamp((xz - gridInfo.xy) / gridInfo.zw, 0.0, 1.0);
   uv = (uv * (gridRes - 1.0) + 0.5) / gridRes;
-  return texture2D(heightTex, uv).r;
+  // beyond the grid the seabed drops away (the clamped edge row would paint shallows and foam out to sea)
+  vec2 past = max(gridInfo.xy - xz, 0.0) + max(xz - gridInfo.xy - gridInfo.zw, 0.0);
+  return texture2D(heightTex, uv).r - length(past) * 0.1;
 }
 
 vec2 ripple(vec2 p, float s) {       // gradient of scrolling value noise

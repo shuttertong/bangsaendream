@@ -69,11 +69,16 @@ export class Collision {
   /** Top height of solid stuff at (x, z), or -Infinity. */
   topAt(x, z) { return this.h.get(key(Math.floor(x / CELL), Math.floor(z / CELL))) ?? -Infinity; }
 
+  /** Inside the playable area (coastal strip, open corridors, walk zones)? Ignores water and solids. */
+  inArea(x, z) {
+    return (this.strip ? this.strip(x, z) <= 4 : this.seaDist(x, z) <= this.limit) || this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
+  }
+
   /** Can a body of radius r stand at (x, z) with feet at height y? */
   free(x, z, r = 0.3, y = -Infinity) {
     const m = this.map;
     const onDeck = this.deckAt(x, z) > -Infinity;
-    if (!onDeck && (this.strip ? this.strip(x, z) > 4 : this.seaDist(x, z) > this.limit) && !this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r)) return false;
+    if (!onDeck && !this.inArea(x, z)) return false;
     if (!onDeck && m.sea - m.heightAt(x, z) > this.wade) return false;
     for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) {
       if (this.topAt(x + dx, z + dz) > y + 0.35) return false;          // allow stepping onto low things

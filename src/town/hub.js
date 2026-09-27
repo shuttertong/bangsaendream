@@ -92,7 +92,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id) });
 
   // red songthaews on the beach road
-  const trucks = createSongthaews(scene, map);
+  const trucks = createSongthaews(scene, map, collision);             // routes stay inside the walkable area
   let riding = null, nearTruck = null, alighting = 0, seatSlot = 0;
   const seatPos = new THREE.Vector3();
   function board(tk) {

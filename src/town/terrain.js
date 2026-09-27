@@ -101,16 +101,45 @@ function coreMesh(map, dist) {
   return g;
 }
 
+/** Height beyond the core square. Repeating the edge row outward would stretch any land that
+ *  touches the edge (the tip of Khao Sam Muk) into a long fake spit, so take the LOWEST edge
+ *  height within a window that widens with the distance out: narrow land tapers into the sea
+ *  within a few hundred metres, the wide mainland carries on. */
+function outerHeights(map) {
+  const { x0, z0, step } = map.core, x1 = x0 + map.size.w, z1 = z0 + map.size.d;
+  const edge = (fixed, horizontal) => {                        // edge profile, one sample per core step
+    const out = [];
+    for (let t = horizontal ? x0 : z0; t <= (horizontal ? x1 : z1) + 0.01; t += step) out.push(horizontal ? map.heightAt(t, fixed) : map.heightAt(fixed, t));
+    return out;
+  };
+  const N = edge(z0, true), S = edge(z1, true), W = edge(x0, false), E = edge(x1, false);
+  const lowest = (prof, from, t, d) => {                       // min of prof over [t − d, t + d] (metres along the edge)
+    const i0 = Math.max(0, Math.floor((t - d - from) / step)), i1 = Math.min(prof.length - 1, Math.ceil((t + d - from) / step));
+    const by = Math.max(1, Math.floor((i1 - i0) / 60));      // coarse stride far out; the window is wide there anyway
+    let m = Infinity;
+    for (let i = i0; i <= i1; i += by) m = Math.min(m, prof[i]);
+    return m === Infinity ? prof[Math.min(prof.length - 1, Math.max(0, Math.round((t - from) / step)))] : m;
+  };
+  return (x, z) => {
+    const cx = Math.min(x1, Math.max(x0, x)), cz = Math.min(z1, Math.max(z0, z)), dx = Math.abs(x - cx), dz = Math.abs(z - cz);
+    if (!dx && !dz) return map.heightAt(x, z);
+    let h = Infinity;
+    if (dz) h = Math.min(h, lowest(z < z0 ? N : S, x0, cx, dz + dx));
+    if (dx) h = Math.min(h, lowest(x < x0 ? W : E, z0, cz, dx + dz));
+    return h;
+  };
+}
+
 function outerMesh(map) {
   const n = OUTER_HALF * 2 / OUTER_STEP;
   const g = new THREE.PlaneGeometry(OUTER_HALF * 2, OUTER_HALF * 2, n, n);
   g.rotateX(-Math.PI / 2);
   const { x0, z0 } = map.core, x1 = x0 + map.size.w, z1 = z0 + map.size.d;
-  const pos = g.attributes.position;
+  const pos = g.attributes.position, heightOut = outerHeights(map);
   for (let k = 0; k < pos.count; k++) {
     const x = pos.getX(k), z = pos.getZ(k);
     const inside = x > x0 + 1 && x < x1 - 1 && z > z0 + 1 && z < z1 - 1;
-    pos.setY(k, map.heightAt(x, z) - (inside ? 6 : 0));   // hide under the core mesh
+    pos.setY(k, inside ? map.heightAt(x, z) - 6 : heightOut(x, z));   // inside: hide under the core mesh
   }
   g.computeVertexNormals();
   const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();

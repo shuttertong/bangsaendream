@@ -53,14 +53,15 @@ function chainWays(ways) {
   return chains;
 }
 
-function buildRoutes(map) {
-  const edge = (map.core.nx - 1) * map.core.step / 2 - ROUTES.edge, inside = ([x, z]) => Math.abs(x) < edge && Math.abs(z) < edge;
+function buildRoutes(map, collision) {
+  const edge = (map.core.nx - 1) * map.core.step / 2 - ROUTES.edge;
+  const inside = ([x, z]) => Math.abs(x) < edge && Math.abs(z) < edge && (!collision || collision.inArea(x, z));   // not past a roadblock
   const ways = map.roads.filter(r => RUN.roads.includes(r.k) && r.p.length >= 2).map(r => r.p);
   const routes = [];
   for (const chain of chainWays(ways)) {
     const pts = [];
     walkLine(chain, 2, (x, z) => pts.push([x, z]));
-    // keep the longest stretch inside the map (some coast roads run off its edge)
+    // keep the longest stretch inside the map and the walkable area (coast roads run off the map edge; 3137 is closed)
     let best = [], cur = [];
     for (const p of pts) { if (inside(p)) cur.push(p); else { if (cur.length > best.length) best = cur; cur = []; } }
     if (cur.length > best.length) best = cur;
@@ -92,9 +93,9 @@ function sample(route, s) {
   return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, dx, dz };
 }
 
-export function createSongthaews(scene, map) {
+export function createSongthaews(scene, map, collision = null) {
   const r = rng(4242);
-  const routes = buildRoutes(map);
+  const routes = buildRoutes(map, collision);
   const templates = [songthaewTemplate({ route: 42, rack: true }), songthaewTemplate({ route: 6088 })];
   const trucks = [];
   routes.forEach((route, ri) => {

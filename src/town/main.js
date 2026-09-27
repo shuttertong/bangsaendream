@@ -15,6 +15,8 @@ import { t } from '../shared/i18n.js';
 import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
+import { createDrone } from './drone.js';
+import { buildRoadblocks, ROADBLOCK } from './roadblock.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler, stripSampler } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
@@ -74,7 +76,8 @@ async function boot() {
   const kit = new Kit();
   completeRoundabout(map);                                            // the bake clips the ring's far side
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
-  layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk)
+  layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk): dressed
+  layout.walkStrip = stripSampler(map, layout.seaDist, ROADBLOCK.closed);   // …minus the closed ones: walkable
   const promenades = buildRoads(kit, map, layout.seaDist, layout.roadIdx);
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
@@ -88,6 +91,8 @@ async function boot() {
   const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
+  const inZone = (x, z) => landmarks.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
+  const roadblocks = buildRoadblocks(kit, map, (x, z) => layout.walkStrip(x, z) <= 4 || inZone(x, z));   // fence off road 3137
   const town = kit.build();
   scene.add(town);
   const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
@@ -96,7 +101,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks], strip: layout.strip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids], decks: [...laem.decks, ...village.decks, ...navy.decks], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
@@ -164,6 +169,7 @@ async function boot() {
 
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
+  const drone = createDrone({ camera, input, map, root: $('hud'), canvas: $('c'), player, tpc, audio });   // 🚁 overlook any area from above
   const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
 
   // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
@@ -178,6 +184,7 @@ async function boot() {
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
     if (free) { cam.update(dt); focus = cam.target; }
+    else if (drone.active) { drone.update(dt); focus = drone.target; hub.update(dt); }
     else {
       if (!hub.seated) player.update(dt, tpc.state.yaw, hub.frozen);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
@@ -193,7 +200,7 @@ async function boot() {
     sea.update(camera);
     nature.update(camera.position);
     culler.update(dt, camera.position, map.heightAt(camera.position.x, camera.position.z));
-    fx.setTiltShift(free && cam.state.tilt && cam.state.pitch > 0.7, 0.5);
+    fx.setTiltShift((free && cam.state.tilt && cam.state.pitch > 0.7) || drone.tiltShift, 0.5);
     input.endFrame();
   });
 
@@ -222,7 +229,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, roadblocks, drone, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
