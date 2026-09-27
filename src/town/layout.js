@@ -132,6 +132,12 @@ export function walkLine(p, step, fn, offset = 0) {
   }
 }
 
+/** Is (x, z) on the map, at least `margin` m inside the edge of the core square? */
+export function inMap(map, x, z, margin = 6) {
+  const { x0, z0, step, nx, nz } = map.core;
+  return x > x0 + margin && x < x0 + (nx - 1) * step - margin && z > z0 + margin && z < z0 + (nz - 1) * step - margin;
+}
+
 /** How far (m) a point lies outside the playable area: the coastal strip (`map.inland` m from
  *  the sea) plus the baked corridors (inland roads, `w` m either side), minus any `closed` ones. ≤ 0 means inside.
  *  The corridor part is rasterised once at CORRIDOR_CELL metres and sampled bilinearly. */

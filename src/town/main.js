@@ -16,9 +16,9 @@ import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
 import { createDrone } from './drone.js';
-import { buildRoadblocks, ROADBLOCK } from './roadblock.js';
+import { buildRoadblocks, createRoadblockNotice, ROADBLOCK } from './roadblock.js';
 import { Kit } from './assets/kit.js';
-import { RoadIndex, Occupancy, seaDistSampler, stripSampler } from './layout.js';
+import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
@@ -92,7 +92,7 @@ async function boot() {
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
   const inZone = (x, z) => landmarks.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
-  const roadblocks = buildRoadblocks(kit, map, (x, z) => layout.walkStrip(x, z) <= 4 || inZone(x, z));   // fence off road 3137
+  const roadblocks = buildRoadblocks(kit, scene, map, layout, (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z)));   // fence off road 3137 (and every road out)
   const town = kit.build();
   scene.add(town);
   const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
@@ -169,6 +169,7 @@ async function boot() {
 
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
+  const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
   const drone = createDrone({ camera, input, map, root: $('hud'), canvas: $('c'), player, tpc, audio });   // 🚁 overlook any area from above
   const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
 
@@ -187,6 +188,7 @@ async function boot() {
     else if (drone.active) { drone.update(dt); focus = drone.target; hub.update(dt); }
     else {
       if (!hub.seated) player.update(dt, tpc.state.yaw, hub.frozen);
+      roadNotice(dt);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
       tpc.update(dt, player.state); focus = tpc.target;
     }

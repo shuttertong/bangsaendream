@@ -1,7 +1,7 @@
 // Collision grid (0.5 m cells, each storing the top height of what's there) for the
 // player and camera: building footprints, tree trunks, poles. Plus the walkable-area
 // rule: stay within the coastal strip and out of water deeper than wading depth.
-import { inPoly } from './layout.js';
+import { inPoly, inMap } from './layout.js';
 
 const CELL = 0.5;
 const key = (i, j) => i * 100003 + j;
@@ -71,6 +71,7 @@ export class Collision {
 
   /** Inside the playable area (coastal strip, open corridors, walk zones)? Ignores water and solids. */
   inArea(x, z) {
+    if (!inMap(this.map, x, z)) return false;                 // never off the edge of the map
     return (this.strip ? this.strip(x, z) <= 4 : this.seaDist(x, z) <= this.limit) || this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
   }
 
