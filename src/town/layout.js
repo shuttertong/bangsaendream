@@ -23,7 +23,7 @@ export class RoadIndex {
       const hw = widthOf(r.k) / 2;
       if (!hw) continue;
       for (let i = 1; i < r.p.length; i++) {
-        const s = { ax: r.p[i - 1][0], az: r.p[i - 1][1], bx: r.p[i][0], bz: r.p[i][1], hw, k: r.k };
+        const s = { ax: r.p[i - 1][0], az: r.p[i - 1][1], bx: r.p[i][0], bz: r.p[i][1], hw, k: r.k, road: r };
         const x0 = Math.floor((Math.min(s.ax, s.bx) - hw) / cell), x1 = Math.floor((Math.max(s.ax, s.bx) + hw) / cell);
         const z0 = Math.floor((Math.min(s.az, s.bz) - hw) / cell), z1 = Math.floor((Math.max(s.az, s.bz) + hw) / cell);
         for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) {
@@ -32,6 +32,19 @@ export class RoadIndex {
         }
       }
     }
+  }
+
+  /** Is (x, z) on the surface of a road other than `road`? (junctions: where one road's markings should stop) */
+  onOtherRoad(x, z, road, margin = 0.1) {
+    const list = this.grid.get(Math.floor(x / this.cell) * 100003 + Math.floor(z / this.cell));
+    if (!list) return false;
+    for (const s of list) {
+      if (s.road === road) continue;
+      const dx = s.bx - s.ax, dz = s.bz - s.az, L = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - s.ax) * dx + (z - s.az) * dz) / L));
+      if (Math.hypot(s.ax + t * dx - x, s.az + t * dz - z) < s.hw - margin) return true;
+    }
+    return false;
   }
 
   /** Nearest road edge: { d (negative = on the road), k (highway kind) } or null. */

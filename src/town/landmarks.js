@@ -50,7 +50,7 @@ export function buildLandmarks(kit, scene, map, layout) {
   scene.add(face);
   layout.occ.mark(x, z, SIGN.island, SIGN.island);           // nothing else grows or stands on the island
   dressRoundabout(kit, map, layout, palms, solids);
-  return { solids, welcome: { x, z, ry }, trees: { palm: palms } };
+  return { solids, welcome: { x, z, ry }, trees: { palm: palms }, walkZones: [{ x, z, r: LANDMARKS.welcome.ring + 13 }] };
 }
 
 /** Around the ring: palms and street lamps on the outer pavement, a floodlight tower, zebra crossings. */

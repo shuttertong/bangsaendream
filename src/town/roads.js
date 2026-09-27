@@ -66,7 +66,7 @@ function frame(p) {
  * `cols` columns so it follows the terrain. colour(sAlong, tAcross) → Color, sampled
  * once per quad (flat: paving slabs) or at every vertex (smooth: asphalt).
  */
-function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false) {
+function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false, keep = null) {
   const { pts, nrm, along } = F;
   const pos = [], col = [];
   const P = (i, t) => {
@@ -76,6 +76,7 @@ function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false) {
   for (let i = 1; i < pts.length; i++) for (let k = 0; k < cols; k++) {
     const ta = t0 + (t1 - t0) * (k / cols), tb = t0 + (t1 - t0) * ((k + 1) / cols);
     const a1 = P(i - 1, tb), a2 = P(i - 1, ta), b1 = P(i, tb), b2 = P(i, ta);
+    if (keep && !keep((a1[0] + b2[0]) / 2, (a1[2] + b2[2]) / 2)) continue;   // e.g. a pavement quad lying on another road
     pos.push(...a1, ...b1, ...a2, ...a2, ...b1, ...b2);       // wound to face up
     if (smooth) {
       const sa = along[i - 1], sb = along[i];
@@ -93,12 +94,13 @@ function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false) {
 }
 
 /** Vertical kerb face along offset t, from `lo` to `hi` above the terrain, facing the road (or away: out). */
-function kerb(kit, map, F, t, lo, hi, color, at, out = false) {
+function kerb(kit, map, F, t, lo, hi, color, at, out = false, keep = null) {
   const { pts, nrm } = F, v = [];
   const side = Math.sign(t) * (out ? -1 : 1);
   for (let i = 1; i < pts.length; i++) {
     const q = j => { const x = pts[j][0] + nrm[j][0] * t, z = pts[j][1] + nrm[j][1] * t; return [x, Math.max(map.heightAt(x, z), map.sea), z]; };
     const a = q(i - 1), b = q(i);
+    if (keep && !keep((a[0] + b[0]) / 2, (a[2] + b[2]) / 2)) continue;
     const A0 = [a[0], a[1] + lo, a[2]], A1 = [a[0], a[1] + hi, a[2]], B0 = [b[0], b[1] + lo, b[2]], B1 = [b[0], b[1] + hi, b[2]];
     // face toward the road (−side × left normal)
     if (side < 0) v.push(...A0, ...B0, ...A1, ...A1, ...B0, ...B1);
@@ -135,8 +137,10 @@ function runs(F, sides) {
 }
 
 /** Returns the promenades built: [{ side, F, t0, t1 }] (offsets across the road frame). */
-export function buildRoads(kit, map, seaDist) {
+export function buildRoads(kit, map, seaDist, roadIdx = null) {
   const promenades = [];
+  // pavements, kerbs and the promenade stop where they would lie on another road (clean junctions)
+  const offRoads = roadIdx ? (x, z) => roadIdx.clearance(x, z, 14) > -0.15 : null;
   // bigger roads drawn slightly higher so they win at junctions
   const order = Object.keys(ROAD_STYLE).reverse();
   const white = new THREE.Color('#ebe7dc');
@@ -144,6 +148,7 @@ export function buildRoads(kit, map, seaDist) {
     const st = ROAD_STYLE[r.k];
     if (!st || r.p.length < 2) continue;
     const F = frame(r.p);
+    const ownSurface = roadIdx ? (x, z) => !roadIdx.onOtherRoad(x, z, r) : null;   // markings stop where another road crosses
     const lift = ROAD_LIFT + (order.indexOf(r.k) + 1) * 0.004;
     const mid = F.pts[F.pts.length >> 1];
     const at = { x: mid[0], z: mid[1] };
@@ -187,10 +192,10 @@ export function buildRoads(kit, map, seaDist) {
       let s = 0;
       for (let i = 1; i < F.pts.length; i++) {
         const segL = F.along[i] - F.along[i - 1];
-        if ((s % (DASH + GAP)) < DASH) strip(kit, map, { pts: [F.pts[i - 1], F.pts[i]], nrm: [F.nrm[i - 1], F.nrm[i]], along: [0, segL] }, -0.08, 0.08, 1, lift + 0.01, () => white, at);
+        if ((s % (DASH + GAP)) < DASH) strip(kit, map, { pts: [F.pts[i - 1], F.pts[i]], nrm: [F.nrm[i - 1], F.nrm[i]], along: [0, segL] }, -0.08, 0.08, 1, lift + 0.01, () => white, at, false, ownSurface);
         s += segL;
       }
-      for (const e of [-1, 1]) { const a = e * (hw - 0.45), b = e * (hw - 0.3); strip(kit, map, F, Math.min(a, b), Math.max(a, b), 1, lift + 0.01, () => white, at); }
+      for (const e of [-1, 1]) { const a = e * (hw - 0.45), b = e * (hw - 0.3); strip(kit, map, F, Math.min(a, b), Math.max(a, b), 1, lift + 0.01, () => white, at, false, ownSurface); }
     }
 
     // beach promenade on the sea side of beachfront stretches
@@ -204,9 +209,9 @@ export function buildRoads(kit, map, seaDist) {
         if (across < 0.45 || across > P.w - 0.45) return border;                      // dark border stripes
         if (s % P.bandEvery < 0.5) return band;                                       // cross bands
         return (Math.floor(s / 0.5) + Math.floor(across / 0.5)) % 2 ? body : body2;   // small pavers
-      }, at);
-      kerb(kit, map, G, t0, lift - 0.02, P.lift + 0.02, new THREE.Color('#c9c3b6'), at);   // step up from the road
-      kerb(kit, map, G, t1, -0.3, P.lift + 0.02, new THREE.Color('#b8ab94'), at, true);    // edge down to the sand
+      }, at, false, offRoads);
+      kerb(kit, map, G, t0, lift - 0.02, P.lift + 0.02, new THREE.Color('#c9c3b6'), at, false, offRoads);   // step up from the road
+      kerb(kit, map, G, t1, -0.3, P.lift + 0.02, new THREE.Color('#b8ab94'), at, true, offRoads);    // edge down to the sand
       for (let i = 0; i < G.pts.length; i++) for (let k = 0; k <= P.w; k += 0.5) {
         const tt = side * (hw + k);
         promCells.add(promKey(G.pts[i][0] + G.nrm[i][0] * tt, G.pts[i][1] + G.nrm[i][1] * tt));
@@ -220,9 +225,9 @@ export function buildRoads(kit, map, seaDist) {
       const a = e * (hw + 0.2), b = e * (hw + SIDEWALK.w);
       const s1 = new THREE.Color(SIDEWALK.col), s2 = new THREE.Color(SIDEWALK.col2);
       for (const { F: G } of runs(F, sides.map(sd => (sd === e ? 0 : 1)))) {
-        strip(kit, map, G, Math.min(a, b), Math.max(a, b), 2, SIDEWALK.lift, (s, t) => ((Math.floor(s / 1.0) + Math.floor(Math.abs(t) / 1.2)) % 2 ? s1 : s2), at);
-        strip(kit, map, G, e > 0 ? hw : -hw - 0.2, e > 0 ? hw + 0.2 : -hw, 1, SIDEWALK.lift + 0.02, () => new THREE.Color(SIDEWALK.curb), at);
-        kerb(kit, map, G, e * hw, lift - 0.02, SIDEWALK.lift + 0.02, new THREE.Color('#c9c3b6'), at);
+        strip(kit, map, G, Math.min(a, b), Math.max(a, b), 2, SIDEWALK.lift, (s, t) => ((Math.floor(s / 1.0) + Math.floor(Math.abs(t) / 1.2)) % 2 ? s1 : s2), at, false, offRoads);
+        strip(kit, map, G, e > 0 ? hw : -hw - 0.2, e > 0 ? hw + 0.2 : -hw, 1, SIDEWALK.lift + 0.02, () => new THREE.Color(SIDEWALK.curb), at, false, offRoads);
+        kerb(kit, map, G, e * hw, lift - 0.02, SIDEWALK.lift + 0.02, new THREE.Color('#c9c3b6'), at, false, offRoads);
       }
     }
   }

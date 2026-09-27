@@ -73,7 +73,7 @@ async function boot() {
   const kit = new Kit();
   completeRoundabout(map);                                            // the bake clips the ring's far side
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
-  const promenades = buildRoads(kit, map, layout.seaDist);
+  const promenades = buildRoads(kit, map, layout.seaDist, layout.roadIdx);
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
@@ -95,6 +95,7 @@ async function boot() {
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks] });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
+  collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
   // audio can only start after a user gesture (iOS / Chrome autoplay rules)

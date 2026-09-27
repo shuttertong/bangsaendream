@@ -12,6 +12,7 @@ export class Collision {
     this.seaDist = seaDist;
     this.h = new Map();
     this.decks = new Map();                    // walkable platforms over water (piers): cell → surface height
+    this.walkZones = [];                       // [{x, z, r}]: walkable even beyond the coastal strip (e.g. the whole roundabout)
     this.limit = (map.inland || 100) + 4;     // metres from the sea the player may walk
     this.wade = 1.1;                           // max water depth (scene units)
   }
@@ -71,7 +72,7 @@ export class Collision {
   free(x, z, r = 0.3, y = -Infinity) {
     const m = this.map;
     const onDeck = this.deckAt(x, z) > -Infinity;
-    if (!onDeck && this.seaDist(x, z) > this.limit) return false;
+    if (!onDeck && this.seaDist(x, z) > this.limit && !this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r)) return false;
     if (!onDeck && m.sea - m.heightAt(x, z) > this.wade) return false;
     for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) {
       if (this.topAt(x + dx, z + dz) > y + 0.35) return false;          // allow stepping onto low things
