@@ -294,3 +294,23 @@ body.touch-on #game-ui .b-tilt { bottom: calc(130px + env(safe-area-inset-bottom
 .mp-panel .mp-emotes button { font-size: 26px; padding: 4px 12px; }
 .mp-panel button { border: 1.5px solid #e2c89a; background: #fff; border-radius: 12px; padding: 7px 8px; font: 500 14px Kanit, sans-serif; color: var(--ink, #3a3228); text-align: left; }
 .mp-panel button.close { text-align: center; }
+
+/* co-op: invite banner + lobby in the hub, team list in the banana game */
+.co-wrap { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 5; pointer-events: none; }
+.co-invite, .co-lobby { pointer-events: auto; background: rgba(255, 250, 240, .95); border-radius: 16px; box-shadow: 0 6px 24px rgba(40, 20, 10, .3); font: 500 15px Kanit, sans-serif; color: var(--ink, #3a3228); }
+.co-invite { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; white-space: nowrap; animation: bblink .6s 3 alternate; }
+.co-invite small { color: #8a7a66; }
+.co-invite button, .co-lobby button { border: 0; border-radius: 12px; padding: 6px 14px; font: 600 14px Kanit, sans-serif; }
+.co-invite .join, .co-lobby .go { background: var(--accent, #e8743a); color: #fff; }
+.co-invite .no, .co-lobby .out { background: #efe6d4; color: #6a5a46; }
+.co-lobby { padding: 12px 16px; min-width: 250px; }
+.co-lobby h3 { margin: 0 0 6px; font: 600 17px Kanit, sans-serif; }
+.co-lobby ul { list-style: none; margin: 0; padding: 0; }
+.co-lobby li { padding: 3px 0; }
+.co-lobby li.empty { color: #a89a86; font-weight: 400; }
+.co-lobby p { margin: 8px 0; color: #8a7a66; font-size: 14px; }
+.co-lobby .co-btns { display: flex; gap: 8px; justify-content: flex-end; }
+#game-ui .b-team { position: absolute; left: 12px; top: calc(64px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 4px; }
+#game-ui .b-team span { font: 600 13px Kanit, sans-serif; color: #fff; background: rgba(30, 40, 50, .55); border-radius: 10px; padding: 2px 9px; }
+#game-ui .b-team span.me { background: rgba(232, 116, 58, .85); }
+#game-ui .b-team span.gone { opacity: .45; text-decoration: line-through; }

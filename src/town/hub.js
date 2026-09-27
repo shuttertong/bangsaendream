@@ -80,13 +80,14 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null;
+  let hud = null, coopHandler = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
     onToast: toast,
     onEnding: () => showEnding(root, audio),
     onGame: id => { if (!startGame(id)) { toast(t('comingSoon')); P.setFlag(`asked_${id}`); } },
+    onCoop: id => (coopHandler ? coopHandler(id) : startGame(id)),   // co-op lobby when multiplayer is on
   });
   const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id) });
 
@@ -163,6 +164,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   return {
     places, people, talk, travel, hud, trucks, seats,
     get riding() { return riding; },
+    /** coop.js sets this: (gameId) → open a co-op lobby. */
+    set coopHandler(fn) { coopHandler = fn; },
     /** Which truck we ride (index, for other players) and which bench seat we take. */
     get ride() { return riding ? riding.i : null; },
     set seatSlot(v) { seatSlot = v; },

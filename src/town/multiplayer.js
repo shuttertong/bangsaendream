@@ -22,7 +22,7 @@ const MP = {
 };
 
 export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy }) {
-  const remotes = new Map();
+  const remotes = new Map(), coFns = new Set();
   let myId = null, hostId = null, sendT = 0, keepT = 0, truckT = 0, last = '';
   const trucks = hub.trucks, slotOf = id => id % trucks.seats;
   trucks.onHoldRequest = (i, on) => net?.send({ t: 'hold', i, on });
@@ -113,7 +113,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     const bubble = document.createElement('div');
     bubble.className = 'mp-bubble';
     layer.append(tag, bubble);
-    const r = { id: p.id, n1: p.n1, n2: p.n2, kid, tag, bubble, bubbleT: 0, emote: null, emoteT: 0, buf: [], shown: null, prev: null };
+    const r = { id: p.id, n1: p.n1, n2: p.n2, look: p.look, kid, tag, bubble, bubbleT: 0, emote: null, emoteT: 0, buf: [], shown: null, prev: null };
     remotes.set(p.id, r);
     if (p.state) push(r, p.state);
     kid.mesh.visible = !!p.state;
@@ -157,6 +157,9 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
         if (r) hub.hud?.toast(t('mpLeft', { name: nameOf(r.n1, r.n2) }));
         remove(m.id);
         for (const tk of trucks.trucks) tk.holds.delete(m.id);           // their pull-over requests go with them
+        for (const fn of coFns) fn(m.id, { k: 'gone' });
+      } else if (m.t === 'co') {
+        for (const fn of coFns) fn(m.from, m.d);
       } else if (m.t === 'host') {
         setHost(m.id);
       } else if (m.t === 'trucks') {
@@ -280,5 +283,14 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     me.bubble.classList.toggle('on', me.bubbleT > 0);
   }
 
-  return { update, remotes, get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
+  /** Name + look indices of a player (us or someone else), for co-op games. */
+  function info(id) {
+    if (id === myId) return { id, name: nameOf(profile.n1, profile.n2), look: profile.look };
+    const r = remotes.get(id);
+    return r ? { id, name: nameOf(r.n1, r.n2), look: r.look } : null;
+  }
+  // co-op mini-game channel: to = [ids] or null for everyone; d = small numeric payload
+  const co = { send: (to, d) => net?.send({ t: 'co', to, d }), on: fn => coFns.add(fn), off: fn => coFns.delete(fn) };
+
+  return { update, remotes, info, co, get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
 }

@@ -12,7 +12,7 @@ Only whitelisted, type-checked fields are relayed (positions, poses, preset phra
 name indices, look indices). No free text ever passes through, by design: it's a kids'
 game and chat is preset phrases only.
 """
-import base64, hashlib, http.server, json, math, struct, sys, threading, time
+import base64, hashlib, http.server, json, math, re, struct, sys, threading, time
 from functools import partial
 from pathlib import Path
 
@@ -29,6 +29,35 @@ next_id = [1]
 host_id = [None]                # who simulates the shared red trucks
 host_since = [0.0]
 MAX_TRUCKS = 64
+# co-op mini-game messages: {t:'co', to:[ids]|null, d:{...}}. `d` may only hold numbers,
+# booleans, lists and short lowercase words under these keys — never free text.
+CO_KEYS = {'k', 'room', 'game', 'seats', 't', 'seed', 'lean', 's', 'e', 'ev', 'phase', 'n', 'i', 'side', 'team', 'r'}
+CO_WORD = re.compile(r'^[a-z]{1,12}$')
+
+
+def clean_co(v, depth=0):
+    """Validated copy of a co-op payload, or raises ValueError."""
+    if depth > 4:
+        raise ValueError
+    if v is None or isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        if not math.isfinite(v) or abs(v) > 1e6:
+            raise ValueError
+        return v
+    if isinstance(v, str):
+        if not CO_WORD.match(v):
+            raise ValueError
+        return v
+    if isinstance(v, list):
+        if len(v) > 64:
+            raise ValueError
+        return [clean_co(x, depth + 1) for x in v]
+    if isinstance(v, dict):
+        if not set(v) <= CO_KEYS:
+            raise ValueError
+        return {k: clean_co(x, depth + 1) for k, x in v.items()}
+    raise ValueError
 HOST_TIMEOUT = 3.0              # a host that sends no truck snapshots for this long is replaced
 
 
@@ -234,6 +263,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if host and host is not me:
                 try:
                     host.send({'t': 'hold', 'id': me.id, 'i': m['i'], 'on': bool(m.get('on'))})
+                except OSError:
+                    pass
+        elif t == 'co' and me.hello:
+            try:
+                d = clean_co(m.get('d'))
+            except ValueError:
+                return
+            to = m.get('to')
+            if to is not None and not (isinstance(to, list) and len(to) <= 8 and all(isinstance(i, int) for i in to)):
+                return
+            with clients_lock:
+                targets = [c for c in clients.values() if c is not me and c.hello and (to is None or c.id in to)]
+            for c in targets:
+                try:
+                    c.send({'t': 'co', 'from': me.id, 'd': d})
                 except OSError:
                     pass
         elif t == 'say' and me.hello and isinstance(m.get('p'), int) and 0 <= m['p'] < 64:

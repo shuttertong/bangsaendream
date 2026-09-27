@@ -52,6 +52,10 @@ export function createGameUI(root, { title, how, keys, audio }) {
 
   return {
     set onStart(f) { onStart = f; }, set onQuit(f) { onQuit = f; }, set onBack(f) { onBack = f; },
+    /** Close the intro without a tap (co-op: the leader started the round). */
+    begin() { $('.g-intro').hidden = true; },
+    /** Replace the intro's start button text (co-op members wait for the leader). */
+    set startLabel(v) { $('.g-go').textContent = v; },
     /** time: seconds left, or a string shown instead (e.g. the wave number). */
     bar(time, count, baht, countLabel = t('caught')) {
       if (typeof time === 'string') { $('.g-time').textContent = time; $('.g-time').classList.remove('low'); }

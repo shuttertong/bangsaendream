@@ -13,16 +13,18 @@ const FRIENDS = [
 ];
 const VESTS = ['#e8541e', '#2a2a2a', '#f0c23a', '#2a2a2a'];
 
-export function createRiders(scene, parent, seats, { straddle = false } = {}) {
+/** looks: optional per-seat look overrides (co-op: each player's own look). */
+export function createRiders(scene, parent, seats, { straddle = false, looks = [] } = {}) {
   const splashMat = new THREE.SpriteMaterial({ color: '#ffffff', transparent: true, depthWrite: false });
   const puffs = [];
   const riders = seats.map((seat, i) => {
-    const look = i === 0 ? { ...KID_LOOK, vest: VESTS[0] } : { ...FRIENDS[(i - 1) % FRIENDS.length], vest: VESTS[i % VESTS.length], scale: 1.05 };
+    const look = looks[i] ? { ...looks[i], vest: VESTS[i % VESTS.length] }
+      : i === 0 ? { ...KID_LOOK, vest: VESTS[0] } : { ...FRIENDS[(i - 1) % FRIENDS.length], vest: VESTS[i % VESTS.length], scale: 1.05 };
     const p = buildPerson(look);
     p.mesh.position.copy(seat.pos);
     p.mesh.rotation.y = seat.yaw || 0;
     parent.add(p.mesh);
-    const r = { ...p, seat, on: true, kid: i === 0, v: new THREE.Vector3(), spin: new THREE.Vector3(), t: 0, wave: Math.random() * 6 };
+    const r = { ...p, seat, on: true, kid: i === 0, v: new THREE.Vector3(), spin: new THREE.Vector3(), t: 0, wave: Math.random() * 6, lean: 0 };
     pose(r, 0);
     return r;
   });
@@ -42,6 +44,7 @@ export function createRiders(scene, parent, seats, { straddle = false } = {}) {
     B.foreL.rotation.x = cheer ? 0 : -0.9;
     B.foreR.rotation.x = -0.9;
     B.mouth.scale.set(1.7, cheer ? 1.4 : 0.6, 1);
+    B.spine.rotation.z = r.lean * 0.45;                 // leaning (co-op: shows what each player is doing)
   }
 
   /** Throw rider off toward `dir` (world). */

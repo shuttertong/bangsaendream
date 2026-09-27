@@ -5,6 +5,7 @@
 //   { flag: 'id' } / { quest: [id, st] }  story state
 //   { ask: [{ label, then: [steps] }] }   choices
 //   { game: 'crab' }                      offer a mini-game
+//   { coop: 'banana' }                    start a co-op lobby (multiplayer; solo when offline)
 // A script function receives the save data so lines can depend on progress.
 
 const ADULT = { scale: 1.32, headScale: 0.86 };
@@ -127,6 +128,7 @@ export const ROSTER = [
       { say: { th: 'มาเล่นเครื่องเล่นทางน้ำกันไหม? ใส่เสื้อชูชีพก่อนนะ!', en: 'Up for a ride on the water? Life vest on first!' } },
       { ask: [
         { label: { th: '🍌 บานาน่าโบ๊ท', en: '🍌 Banana boat' }, then: [{ game: 'banana' }] },
+        { label: { th: '🍌👫 บานาน่าโบ๊ทกับเพื่อน', en: '🍌👫 Banana boat with friends' }, then: [{ coop: 'banana' }] },
         { label: { th: '🛋️ โซฟาโบ๊ท', en: '🛋️ Sofa boat' }, then: [{ game: 'sofa' }] },
         { label: { th: '🌊 ขับเจ็ทสกี', en: '🌊 Ride the jet ski' }, then: [{ game: 'jetski' }] },
         { label: { th: 'ไว้ก่อนนะพี่', en: 'Maybe later' }, then: [] },

@@ -19,7 +19,7 @@ export function mouthFor(g) {
   return 'half';
 }
 
-export function createTalk(root, { onGame, onToast, onEnding, audio }) {
+export function createTalk(root, { onGame, onCoop, onToast, onEnding, audio }) {
   const box = document.createElement('div');
   box.id = 'talk';
   box.innerHTML = '<div class="who"></div><div class="line"></div><div class="choices"></div><div class="more">▼</div>';
@@ -45,6 +45,7 @@ export function createTalk(root, { onGame, onToast, onEnding, audio }) {
       if (st.ending) { close(); onEnding?.(); return; }
       if (st.quest) P.setQuest(st.quest[0], st.quest[1]);
       if (st.game) { close(); onGame(st.game); return; }
+      if (st.coop) { close(); (onCoop || onGame)(st.coop); return; }
       if (st.ask) {
         waitingChoice = true;
         choices.innerHTML = '';

@@ -11,6 +11,6 @@ export const ROUND = {
   tipping: 2.2,            // past `tipAt` the banana wants to keep rolling (unstable)
   tipAt: 0.3,
   recover: 2.8,            // seconds to climb back on
-  points: { upright: 10, hook: 60, wild: 25 },   // per second upright; surviving a hook turn; riding a big tilt out
+  points: { upright: 10, hook: 60, wild: 25, team: 30 },   // per second upright; surviving a hook turn; riding a big tilt out; co-op: all leaned together through a hook
   bahtPer: 20,             // points per baht
 };

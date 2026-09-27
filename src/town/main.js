@@ -28,6 +28,7 @@ import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
 import { createMultiplayer } from './multiplayer.js';
+import { createCoop } from './coop.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
 import * as P from '../shared/progress.js';
@@ -100,7 +101,8 @@ async function boot() {
   if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
   // mini-games: while one runs, the hub pauses and the game renders its own scene
   let game = null, gameMod = null, gameId = null, loading = false;
-  const startGame = id => {
+  /** opts.coop: co-op session (see coop.js) for games that support it. */
+  const startGame = (id, opts = {}) => {
     const def = GAMES[id];
     if (!def || game || loading) return false;     // one game at a time (double taps)
     loading = true;
@@ -109,7 +111,7 @@ async function boot() {
       loading = false;
       gameMod = mod; gameId = id;
       game = mod.start({
-        renderer, input, touch, audio, progress: P, root: $('hud'),
+        renderer, input, touch, audio, progress: P, root: $('hud'), coop: opts.coop || null,
         onExit: res => {
           document.body.classList.add('fading');
           setTimeout(() => {
@@ -141,6 +143,7 @@ async function boot() {
 
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
+  const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
 
   // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
   let bots = null;
@@ -149,6 +152,7 @@ async function boot() {
   addSystem((dt, time) => {
     U.time.value = time;
     mp.update(dt, !game && !free);
+    coop.update(dt, !!game || loading);
     bots?.update(dt);
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
@@ -196,7 +200,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
