@@ -24,6 +24,8 @@ import { dressPromenades } from './promenade.js';
 import { buildLandmarks, completeRoundabout } from './landmarks.js';
 import { buildLaemThaen } from './laemthaen.js';
 import { buildKhaoSamMuk } from './khaosammuk.js';
+import { buildFishingVillage } from './fishingvillage.js';
+import { createChunkCuller } from './chunkcull.js';
 import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
 import { createPlayer } from './player.js';
@@ -72,6 +74,7 @@ async function boot() {
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
+  const village = buildFishingVillage(kit, map, layout);               // stilt houses, jetties, boats, the long pier
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
@@ -84,7 +87,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids], decks: laem.decks });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids], decks: [...laem.decks, ...village.decks] });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
@@ -136,6 +139,7 @@ async function boot() {
   };
   const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome });
 
+  const culler = createChunkCuller([town, beach.group]);             // hide map chunks far behind the haze
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
     camera.aspect = innerWidth / innerHeight;
@@ -178,6 +182,7 @@ async function boot() {
     fx.setFocus(focus, camera.position.y - focus.y);
     sea.update(camera);
     nature.update(camera.position);
+    culler.update(dt, camera.position, map.heightAt(camera.position.x, camera.position.z));
     fx.setTiltShift(free && cam.state.tilt && cam.state.pitch > 0.7, 0.5);
     input.endFrame();
   });

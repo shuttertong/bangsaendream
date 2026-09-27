@@ -10,6 +10,7 @@ import { roadWidth } from './roads.js';
 import { monkeyGeometry } from '../monkey/models.js';
 import { MONKEYS } from '../monkey/species.js';
 import { getMaterial } from '../world/materials.js';
+import { VILLAGE } from './fishingvillage.js';
 
 export const KSM = {
   box: ROCKY_SHORE[0],                                        // the hill and its shore (terrain.js keeps it rocky)
@@ -18,7 +19,7 @@ export const KSM = {
   seawall: { roads: ['secondary', 'tertiary', 'residential', 'unclassified'], sea: 14, every: 3, walk: 3, drop: 3.2, canopyEvery: 21, canopyFrom: 0.35 },
   monkeys: { near: [-652, -1942], count: 16, spread: 16 },
   lookout: { at: [-652, -1942], r: 20, paving: '#cfc6b4', shrine: { red: '#b8322a', gold: '#d8ac48', roof: '#c9542e' } },
-  poles: { area: { x0: -520, x1: -120, z0: -2470, z1: -2180 }, depth: [0.3, 12], above: 1.2, patches: 14, rows: [4, 7], cols: [10, 22], gap: 1.6 },
+  poles: { area: { x0: -430, x1: -120, z0: -2470, z1: -2180 }, depth: [0.3, 12], above: 1.2, patches: 14, rows: [4, 7], cols: [10, 22], gap: 1.6 },
   colors: { wall: '#d9d4c8', walk: '#c9c2b2', rail: '#f4f2ec', canopy: '#4a5058', pole: '#9a8a6a' },
 };
 
@@ -67,7 +68,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
     const hw = roadWidth(road.k) / 2;
     let run = 0, prevRail = null;
     walkLine(road.p, S.every, (x, z, dx, dz) => {
-      if (!inBox(x, z, K.box)) { prevRail = null; return; }
+      if (!inBox(x, z, K.box) || inBox(x, z, VILLAGE.shore)) { prevRail = null; return; }   // the village has houses, not a seawall
       let nx = -dz, nz = dx;                                         // toward the sea side
       if (seaDist(x + nx * 6, z + nz * 6) > seaDist(x - nx * 6, z - nz * 6)) { nx = -nx; nz = -nz; }
       if (seaDist(x + nx * (hw + S.walk), z + nz * (hw + S.walk)) > S.sea) { prevRail = null; run = 0; return; }

@@ -4,6 +4,7 @@
 // and centre dashes; asphalt gets worn wheel tracks and patchy colour.
 import * as THREE from 'three';
 import { walkLine } from './layout.js';
+import { ROCKY_SHORE } from './terrain.js';
 
 // width (m), surface colour, centre dashes / edge lines
 export const ROAD_STYLE = {
@@ -112,6 +113,7 @@ function kerb(kit, map, F, t, lo, hi, color, at, out = false) {
  */
 function seaSides(F, hw, seaDist) {
   return F.pts.map(([x, z], i) => {
+    if (ROCKY_SHORE.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1)) return 0;   // seawall / fishing-village shore: no beach promenade
     const [nx, nz] = F.nrm[i];
     const l = seaDist(x + nx * (hw + 4), z + nz * (hw + 4)), r = seaDist(x - nx * (hw + 4), z - nz * (hw + 4));
     const side = l < r ? 1 : -1, near = Math.min(l, r);
@@ -149,7 +151,7 @@ export function buildRoads(kit, map, seaDist) {
 
     // the real beach promenade (an OSM pedestrian way along the beach): brick paving + dressing
     const mid2 = F.pts[F.pts.length >> 1];
-    if (r.k === 'pedestrian' && seaDist && seaDist(mid2[0], mid2[1]) < PROMENADE.pedestrianSea) {
+    if (r.k === 'pedestrian' && seaDist && seaDist(mid2[0], mid2[1]) < PROMENADE.pedestrianSea && !ROCKY_SHORE.some(b => mid2[0] > b.x0 && mid2[0] < b.x1 && mid2[1] > b.z0 && mid2[1] < b.z1)) {
       const P = PROMENADE, hwP = P.w / 2, body = new THREE.Color(P.body), body2 = new THREE.Color(P.body2), band = new THREE.Color(P.band), border = new THREE.Color(P.border);
       strip(kit, map, F, -hwP, hwP, 12, lift, (s, t) => {
         const across = t + hwP;
