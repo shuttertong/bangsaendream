@@ -7,7 +7,7 @@ import { ITEMS } from '../shared/items.js';
 const ICON = { market: '🛍️', anchor: '⚓', sign: '🐬', speedboat: '🚤', home: '🏠', beach: '🏖️', tube: '🛟', food: '🥗', crab: '🦀', boat: '🦑', hill: '🐒' };
 const FADE_MS = 380, ARRIVE = 2.6;      // metres in front of the place's NPC
 
-export function createTravel(root, { places, player, camera, npcAt }) {
+export function createTravel(root, { places, player, camera, npcAt, collision = null }) {
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = '<div class="panel"><h2></h2><div class="list"></div><button class="close"></button></div>';
@@ -31,15 +31,22 @@ export function createTravel(root, { places, player, camera, npcAt }) {
     fade.classList.add('on');
     setTimeout(() => {
       const npc = npcAt(place.id);
-      const fx = Math.sin(place.yaw), fz = Math.cos(place.yaw);
-      const x = place.x + fx * (npc ? ARRIVE : 0), z = place.z + fz * (npc ? ARRIVE : 0);
-      const yaw = npc ? place.yaw + Math.PI : place.yaw;       // face the NPC
+      const [x, z, yaw] = npc ? arrival(place) : [place.x, place.z, place.yaw];
       player.place(x, z, yaw);
       camera.setYaw(yaw + Math.PI);
       camera.snap?.();
       P.setPos(x, z, yaw);
       setTimeout(() => fade.classList.remove('on'), 60);
     }, FADE_MS);
+  }
+
+  /** A walkable spot ARRIVE m from the place's NPC, facing it: in front of it if free, else the nearest free angle. */
+  function arrival(place) {
+    for (const d of [ARRIVE, ARRIVE + 1, ARRIVE + 2]) for (const turn of [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.2, -2.2, Math.PI]) {
+      const a = place.yaw + turn, x = place.x + Math.sin(a) * d, z = place.z + Math.cos(a) * d;
+      if (!collision || collision.free(x, z, 0.45)) return [x, z, a + Math.PI];      // face the NPC
+    }
+    return [place.x + Math.sin(place.yaw) * ARRIVE, place.z + Math.cos(place.yaw) * ARRIVE, place.yaw + Math.PI];
   }
 
   function openTravel() {

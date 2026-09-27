@@ -89,7 +89,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     onGame: id => { if (!startGame(id)) { toast(t('comingSoon')); P.setFlag(`asked_${id}`); } },
     onCoop: id => (coopHandler ? coopHandler(id) : startGame(id)),   // co-op lobby when multiplayer is on
   });
-  const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id) });
+  const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id), collision });
 
   // red songthaews on the beach road
   const trucks = createSongthaews(scene, map, collision);             // routes stay inside the walkable area

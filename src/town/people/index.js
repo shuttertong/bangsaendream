@@ -11,7 +11,7 @@ export function createPeople(scene, map, places, collision, lift = () => 0) {
     const place = places[def.place];
     if (!place) continue;
     const npc = createNPC(scene, def, place, map, lift);
-    collision.circle(place.x, place.z, npc.radius, map.heightAt(place.x, place.z) + 2);
+    collision.circle(place.x, place.z, npc.radius, Math.max(map.heightAt(place.x, place.z), collision.deckAt(place.x, place.z)) + 2);   // on a deck (the viewpoint) too
     npcs.push(npc);
   }
 

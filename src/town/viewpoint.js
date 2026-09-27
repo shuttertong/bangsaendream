@@ -139,8 +139,10 @@ export function buildViewpoint(kit, map, layout) {
   // keep the terrace and the view in front of it free of trees and crags
   const clear = f.P(0, 0, Dp / 2 + V.clearView / 2);
   occ.mark(clear.x, clear.z, A + 1, (Dp + V.clearView) / 2, ry);
-  const stand = f.P(0, 0, Dp - 2.5);
-  return { decks, solids, place: { x: stand.x, z: stand.z, yaw: ry }, clear: { x: clear.x, z: clear.z, r: Math.hypot(A, (Dp + V.clearView) / 2) } };
+  // the travel stop / Chai's spot: in from the far rail, facing into the terrace (visitors arrive
+  // in front of him, looking out past him at the view)
+  const stand = f.P(west * -3, 0, Dp - 3.2);
+  return { decks, solids, place: { x: stand.x, z: stand.z, yaw: ry + Math.PI }, clear: { x: clear.x, z: clear.z, r: Math.hypot(A, (Dp + V.clearView) / 2) } };
 }
 
 const xz = p => ({ x: p.x, z: p.z });
