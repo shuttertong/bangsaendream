@@ -31,7 +31,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   const solids = [], trees = { rainTree: [], casuarina: [], frangipani: [] };
   (layout.noBeach ||= []).push(K.box);                               // seawall shore: no umbrellas or palm rows
 
-  // ---- the viewpoint: a paved clearing with a railing and a small red shrine ----
+  // ---- the shrine clearing: paving, a railing and a small red shrine (the viewpoint terrace is viewpoint.js) ----
   const LK = K.lookout, [lx, lz] = LK.at;
   occ.mark(lx, lz, LK.r, LK.r);
   const disk = new THREE.RingGeometry(0.01, LK.r, 40, 10).rotateX(-Math.PI / 2).translate(lx, 0, lz), dp = disk.attributes.position;
@@ -104,7 +104,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   const O = K.outcrop, b = K.box;
   for (let x = b.x0; x < b.x1; x += O.step) for (let z = b.z0; z < b.z1; z += O.step) {
     const px = x + (r() - 0.5) * O.step, pz = z + (r() - 0.5) * O.step, y = map.heightAt(px, pz);
-    if (y < map.sea + 1 || rockMask(px, y, pz) < O.mask || roadIdx.clearance(px, pz, 8) < 3) continue;
+    if (y < map.sea + 1 || rockMask(px, y, pz) < O.mask || roadIdx.clearance(px, pz, 8) < 3 || occ.test(px, pz, 3, 3)) continue;
     const n = Math.round(THREE.MathUtils.lerp(...O.per, r()));
     for (let i = 0; i < n; i++) {
       const s = THREE.MathUtils.lerp(...O.size, r() ** 1.6), bx = px + (r() - 0.5) * 6, bz = pz + (r() - 0.5) * 6, by = map.heightAt(bx, bz);

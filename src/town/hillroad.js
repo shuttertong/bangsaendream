@@ -49,7 +49,7 @@ export function buildHillRoads(kit, map, layout) {
       walkLine(road.p, H.rail.step, (x, z, dx, dz) => {
         const nx = -dz * s, nz = dx * s, px = x + nx * (hw + H.rail.off), pz = z + nz * (hw + H.rail.off);
         const edge = ground(x + nx * hw, z + nz * hw), below = ground(x + nx * (hw + H.rail.probe), z + nz * (hw + H.rail.probe));
-        if (!onHill(x, z) || edge - below < H.rail.drop || roadIdx.clearance(px, pz, 8) < 0.3) { prev = null; return; }
+        if (!onHill(x, z) || edge - below < H.rail.drop || roadIdx.clearance(px, pz, 8) < 0.3 || layout.occ.test(px, pz, 0.3, 0.3)) { prev = null; return; }   // (not across the viewpoint terrace)
         const y = Math.max(edge, ground(px, pz));
         const post = [new THREE.Vector3(px, y - 0.3, pz), new THREE.Vector3(px, y + H.rail.h[1] + 0.05, pz)];
         kit.rod('metal', post[0], post[1], H.rail.post, postCol);

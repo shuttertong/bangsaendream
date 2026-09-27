@@ -13,7 +13,7 @@ export const PLACES = {
   navyPier:  { name: { th: 'สะพานราชนาวี', en: 'Royal Navy pier' }, icon: 'anchor', anchor: { near: [-1100, -968] } },
   crabBeach: { name: { th: 'หาดปูลม', en: 'Ghost-crab beach' }, icon: 'crab', anchor: { near: [-560, 20], sea: 9 } },
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
-  viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: { near: [-655, -1942] } },
+  viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: 'viewpoint' },   // the terrace (viewpoint.js)
 };
 
 /** Nearest walkable spot to (x, z), optionally about `sea` metres from the water. */
@@ -57,6 +57,8 @@ export function resolvePlaces(ctx) {
       const fx = Math.sin(row.ry), fz = Math.cos(row.ry);
       [x, z] = freeSpot(row.x + fx * (row.D / 2 + 1.5), row.z + fz * (row.D / 2 + 1.5), ctx);
       yaw = row.ry;
+    } else if (a === 'viewpoint' && ctx.viewpoint) {
+      ({ x, z, yaw } = ctx.viewpoint);                                // on the terrace, facing the view
     } else if (a === 'welcome' && ctx.welcome) {
       // on the ring road in front of the steps, looking up at the sign
       const w = ctx.welcome, d = 17;

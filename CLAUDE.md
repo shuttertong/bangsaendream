@@ -22,7 +22,7 @@ Read this whole file before writing code. Follow the rules in **§8 Working Rule
 
 ### Hub landmarks (real places in the map area; check each position against OSM before placing)
 - Bang Saen beach road with beach umbrellas, deck chairs and inner-tube (ห่วงยาง) rental stalls
-- Khao Sam Muk (เขาสามมุข) hill at the north end: macaques, shrine, viewpoint (viewpoint ≈ `x -655, z -1942`)
+- Khao Sam Muk (เขาสามมุข) hill at the north end: macaques, shrine (clearing ≈ `x -652, z -1942`), viewpoint terrace (จุดชมวิว, from Street View 13.30950, 100.90484 ≈ `x -559, z -1603`)
 - Laem Thaen (แหลมแท่น) rocky point between the beach and Khao Sam Muk, at the north-west (tip ≈ `x -1356, z -758`). OSM places it here, not at the south end
 - Seafood stalls and a small market
 - Grandma's house (fictional, placed in a residential block)
@@ -312,6 +312,7 @@ Roads (2026-09-27, the user asked for realistic, connected coastal roads that th
 - `__game.auditRoads()` (debug) reports metres of road that dip below the sea, sink, tilt, bump or climb steeply, plus dangling ends and connected pieces. After the fix: below 0, sink 0, tilt 1 %, and the coast from Bang Saen to Ang Sila is one connected 17.4 km network.
 Drone view (`town/drone.js`, 🚁 button or V; Esc leaves): fly up and overlook an area top-down. Area chips come from `DRONE_AREAS`; the ⬚ tool frames a dragged box; double-tap flies down to a spot; drag pans, wheel/pinch zooms, Q/E turn, and the angle button switches top ↔ tilted (tilt-shift above 150 m). Above 1200 m, `chunkcull.js` hides the metal, glass and lit detail chunks to keep the overview under 300 draw calls.
 Terrain beyond the core square (`terrain.js` `outerHeights`) takes the lowest edge height over a widening window, so land that touches the edge tapers off instead of stretching into fake spits. The water shader deepens past the grid for the same reason.
+The Khao Sam Muk viewpoint (`town/viewpoint.js`, from the user's Street View) is a level terrace built out from the hill road over the south-west slope. It has retaining walls, grey paving with lighter zigzag borders, a concrete balustrade (lathe balusters, square posts, an entrance gap on the road side), a metal-roofed shelter at the north-west end, coin binocular viewers and macaques on the rail. It is a walkable deck, built before the hill forest so trees and crags keep off it and its view. Travel stop `viewpoint` (Chai, the monkey game) and the drone's viewpoint chip point here.
 Hill roads on Khao Sam Muk (`town/hillroad.js`): red-and-white kerbs, guardrails where the ground drops away, lamps and kerbside monkeys.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.

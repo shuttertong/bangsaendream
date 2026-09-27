@@ -4,6 +4,7 @@
 // straight-down ↔ tilted. The kid waits where they stood; the town keeps living below.
 import * as THREE from 'three';
 import { t, tr, onLang } from '../shared/i18n.js';
+import { VIEWPOINT } from './viewpoint.js';
 
 // at: [x, z] centre in local metres (or 'player'); size: metres the view should take in
 export const DRONE_AREAS = [
@@ -16,7 +17,7 @@ export const DRONE_AREAS = [
   { id: 'walking', icon: '🛍️', name: { th: 'ถนนคนเดิน', en: 'Walking street' }, at: [-1200, -940], size: 260 },
   { id: 'navyPier', icon: '⚓', name: { th: 'สะพานราชนาวี', en: 'Royal Navy pier' }, at: [-1100, -1010], size: 300 },
   { id: 'khaoSamMuk', icon: '🐒', name: { th: 'เขาสามมุข', en: 'Khao Sam Muk' }, at: [-560, -1760], size: 1100 },
-  { id: 'viewpoint', icon: '🔭', name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, at: [-655, -1942], size: 200 },
+  { id: 'viewpoint', icon: '🔭', name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, at: VIEWPOINT.at, size: 160 },
   { id: 'village', icon: '🛶', name: { th: 'หมู่บ้านชาวประมง', en: 'Fishing village' }, at: [-565, -2285], size: 420 },
 ];
 
