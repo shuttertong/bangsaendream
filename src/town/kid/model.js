@@ -1,4 +1,4 @@
-// The player kid (≈1.3 m): straw hat, T-shirt, shorts, sandals. Built by the shared
+// The player kid (≈1.35 m, chibi proportions): straw hat, T-shirt, shorts, sandals. Built by the shared
 // person builder; bones are posed by kid/index.js.
 import { buildPerson, BODY } from '../people/body.js';
 
