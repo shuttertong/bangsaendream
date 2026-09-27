@@ -10,11 +10,11 @@ import { patch, replaceInclude } from '../../core/shaderPatch.js';
 // Proportions in kid units (≈1.3 m tall); adults use look.scale and a smaller head.
 export const BODY = {
   hip: 0.62, thigh: 0.3, shin: 0.28, ankle: 0.05, torso: 0.36, neck: 0.05, head: 0.125,
-  hipW: 0.075, shoulderW: 0.16, upperArm: 0.19, foreArm: 0.17,
+  hipW: 0.075, shoulderW: 0.155, upperArm: 0.205, foreArm: 0.19,     // hands reach mid-thigh
 };
 
 export const DEFAULT_LOOK = {
-  scale: 1, headScale: 1.45, belly: 0,           // kids: big chibi head; adults pass headScale ≈ 0.86
+  scale: 1, headScale: 1.2, belly: 0,            // kids: a big-ish toon head (≈ 1/5 of their height); adults pass ≈ 0.86
   skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | bald
   shirt: '#7fc4e8', shirtTrim: '#f4f1e8', sleeves: 'short',  // short | long | none
   bottom: 'shorts', bottomColor: '#34507a',                   // shorts | pants | skirt
@@ -23,11 +23,11 @@ export const DEFAULT_LOOK = {
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
 
-export const CHIBI_LEGS = 0.66;            // kids' leg length (× BODY) unless look.legScale says otherwise
+export const KID_LEGS = 1;                 // kids' leg length (× BODY) unless look.legScale says otherwise (0.66 = chibi)
 
 /** Proportions for one person: BODY with the legs scaled. */
 export const bodyFor = look => {
-  const ls = look.legScale ?? (look.headScale > 1 ? CHIBI_LEGS : 1);
+  const ls = look.legScale ?? (look.headScale > 1 ? KID_LEGS : 1);
   return { ...BODY, hip: BODY.hip * ls, thigh: BODY.thigh * ls, shin: BODY.shin * ls };
 };
 

@@ -24,7 +24,7 @@ export function createCustomers(scene, r, { slots: SLOTS, lane: LANE = 3.4, orde
     const slot = free[Math.floor(r() * free.length)];
     const adult = r() < 0.75;
     const look = {
-      scale: adult ? 1.2 + r() * 0.15 : 1, headScale: adult ? 0.86 : 1.45,
+      scale: adult ? 1.2 + r() * 0.15 : 1, headScale: adult ? 0.86 : 1.2,
       skin: pick(LOOKS.skin), shirt: pick(LOOKS.shirt), bottom: r() < 0.25 ? 'skirt' : r() < 0.5 ? 'pants' : 'shorts',
       bottomColor: pick(LOOKS.bottom), hat: pick(LOOKS.hat), hatColor: pick(LOOKS.shirt), hairStyle: pick(LOOKS.hair), belly: r() * 0.4,
     };

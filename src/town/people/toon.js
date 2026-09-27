@@ -12,7 +12,12 @@ export const TOON = {
   eye: { x: 0.4, w: 0.155, h: 0.225 },     // eye centre x and half-size (× head radius): big chibi eyes
   shape: [1, 0.97, 0.95], chin: 0.14,      // head ellipsoid radii (× R), chin taper
   seg: { head: [32, 24], limb: [6, 14], round: [18, 12] },
-  limb: { arm: 0.043, fore: 0.04, hand: 0.052, thigh: 0.06, shin: 0.054, knee: 0.056 },   // chunky, soft limbs
+  // natural, tapered limbs (radius at the top / widest point / bottom, and where the widest point sits)
+  limb: {
+    arm: [0.041, 0.039, 0.033, 0.35], fore: [0.033, 0.034, 0.026, 0.3],
+    thigh: [0.066, 0.06, 0.045, 0.25], shin: [0.044, 0.049, 0.029, 0.3],
+    hand: [0.034, 0.046, 0.026], shorts: [0.072, 0.078, 0.76], sleeve: [0.05, 0.047, 0.42],
+  },
   iris: '#5a3a26', irisLow: '#9a6a44', lash: '#1e1412', shine: '#ffffff', sole: '#f4f1e8',
 };
 
@@ -29,6 +34,21 @@ const sc = (g, x, y, z) => { g.scale(x, y, z); return g; };
 const sph = (r, w = TOON.seg.round[0], h = TOON.seg.round[1]) => new THREE.SphereGeometry(r, w, h);
 const cap = (r, len) => new THREE.CapsuleGeometry(r, Math.max(0.001, len), TOON.seg.limb[0], TOON.seg.limb[1]);
 const lathe = (pts, seg = 22) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+const hermite = (a, b, t) => a + (b - a) * t * t * (3 - 2 * t);
+/** A limb hanging from the joint (y = 0) down to −len: radius r0 at the top, widest r1 at `mid` (0–1), r2 at the
+ *  bottom, with round ends that tuck into the neighbouring joints. Bottom → top, so the lathe faces outward. */
+function taper(len, r0, r1, r2, mid = 0.3) {
+  const pts = [];
+  for (let k = 0; k <= 4; k++) { const a = (k / 4) * Math.PI / 2; pts.push([r2 * Math.sin(a), -len - r2 * Math.cos(a)]); }   // bottom cap
+  for (let k = 1; k < 12; k++) {
+    const t = 1 - k / 12, y = -len * t;                               // t: 0 at the top joint, 1 at the bottom
+    pts.push([t > mid ? hermite(r1, r2, (t - mid) / (1 - mid)) : hermite(r0, r1, t / mid), y]);
+  }
+  for (let k = 0; k <= 4; k++) { const a = (1 - k / 4) * Math.PI / 2; pts.push([r0 * Math.sin(a), r0 * Math.cos(a)]); }       // top cap
+  return lathe(pts, 16);
+}
+/** An open tube (sleeve, shorts leg) from y0 down to y1, radius ra at the top flaring to rb at the hem. */
+const tube = (y0, y1, ra, rb) => lathe([[rb, y1], [rb * 1.01, y1 + 0.01], [(ra + rb) / 2, (y0 + y1) / 2], [ra, y0 - 0.01], [ra * 0.7, y0]], 18);
 
 /** Point + outward normal on the head ellipsoid (centre at the origin) at face coords (x, y). */
 function surface(R, x, y) {
@@ -164,23 +184,20 @@ export function toonParts(K, B) {
   const legCover = K.bottom === 'pants' ? K.bottomColor : K.skin;
   const L = TOON.limb;
   const side = s => ({
-    [`arm${s}`]: [colored(at(sph(1).scale(L.arm * 1.25, L.arm * 1.35, L.arm * 1.2), 0, -0.012, 0), bare ? K.skin : K.shirt),   // round shoulder / sleeve
-      colored(at(cap(L.arm, B.upperArm), 0, -B.upperArm / 2, 0), long ? K.shirt : K.skin),
-      ...(bare || long ? [] : [colored(at(sph(1).scale(L.arm * 1.18, L.arm * 1.3, L.arm * 1.15), 0, -0.045, 0), K.shirt)])],
-    [`fore${s}`]: [colored(sph(L.fore * 1.02), long ? K.shirt : K.skin),                                             // elbow, flush with the arm
-      colored(at(cap(L.fore, B.foreArm - L.fore), 0, -B.foreArm / 2 + L.fore / 2, 0), long ? K.shirt : K.skin),
-      colored(at(sc(sph(1), L.hand, L.hand * 1.08, L.hand * 0.85), 0, -B.foreArm - 0.012, 0.004), K.skin)],           // mitten hand
-    [`leg${s}`]: K.bottom === 'skirt' ? [colored(at(cap(L.thigh, B.thigh), 0, -B.thigh / 2, 0), K.skin)]
-      : [colored(at(sc(sph(1), L.thigh * 1.45, 0.12, L.thigh * 1.35), 0, -0.06, 0), K.bottomColor),                  // shorts leg
-        colored(at(cap(L.thigh, B.thigh), 0, -B.thigh / 2, 0), legCover)],
-    [`shin${s}`]: [colored(sph(L.knee), legCover),                                                                   // knee, flush
-      colored(at(cap(L.shin, B.shin - L.shin), 0, -B.shin / 2 + L.shin / 2, 0), legCover)],
-    [`foot${s}`]: [colored(at(sc(sph(1), 0.062, 0.032, 0.11), 0, -B.ankle + 0.014, 0.035), TOON.sole),                // sole
-      colored(at(sc(sph(1), 0.058, 0.05, 0.104), 0, -B.ankle + 0.037, 0.035), K.shoe)],                              // rounded shoe
+    [`arm${s}`]: [colored(sph(L.arm[0] * 1.05), bare ? K.skin : K.shirt),                                          // shoulder joint
+      colored(taper(B.upperArm, ...L.arm), long ? K.shirt : K.skin),
+      ...(bare || long ? [] : [colored(tube(0.02, -B.upperArm * L.sleeve[2], L.sleeve[0], L.sleeve[1]), K.shirt)])],   // short sleeve
+    [`fore${s}`]: [colored(taper(B.foreArm, ...L.fore.slice(0, 3), L.fore[3]), long ? K.shirt : K.skin),
+      colored(at(sc(sph(1), L.hand[0], L.hand[1], L.hand[2]), 0, -B.foreArm - L.hand[1] * 0.75, 0.004), K.skin)],   // hand
+    [`leg${s}`]: [colored(taper(B.thigh, ...L.thigh), legCover),
+      ...(K.bottom === 'skirt' ? [] : [colored(tube(L.thigh[0] * 1.3, -B.thigh * L.shorts[2], L.shorts[0], L.shorts[1]), K.bottomColor)])],   // shorts leg, from above the thigh's round top
+    [`shin${s}`]: [colored(taper(B.shin, ...L.shin), legCover)],
+    [`foot${s}`]: [colored(at(sc(sph(1), 0.052, 0.028, 0.1), 0, -B.ankle + 0.013, 0.03), TOON.sole),              // sole
+      colored(at(sc(sph(1), 0.048, 0.045, 0.094), 0, -B.ankle + 0.034, 0.03), K.shoe)],                           // rounded shoe
   });
 
   const belly = K.belly;
-  const torso = lathe([[0, -0.08], [0.115, -0.075], [0.14, -0.02], [0.148 + belly * 0.03, 0.08], [0.146, 0.18], [0.132, 0.26], [0.1, 0.31], [0.06, 0.33], [0, 0.335]]);
+  const torso = lathe([[0, -0.08], [0.11, -0.075], [0.128, -0.02], [0.13 + belly * 0.04, 0.08], [0.136, 0.18], [0.13, 0.25], [0.1, 0.305], [0.055, 0.328], [0, 0.332]]);
   const spine = [
     colored(sc(torso, 1, 1, 0.78 + belly * 0.3), K.shirt),
     colored(at(sc(new THREE.TorusGeometry(0.058, 0.014, 8, 20).rotateX(Math.PI / 2), 1, 1, 0.85), 0, B.torso - 0.075, 0), K.shirtTrim),   // collar
@@ -191,7 +208,7 @@ export function toonParts(K, B) {
     for (const y of [0.04, 0.15]) spine.push(colored(at(sc(new THREE.TorusGeometry(0.166 + belly * 0.03, 0.012, 6, 28).rotateX(Math.PI / 2), 1, 1, 0.84 + belly * 0.3), 0, y, 0), '#1a1a1a'));
   }
   if (K.apron) spine.push(colored(at(sc(sph(1, 16, 12), 0.13, 0.19, 0.02), 0, 0.03, 0.105 + belly * 0.05), K.apron));
-  const hips = [colored(sc(lathe([[0, -0.1], [0.1, -0.1], [0.128, -0.05], [0.13, 0.04], [0.12, 0.1], [0, 0.1]]), 1, 1, 0.8), K.bottomColor)];
+  const hips = [colored(sc(lathe([[0, -0.1], [0.1, -0.1], [0.12, -0.05], [0.124, 0.04], [0.118, 0.1], [0, 0.1]]), 1, 1, 0.8), K.bottomColor)];
   if (K.bottom === 'skirt') hips.push(colored(sc(lathe([[0, 0.06], [0.13, 0.06], [0.155, -0.2], [0.175, -0.46], [0, -0.46]]), 1, 1, 0.8), K.bottomColor));
 
   return { hips, spine, head, hat, eyes, mouth, ...side('L'), ...side('R') };
