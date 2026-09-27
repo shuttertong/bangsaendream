@@ -74,7 +74,7 @@ async function boot() {
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
-  const village = buildFishingVillage(kit, map, layout);               // stilt houses, jetties, boats, the long pier
+  const village = buildFishingVillage(kit, map, layout, scene);               // stilt houses, jetties, boats, the long pier
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas

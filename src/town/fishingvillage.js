@@ -9,15 +9,19 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng, walkLine } from './layout.js';
 import { roadWidth } from './roads.js';
 import { longtailGeometry } from '../jetski/props.js';
+import { createBobbingBoats } from './boats.js';
 
 export const VILLAGE = {
   shore: { x0: -660, x1: -470, z0: -2450, z1: -2120 },         // the east shore of the hill's north end
   roads: ['residential', 'unclassified', 'service', 'tertiary', 'secondary'], roadSea: 35,   // the shore road the houses face
+  plank: 0.3,                                                   // plank height (lap siding)
   house: { w: [5.5, 8], d: [7, 11], front: 1.2, floor: 1.9, floors: [1, 2], gap: [0.6, 2.2], cluster: [3, 6], jettyGap: 5 },
   jetty: { len: [18, 32], w: 2.4, boats: [2, 4] },            // metres beyond the waterline
   pier: { from: [-640, -2455], dir: [0.55, -0.84], len: 115, w: 4.2, boats: 8, hut: true },   // the long pier off the north tip
   colors: {
-    walls: ['#d9d0bc', '#c8b89a', '#9fb8b0', '#e0d6c0', '#b89a78', '#d6c4a8', '#a8c0c8'],
+    walls: ['#d9d0bc', '#c8b89a', '#9fb8b0', '#e0d6c0', '#b89a78', '#d6c4a8', '#a8c0c8'],   // painted planks
+    timber: ['#8a6a4a', '#9a7a56', '#7a5c40', '#a88a64', '#6f5a44'], paintedChance: 0.4,     // bare weathered planks
+    gap: '#2e241c', corner: '#5a4632', trim: '#e8e2d2',
     roofs: ['#3f9a8c', '#3a8a5a', '#2f8a9a', '#c9542e', '#2f6fc4', '#8d9aa3', '#4aa88a'],
     wood: '#8a6a4a', deck: '#a8845c', post: '#6a5440', window: '#2e3a40', rail: '#e8e4d8',
     hulls: [['#2f6fc4', '#f4f2ec', '#d8443a'], ['#d8443a', '#f4f2ec', '#2f6fc4'], ['#3a8a5a', '#f0c23a', '#f4f2ec'], ['#f4f2ec', '#2f6fc4', '#d8443a']],
@@ -58,15 +62,15 @@ export function fishingBoatGeometry([bottom, band, top]) {
   ]);
 }
 
-export function buildFishingVillage(kit, map, layout) {
+export function buildFishingVillage(kit, map, layout, scene) {
   const V = VILLAGE, r = rng(909), col = h => new THREE.Color(h), c = V.colors;
   const decks = [], solids = [], in_ = (x, z, b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1;
   const sea = map.sea, floorY = sea + V.house.floor;
-  const addBaked = (geo, m) => { const a = geo.attributes.color; let i = 0; const tmp = new THREE.Color(); kit.add('wall', geo, m, () => tmp.fromBufferAttribute(a, i++)); };
+  const fleet = [];                                                  // moored boats (instanced + bobbing)
   const boats = c.hulls.map(fishingBoatGeometry), longtail = longtailGeometry();
   const moor = (x, z, yaw, big = true) => {                          // a boat floating at (x, z), bow toward yaw
     const m = new THREE.Matrix4().compose(new THREE.Vector3(x, sea - 0.35, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
-    addBaked(big ? r.pick(boats) : longtail, m);
+    fleet.push({ geo: big ? r.pick(boats) : longtail, m });            // they bob: see boats.js
   };
   const postsDown = (f, u, w, top) => f.box('wall', u, top - 2.6, w, 0.26, 5.2, 0.26, col(c.post));
 
@@ -89,21 +93,33 @@ export function buildFishingVillage(kit, map, layout) {
   function house(x, z, sx, sz, W, D) {
     const floorY = Math.max(sea + V.house.floor, map.heightAt(x, z) + 0.45);   // level with the road at the front
     const ry = Math.atan2(sx, sz), f = kit.frame(x, 0, z, ry), fl = Math.round(lerp(...V.house.floors, r() ** 1.5));
-    const wall = col(r.pick(c.walls)), roof = col(r.pick(c.roofs)), H = fl * 2.8;
+    const base = col(r() < c.paintedChance ? r.pick(c.walls) : r.pick(c.timber)), roof = col(r.pick(c.roofs)), H = fl * 2.8;
     for (let u = -W / 2 + 0.3; u <= W / 2 - 0.2; u += (W - 0.6) / 2) for (let w = 0.3; w <= D + 2.2; w += (D + 1.9) / 3) postsDown(f, u, w, floorY);
     f.box('wall', 0, floorY - 0.1, D / 2 + 1, W, 0.2, D + 2, col(c.deck));                        // floor + back deck
-    f.box('wall', 0, floorY + H / 2, D / 2, W, H, D, wall);
-    for (let k = 0; k < fl; k++) for (const u of [-W / 4, W / 4]) {                                 // windows front and back
-      f.box('wall', u, floorY + 1.4 + k * 2.8, -0.02, 1.1, 0.9, 0.06, col(c.window));
-      f.box('wall', u, floorY + 1.4 + k * 2.8, D + 0.02, 1.1, 0.9, 0.06, col(c.window));
+    // plank walls: a dark core with overlapping horizontal planks, each a touch different
+    f.box('wall', 0, floorY + H / 2, D / 2, W - 0.1, H, D - 0.1, col(c.gap));
+    const PH = V.plank, rows = Math.round(H / PH), shade = new THREE.Color();
+    for (let k = 0; k < rows; k++) {
+      const y = floorY + (k + 0.5) * (H / rows), jut = k % 2 ? 0.012 : 0, pc = shade.copy(base).offsetHSL(0, 0, (r() - 0.5) * 0.08).clone();
+      f.box('wall', 0, y, -0.02 - jut, W, H / rows - 0.025, 0.08, pc);             // front
+      f.box('wall', 0, y, D + 0.02 + jut, W, H / rows - 0.025, 0.08, pc);          // back
+      for (const sgn of [-1, 1]) f.box('wall', sgn * (W / 2 + 0.02 + jut), y, D / 2, 0.08, H / rows - 0.025, D, pc);   // sides
     }
-    f.box('wall', 0, floorY + 1.0, -0.03, 1.0, 2.0, 0.06, col(c.wood));                          // door to the road
+    for (const u of [-W / 2, W / 2]) for (const w of [0, D]) f.box('wall', u, floorY + H / 2, w, 0.18, H, 0.18, col(c.corner));   // corner posts
+    for (let k = 0; k < fl; k++) for (const u of [-W / 4, W / 4]) {                                 // framed windows front and back
+      for (const w of [-0.08, D + 0.08]) {
+        f.box('wall', u, floorY + 1.4 + k * 2.8, w, 1.3, 1.1, 0.05, col(c.trim));
+        f.box('wall', u, floorY + 1.4 + k * 2.8, w + (w < 0 ? -0.03 : 0.03), 1.1, 0.9, 0.05, col(c.window));
+      }
+    }
+    f.box('wall', 0, floorY + 1.05, -0.09, 1.2, 2.2, 0.05, col(c.trim));                          // door to the road
+    f.box('wall', 0, floorY + 1.0, -0.12, 1.0, 2.0, 0.05, col(c.wood));
     f.box('wall', 0, floorY + 0.55, D + 2, W, 0.08, 0.06, col(c.rail));                           // back-deck rail
     // gable roof, ridge along the shore (u); overhangs front and back
     const y0 = floorY + H, rise = 1.4, o = 0.6, w0 = -o, w1 = D + o, wm = D / 2, uL = -W / 2 - o, uR = W / 2 + o;
     f.tris2('wall', [uL, y0, w0, uR, y0, w0, uL, y0 + rise, wm, uL, y0 + rise, wm, uR, y0, w0, uR, y0 + rise, wm,
       uL, y0 + rise, wm, uR, y0 + rise, wm, uL, y0, w1, uL, y0, w1, uR, y0 + rise, wm, uR, y0, w1], roof);
-    f.tris('wall', [-W / 2, y0, 0, W / 2, y0, 0, 0, y0 + rise, wm, W / 2, y0, D, -W / 2, y0, D, 0, y0 + rise, wm], wall);
+    f.tris('wall', [-W / 2, y0, 0, W / 2, y0, 0, 0, y0 + rise, wm, W / 2, y0, D, -W / 2, y0, D, 0, y0 + rise, wm], base);
     const ctr = f.P(0, 0, D / 2);
     solids.push({ x: ctr.x, z: ctr.z, r: Math.max(W, D) / 2 - 0.4, top: y0 + rise });
     if (r() < 0.35) { const p = f.P((r() - 0.5) * W, 0, D + 4); moor(p.x, p.z, ry + Math.PI / 2 + (r() - 0.5) * 0.4, false); }   // a longtail tied up behind
@@ -164,5 +180,6 @@ export function buildFishingVillage(kit, map, layout) {
       moor(p.x, p.z, ry + (i % 3 === 0 ? Math.PI : 0) + (r() - 0.5) * 0.1, i % 4 !== 3);
     }
   }
-  return { decks, solids };
+  createBobbingBoats(scene, fleet);
+  return { decks, solids, boats: fleet.length };
 }
