@@ -337,3 +337,18 @@ body.drone #ui .top, body.drone #ui .prompt, body.drone #touch, body.drone .mp-l
 #drone.selecting ~ * { cursor: crosshair; }
 body.drone canvas { cursor: grab; }
 @media (max-width: 600px) { #drone .d-hint { font-size: 12px; } #drone .d-title { font-size: 15px; } }
+
+/* ---------- binocular viewer ---------- */
+#scope { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 3; font-family: 'Sarabun', sans-serif; }
+body.scope #scope { display: block; }
+body.scope #ui .top, body.scope #ui .prompt, body.scope #touch, body.scope .mp-layer, body.scope .b-drone { display: none !important; }
+#scope .sc-mask { position: absolute; inset: 0; width: 100%; height: 100%; fill: #141210; }
+#scope .sc-tags { position: absolute; inset: 0; }
+#scope .sc-tag { position: absolute; transform: translate(-50%, -100%); background: rgba(255, 250, 240, .92); color: var(--ink); border-radius: 10px; padding: 3px 10px; text-align: center; white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+#scope .sc-tag::after { content: ''; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(255, 250, 240, .92); }
+#scope .sc-tag b { display: block; font: 600 15px 'Kanit', sans-serif; }
+#scope .sc-tag span { font-size: 12px; color: var(--accent); }
+#scope .sc-bar { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: 8px; pointer-events: auto; }
+#scope .sc-bar button { border: 0; background: var(--panel); border-radius: 999px; min-width: 44px; height: 44px; padding: 0 14px; font: 600 18px 'Kanit', sans-serif; cursor: pointer; }
+#scope .sc-bar .sc-exit { background: var(--accent); color: #fff; font-size: 15px; }
+#scope .sc-hint { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%); color: #f4efe4; font-size: 13px; background: rgba(0, 0, 0, .35); border-radius: 999px; padding: 4px 14px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }

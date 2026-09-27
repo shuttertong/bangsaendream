@@ -14,6 +14,7 @@ export const VIEWPOINT = {
   gap: 0.6,                           // from the road edge to the terrace
   entrance: 6,                        // opening in the road-side balustrade
   clearView: 14,                      // metres beyond the rail kept free of trees
+  fan: { reach: 75, half: 1.3, step: 6 },   // …and a wide fan down the slope (m, ±rad), so the binoculars see past the crowns
   rail: { h: 1.0, baluster: 0.25, post: 2.4, inset: 0.2 },
   shelter: { along: 6.5, deep: 7.5, h: 2.7, pitch: 1.1 },
   binoculars: 2, monkeys: 5,
@@ -26,7 +27,7 @@ export const VIEWPOINT = {
 
 const col = h => new THREE.Color(h);
 
-/** Returns { decks, solids, place: {x, z, yaw}, clear: {x, z, r} } — builds into the kit. */
+/** Returns { decks, solids, scopes: [{x, z, eye, yaw}], place: {x, z, yaw}, clear: {x, z, r} } — builds into the kit. */
 export function buildViewpoint(kit, map, layout) {
   const V = VIEWPOINT, c = V.colors, r = rng(1603), { roadIdx, occ } = layout, sit = sittingMonkeys(kit);
   // the road beside the Street View spot, and which side falls away (the view)
@@ -37,7 +38,7 @@ export function buildViewpoint(kit, map, layout) {
     const px = ax + dx * t, pz = az + dz * t, d = Math.hypot(px - V.at[0], pz - V.at[1]);
     if (roadWidth(road.k) && (!best || d < best.d)) best = { d, px, pz, dx: dx / L, dz: dz / L, hw: roadWidth(road.k) / 2 };
   }
-  if (!best || best.d > 20) return { decks: [], solids: [] };
+  if (!best || best.d > 20) return { decks: [], solids: [], scopes: [] };
   const side = [1, -1].map(s => ({ s, h: map.heightAt(best.px - best.dz * s * 15, best.pz + best.dx * s * 15) })).sort((a, b) => a.h - b.h)[0].s;
   const ox = -best.dz * side, oz = best.dx * side;                   // out over the slope
   const ry = Math.atan2(ox, oz), off = best.hw + V.gap;
@@ -47,7 +48,7 @@ export function buildViewpoint(kit, map, layout) {
   let lowest = Infinity, highest = -Infinity;
   for (let u = -A; u <= A; u += 2) for (let w = 0; w <= Dp; w += 2) { const q = f.P(u, 0, w), h = map.heightAt(q.x, q.z); lowest = Math.min(lowest, h); highest = Math.max(highest, h); }
   const Y = Math.max(roadTop + 0.12, highest + 0.08);                 // level, never under the ground
-  const decks = [], solids = [];
+  const decks = [], solids = [], scopes = [];
 
   // ---- the terrace: a slab whose sides are the retaining walls, paved on top ----
   const base = Math.max(map.sea, lowest) - 0.5;
@@ -127,6 +128,8 @@ export function buildViewpoint(kit, map, layout) {
     for (const e of [-0.09, 0.09]) f.rod('wall', [pu + e, Y + 1.2, pw - 0.05], [pu + e, Y + 1.2, pw + 0.3], 0.055, col(c.scopeHead));
     for (const e of [-0.09, 0.09]) f.box('wall', pu + e, Y + 1.2, pw - 0.07, 0.07, 0.07, 0.02, col(c.scopeGlass));
     solids.push({ x: p.x, z: p.z, r: 0.25, top: Y + 1.3 });
+    const eye = f.P(pu, Y + 1.2, pw + 0.4), stand = f.P(pu, 0, pw - 0.9);
+    scopes.push({ x: stand.x, z: stand.z, eye, yaw: ry });            // where the kid stands to use it; the lens view
   }
 
   // ---- macaques on the top rail ----
@@ -139,10 +142,15 @@ export function buildViewpoint(kit, map, layout) {
   // keep the terrace and the view in front of it free of trees and crags
   const clear = f.P(0, 0, Dp / 2 + V.clearView / 2);
   occ.mark(clear.x, clear.z, A + 1, (Dp + V.clearView) / 2, ry);
+  const F = V.fan, mid = f.P(0, 0, Dp);
+  for (let d = F.step; d <= F.reach; d += F.step) for (let a = -F.half; a <= F.half + 1e-6; a += F.step / Math.max(d, 12)) {
+    const x = mid.x + Math.sin(ry + a) * d, z = mid.z + Math.cos(ry + a) * d;
+    if (roadIdx.clearance(x, z, 8) > 2) occ.mark(x, z, F.step / 2 + 0.5, F.step / 2 + 0.5);   // (not over a road: hill-road rails stay)
+  }
   // the travel stop / Chai's spot: in from the far rail, facing into the terrace (visitors arrive
   // in front of him, looking out past him at the view)
   const stand = f.P(west * -3, 0, Dp - 3.2);
-  return { decks, solids, place: { x: stand.x, z: stand.z, yaw: ry + Math.PI }, clear: { x: clear.x, z: clear.z, r: Math.hypot(A, (Dp + V.clearView) / 2) } };
+  return { decks, solids, scopes, place: { x: stand.x, z: stand.z, yaw: ry + Math.PI }, clear: { x: clear.x, z: clear.z, r: Math.hypot(A, (Dp + V.clearView) / 2) } };
 }
 
 const xz = p => ({ x: p.x, z: p.z });

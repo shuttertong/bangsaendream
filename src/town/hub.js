@@ -21,7 +21,7 @@ import { createSeats } from './seats.js';
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint, scopes = null }) {
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
@@ -119,7 +119,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
 
   // deck chairs (rented) and public benches (free)
   const seats = createSeats({ list: beach.seats, player, collision, toast });
-  let nearSeat = null, seatT = 0;
+  let nearSeat = null, seatT = 0, nearScope = null;             // binocular viewer (binoculars.js) in reach
 
   let near = null, talkingTo = null;
   const act = () => {
@@ -129,6 +129,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     else if (near) startTalk();
     else if (nearTruck) board(nearTruck);
     else if (nearSeat && seats.sit(nearSeat)) audio?.play('thud');
+    else if (nearScope) scopes.use(nearScope);
   };
   const startTalk = () => {
     if (!near || talk.active || travel.open) return;
@@ -215,8 +216,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       near = busy ? null : people.nearest(p);
       nearTruck = near || busy ? null : trucks.nearest(p);
       nearSeat = near || nearTruck || busy ? null : seats.nearest(p);
-      const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : [null, null];
-      hud.setPrompt(riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : seatKey,
+      nearScope = near || nearTruck || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
+      const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : [null, null];
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : seatKey,
         near ? near.def.name : null, seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
