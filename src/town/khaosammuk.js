@@ -109,11 +109,12 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
     for (let i = 0; i < n; i++) {
       const s = THREE.MathUtils.lerp(...O.size, r() ** 1.6), bx = px + (r() - 0.5) * 6, bz = pz + (r() - 0.5) * 6, by = map.heightAt(bx, bz);
       const h = s * THREE.MathUtils.lerp(...O.tall, r());
+      if (roadIdx.clearance(bx, bz, 12) < s * 0.8 + 1) continue;          // big boulders stay off the road edge
       const g = new THREE.DodecahedronGeometry(1, 0).scale(s * (0.6 + r() * 0.5), h, s * (0.5 + r() * 0.4));
       const rot = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler((r() - 0.5) * 0.5, r() * 6, (r() - 0.5) * 0.5));
       kit.add('wall', g, rot.setPosition(bx, by + h * (1 - O.sink) - h * 0.4, bz), col(r.pick(O.colors)));
       occ.mark(bx, bz, s * 0.8, s * 0.8);
-      if (seaDist(bx, bz) < (map.inland || 100) + 8) solids.push({ x: bx, z: bz, r: s * 0.8, top: by + s });
+      if (layout.strip(bx, bz) < 8) solids.push({ x: bx, z: bz, r: s * 0.8, top: by + s });
     }
   }
 
@@ -129,14 +130,11 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   }
 
   // ---- macaques by the viewpoint: sitting on the wall, the road, the rocks ----
-  const Mk = K.monkeys, geos = MONKEYS.slice(0, 3).map(m => { const g = monkeyGeometry(m); return { m, parts: [g.body, g.front.clone().rotateX(-0.9).translate(0, 0.3, 0.14), g.back.clone().rotateX(0.4).translate(0, 0.3, -0.14)] }; });   // idle pose, as in the monkey game
+  const Mk = K.monkeys, sit = sittingMonkeys(kit);
   for (let i = 0; i < Mk.count; i++) {
     const a = r() * Math.PI * 2, d = r() * Mk.spread, x = Mk.near[0] + Math.cos(a) * d, z = Mk.near[1] + Math.sin(a) * d;
     if (map.heightAt(x, z) < map.sea + 0.3) continue;
-    const { m, parts } = r.pick(geos), s = m.size * 1.3, ry = r() * 6.28, y = map.heightAt(x, z) + 0.05;
-    const mat = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(s, s, s));
-    // sitting: the geometry is merged with its own colours, legs tucked under the body
-    for (const g of parts) { const c = g.attributes.color; let v = 0; kit.add('wall', g, mat, () => new THREE.Color().fromBufferAttribute(c, v++)); }
+    sit(r.pick, x, map.heightAt(x, z) + 0.05, z, r() * 6.28);
   }
 
   // ---- mussel-farm poles in Ang Sila bay (one instanced draw) ----
@@ -164,4 +162,16 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
     scene.add(mesh);
   }
   return { trees, solids, counts: { trees: Object.values(trees).reduce((a, l) => a + l.length, 0), poles: spots.length } };
+}
+
+/** A sitting macaque merged into the kit: sit(pick, x, y, z, ry). Idle pose as in the monkey game,
+ *  merged with its own vertex colours, legs tucked under the body. */
+export function sittingMonkeys(kit) {
+  const geos = MONKEYS.slice(0, 3).map(m => { const g = monkeyGeometry(m); return { m, parts: [g.body, g.front.clone().rotateX(-0.9).translate(0, 0.3, 0.14), g.back.clone().rotateX(0.4).translate(0, 0.3, -0.14)] }; });
+  const up = new THREE.Vector3(0, 1, 0);
+  return (pick, x, y, z, ry) => {
+    const { m, parts } = pick(geos), s = m.size * 1.3;
+    const mat = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(up, ry), new THREE.Vector3(s, s, s));
+    for (const g of parts) { const c = g.attributes.color; let v = 0; kit.add('wall', g, mat, () => new THREE.Color().fromBufferAttribute(c, v++)); }
+  };
 }

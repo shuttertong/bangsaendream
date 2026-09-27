@@ -24,6 +24,7 @@ import { dressPromenades } from './promenade.js';
 import { buildLandmarks, completeRoundabout } from './landmarks.js';
 import { buildLaemThaen } from './laemthaen.js';
 import { buildKhaoSamMuk } from './khaosammuk.js';
+import { buildHillRoads } from './hillroad.js';
 import { buildFishingVillage } from './fishingvillage.js';
 import { createChunkCuller } from './chunkcull.js';
 import { buildWalkingStreet } from './walkingstreet.js';
@@ -78,6 +79,7 @@ async function boot() {
   const landmarks = buildLandmarks(kit, scene, map, layout);         // first, so the island stays clear
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
+  const hillRoads = buildHillRoads(kit, map, layout);                  // red-white kerbs, guardrails, lamps, monkeys on the hill roads
   const village = buildFishingVillage(kit, map, layout, scene);               // stilt houses, jetties, boats, the long pier
   const walking = buildWalkingStreet(kit, map, layout);                // market stalls, bulbs, the paved seafront lot
   const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
@@ -94,7 +96,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks], strip: layout.strip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...village.solids, ...walking.solids, ...navy.solids], decks: [...laem.decks, ...village.decks, ...navy.decks], strip: layout.strip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
@@ -220,7 +222,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
