@@ -230,6 +230,7 @@ body.in-game.stall #touch { display: none !important; }
 #title .t-sub, #ending .t-sub { font: 500 16px/1.5 'Sarabun', sans-serif; color: #6a5a4a; margin: 8px 0 18px; }
 #title .t-go, #ending .t-go { border: 0; background: var(--accent); color: #fff; border-radius: 16px; padding: 13px 40px; font: 600 21px 'Kanit', sans-serif; cursor: pointer; box-shadow: 0 6px 16px rgba(200, 100, 40, .35); }
 #title .t-hint { font-size: 13px; color: #8a7a66; margin: 14px 0 0; }
+#title .t-ver { font-size: 11px; color: #b0a08a; margin: 6px 0 0; letter-spacing: .03em; }
 #ending .e-sun { font-size: 44px; margin: 0 0 6px; }
 #ending .e-stats { font: 500 15px 'Kanit', sans-serif; color: #3a6a7a; margin: -6px 0 18px; }
 /* banana + sofa boats */

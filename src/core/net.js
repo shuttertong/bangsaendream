@@ -7,16 +7,19 @@ import { connectRealtime } from './realtime.js';
 const NET = { path: '/mp', tries: 3, backoff: [1000, 15000] };
 
 export function connect(handlers) {
-  // static host (GitHub Pages): online via Supabase. ?online=<name> forces it anywhere, in a separate
+  // One shared world: every address except localhost joins the online hub (Supabase), so the live
+  // site and a phone on the Wi-Fi address (http://192.168.x.x:8000) see each other. localhost (dev)
+  // and ?lan=1 use the Wi-Fi relay in tools/serve.py. ?online=<name> forces Realtime on a separate
   // test channel (e.g. ?online=test), so testing never drops fake players into the real hub.
-  const test = new URLSearchParams(location.search).get('online');
-  if (location.protocol === 'https:' || test !== null) {
+  const q = new URLSearchParams(location.search), test = q.get('online');
+  const dev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if (test !== null || (!dev && !q.has('lan') && /^https?:$/.test(location.protocol))) {
     if (!REALTIME.key) return null;
     const tag = (test || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
     return connectRealtime(tag ? { ...REALTIME, topic: `${REALTIME.topic}-${tag}` } : REALTIME, handlers);
   }
   if (location.protocol !== 'http:') return null;
-  const { onOpen, onMessage, onClose } = handlers;                // plain http: the Wi-Fi relay in tools/serve.py
+  const { onOpen, onMessage, onClose, onFail } = handlers;        // the Wi-Fi relay in tools/serve.py
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${NET.path}`;
   let ws = null, ever = false, fails = 0, wait = NET.backoff[0], stopped = false;
 
@@ -26,7 +29,8 @@ export function connect(handlers) {
     ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } onMessage(m); };
     ws.onclose = () => {
       if (ever) onClose?.();
-      if (stopped || (!ever && ++fails >= NET.tries)) return;       // no relay here: single-player
+      if (stopped) return;
+      if (!ever && ++fails >= NET.tries) { onFail?.(); return; }      // no relay here: single-player
       setTimeout(open, wait);
       wait = Math.min(wait * 2, NET.backoff[1]);
     };

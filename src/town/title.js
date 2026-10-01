@@ -1,6 +1,7 @@
 // Title card (first tap also unlocks audio on iOS) and the ending card.
 import { t } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
+import { GAME_VERSION } from '../shared/config.js';
 
 export function showTitle(root, { onStart }) {
   const el = document.createElement('div');
@@ -12,6 +13,7 @@ export function showTitle(root, { onStart }) {
       <p class="t-sub">${t('titleSub')}</p>
       <button class="t-go">${returning ? t('titleContinue') : t('titlePlay')}</button>
       <p class="t-hint">🔊 ${t('titleHint')}</p>
+      <p class="t-ver">v${GAME_VERSION}</p>
     </div>`;
   root.appendChild(el);
   const go = e => { e?.preventDefault(); e?.stopPropagation(); el.classList.add('out'); setTimeout(() => el.remove(), 600); onStart?.(); removeEventListener('keydown', key); };

@@ -138,6 +138,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   const net = connect({
     onOpen: () => net.send({ t: 'hello', ...profile }),
     onClose: () => { for (const id of [...remotes.keys()]) remove(id); myId = null; hub.seatSlot = 0; setHost(null); btn.classList.remove('on'); },
+    onFail: () => { if (net?.rates) hub.hud?.toast(t('mpOffline')); },   // online hub unreachable (Wi-Fi relay failing is normal on static hosts)
     onMessage: m => {
       if (m.t === 'welcome') {
         myId = m.id; btn.classList.add('on');
@@ -145,6 +146,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
         net.send({ t: 'vis', on: document.visibilityState === 'visible' });   // hidden tabs can't host the trucks
         setHost(m.host);
         for (const p of m.players) add(p);
+        hub.hud?.toast(t('mpOnline', { n: m.players.length }));
         last = '';                                            // send our state right away
       } else if (m.t === 'join') {
         const r = remotes.get(m.id);

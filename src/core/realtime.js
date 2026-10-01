@@ -10,7 +10,7 @@
 // hold / co / say / emote), so town/multiplayer.js, coop.js and the bots need no changes.
 import { cleanHello, cleanState, cleanTrucks, cleanCo, cleanTo, okPhrase, okEmote, okTruck, LIMITS } from './mpcheck.js';
 
-export function connectRealtime(cfg, { onOpen, onMessage, onClose }) {
+export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
   const topic = cfg.topic, peers = new Map();   // id → { hello, bot, hidden, at, state, lastTrucks, silent }
   const me = { id: 1 + Math.floor(Math.random() * 2 ** 30), hello: null, bot: false, hidden: document.visibilityState !== 'visible', at: Date.now() };
   let ws = null, ref = 0, joinRef = null, joined = false, ever = false, fails = 0, stopped = false;
@@ -136,7 +136,7 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose }) {
       let m; try { m = JSON.parse(e.data); } catch { return; }
       if (m.topic !== topic) return;
       if (m.event === 'phx_reply' && m.ref === joinRef) {
-        if (m.payload?.status !== 'ok') { stop(); return; }
+        if (m.payload?.status !== 'ok') { stop(); onFail?.(); return; }
         joined = true; ever = true; fails = 0; wait = cfg.backoff[0];
         onOpen?.();
       } else if (m.event === 'broadcast') receive(m.payload?.payload);
@@ -148,7 +148,8 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose }) {
       const was = joined;
       joined = false; me.hello = null; hostId = null; peers.clear();
       if (was) onClose?.();
-      if (stopped || (!ever && ++fails >= cfg.tries)) return;   // Realtime unreachable: single-player
+      if (stopped) return;
+      if (!ever && ++fails >= cfg.tries) { onFail?.(); return; }   // Realtime unreachable: single-player
       setTimeout(open, wait);
       wait = Math.min(wait * 2, cfg.backoff[1]);
     };

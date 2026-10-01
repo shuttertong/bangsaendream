@@ -212,6 +212,8 @@ const STRINGS = {
     mpOnline: 'ออนไลน์ {n} คน',
     mpNewName: 'สุ่มชื่อใหม่',
     mpJoined: '{name} มาเล่นด้วยแล้ว!',
+    mpOnline: '🌐 ออนไลน์แล้ว · มีเพื่อน {n} คน',
+    mpOffline: '📴 ออฟไลน์ เล่นคนเดียวไปก่อนนะ',
     mpLeft: '{name} กลับบ้านแล้ว',
     // เก้าอี้ชายหาด
     sitRent: 'เช่าเก้าอี้ผ้าใบ ฿{n}',
@@ -428,6 +430,8 @@ const STRINGS = {
     mpOnline: '{n} online',
     mpNewName: 'New name',
     mpJoined: '{name} joined!',
+    mpOnline: '🌐 Online · {n} friends here',
+    mpOffline: '📴 Offline — playing solo for now',
     mpLeft: '{name} went home',
     sitRent: 'Rent a deck chair ฿{n}',
     sitRented: 'Sit in your rented chair',
