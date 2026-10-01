@@ -5,7 +5,7 @@ export const GAME_VERSION = '2026.10.01';
 
 export const FEEDBACK = {
   url: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1/game_feedback',   // the game's own project (not the flood map's)
-  key: '',                                   // publishable key (sb_publishable_…); empty = the 💌 button stays hidden
+  key: 'sb_publishable_kxmi-f_EGl1wgw4TPZX-8A_h4RJDY08',   // publishable key (public by design); empty = the 💌 button stays hidden
   kinds: [                                   // id must match the table's check constraint
     { id: 'idea', icon: '💡' }, { id: 'bug', icon: '🐞' }, { id: 'like', icon: '❤️' }, { id: 'game', icon: '🎮' },
   ],
