@@ -4,7 +4,7 @@ A small 3D browser game set on a real map of Bang Saen Beach, Chonburi, Thailand
 You spend a school break at Grandma's house, meet the people along the beach, and try
 five mini-games from local life. Thai first, English too.
 
-**Play online:** https://shuttertong.github.io/bangsaendream/ (single-player). Or open `index.html`
+**Play online:** https://shuttertong.github.io/bangsaendream/ (online multiplayer via Supabase Realtime). Or open `index.html`
 from any static web server (see below). Works on desktop, phones and iPad (touch joystick).
 Local Wi-Fi multiplayer needs `python3 tools/serve.py 8000`.
 

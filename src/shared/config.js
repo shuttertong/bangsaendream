@@ -13,3 +13,14 @@ export const FEEDBACK = {
   cooldown: 60,                              // seconds between messages from one player
   timeout: 12,                               // seconds before a send counts as failed
 };
+
+// Online multiplayer on https hosts (core/realtime.js): Supabase Realtime, public channel.
+// The free plan allows ~100 messages/s and 2 million a month, so online play sends less often.
+export const REALTIME = {
+  url: 'wss://rlkmjujiidvtjmvfrrfw.supabase.co/realtime/v1/websocket',
+  key: FEEDBACK.key,
+  topic: 'realtime:bangsaendream-hub',
+  heartbeat: 25, tries: 3, backoff: [1000, 15000],   // seconds; failed attempts before staying single-player; ms
+  hostTimeout: 3,                                    // seconds of silence before another player hosts the trucks
+  rates: { sendHz: 4, keepAlive: 3, truckHz: 3, delay: 0.35 },   // vs. Wi-Fi: 10 / 2 / 10 / 0.15
+};

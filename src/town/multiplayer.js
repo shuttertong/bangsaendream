@@ -1,4 +1,4 @@
-// Local Wi-Fi multiplayer in the hub: other players on the same network appear as kids
+// Multiplayer in the hub (local Wi-Fi via tools/serve.py, or online via Supabase Realtime on https): other players on the same network appear as kids
 // in their chosen looks, with name tags, preset-phrase speech bubbles and emotes. The red
 // trucks are shared: the host player's game drives them (snapshots 10×/s), everyone else
 // follows, riders are drawn on each viewer's own copy of the truck. Needs
@@ -182,7 +182,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
 
   /** Interpolated state `delay` seconds in the past. */
   function sample(r) {
-    const rt = now() - MP.delay, b = r.buf;
+    const rt = now() - (net?.rates?.delay ?? MP.delay), b = r.buf;
     if (!b.length) return null;
     let i = b.length - 1;
     while (i > 0 && b[i - 1].t > rt) i--;
@@ -224,16 +224,16 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     // send our state (also while in a mini-game, so others see the 🎮 badge)
     sendT -= dt; keepT -= dt;
     if (net?.online && myId && sendT <= 0) {
-      sendT = 1 / MP.sendHz;
+      sendT = 1 / (net.rates?.sendHz ?? MP.sendHz);
       const p = player.state, s = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pose: hub.pose, busy: busy() || null, air: !p.grounded, ride: hub.ride };
       const key = JSON.stringify(s);
-      if (key !== last || keepT <= 0) { net.send({ t: 'state', ...s }); last = key; keepT = MP.keepAlive; }
+      if (key !== last || keepT <= 0) { net.send({ t: 'state', ...s }); last = key; keepT = net.rates?.keepAlive ?? MP.keepAlive; }
     }
     // host: keep the shared trucks running (also while we're in a mini-game) and broadcast them
     if (trucks.mode === 'host') {
       if (!active) trucks.update(dt, trucks.extra);
       truckT -= dt;
-      if (truckT <= 0) { truckT = 1 / MP.truckHz; net.send({ t: 'trucks', s: trucks.snapshot() }); }
+      if (truckT <= 0) { truckT = 1 / (net?.rates?.truckHz ?? MP.truckHz); net?.send({ t: 'trucks', s: trucks.snapshot() }); }
     }
     // the trucks brake for other players in the road too
     trucks.extra = [...remotes.values()].filter(r => r.last && !r.last.busy).map(r => ({ x: r.last.x, z: r.last.z, ride: r.last.ride != null ? trucks.trucks[r.last.ride] : null }));
