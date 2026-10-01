@@ -5,6 +5,23 @@ import * as THREE from 'three';
 import { getMaterial } from '../../world/materials.js';
 
 const CHUNK = 384;
+
+/** Growable typed buffer: the kit holds millions of vertices, so it never uses plain JS arrays
+ *  (64-bit numbers, and a second copy when the mesh is made). Normals and colours are stored
+ *  as normalized 16-bit integers: 24 bytes a vertex instead of 36 on the GPU (and 72 while building). */
+class Buf {
+  constructor(Type, scale = 1) { this.Type = Type; this.scale = scale; this.a = new Type(3 * 2048); this.n = 0; }
+  push3(x, y, z) {
+    if (this.n + 3 > this.a.length) { const b = new this.Type(this.a.length * 2); b.set(this.a); this.a = b; }
+    const k = this.scale;
+    this.a[this.n] = x * k; this.a[this.n + 1] = y * k; this.a[this.n + 2] = z * k;
+    this.n += 3;
+  }
+  /** A BufferAttribute over exactly the used part (copied once, so the spare capacity is freed). */
+  attribute() { return new THREE.BufferAttribute(this.a.slice(0, this.n), 3, this.scale !== 1); }
+}
+/** Once a static attribute is on the GPU, drop its JS copy (nothing reads the town geometry back). */
+function freeAfterUpload() { this.array = new this.array.constructor(0); }
 const _m = new THREE.Matrix4(), _n = new THREE.Matrix3(), _v = new THREE.Vector3(), _c = new THREE.Color();
 const _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
@@ -19,7 +36,7 @@ export class Kit {
   _bucket(mat, x, z) {
     const key = `${mat}|${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`;
     let b = this.buckets.get(key);
-    if (!b) this.buckets.set(key, b = { mat, pos: [], nrm: [], col: [] });
+    if (!b) this.buckets.set(key, b = { mat, pos: new Buf(Float32Array), nrm: new Buf(Int16Array, 32767), col: new Buf(Uint16Array, 65535) });
     return b;
   }
 
@@ -38,12 +55,12 @@ export class Kit {
     if (!fn) _c.set(color);
     for (let i = 0; i < p.count; i++) {
       _v.fromBufferAttribute(p, i).applyMatrix4(matrix);
-      b.pos.push(_v.x, _v.y, _v.z);
+      b.pos.push3(_v.x, _v.y, _v.z);
       const x = _v.x, y = _v.y, z = _v.z;
       _v.fromBufferAttribute(n, i).applyMatrix3(_n).normalize();
-      b.nrm.push(_v.x, _v.y, _v.z);
+      b.nrm.push3(_v.x, _v.y, _v.z);
       const c = fn ? fn(x, y, z, _v.x, _v.y, _v.z) : _c;
-      b.col.push(c.r, c.g, c.b);
+      b.col.push3(Math.min(1, Math.max(0, c.r)), Math.min(1, Math.max(0, c.g)), Math.min(1, Math.max(0, c.b)));
     }
     this.tris += p.count / 3;
   }
@@ -100,16 +117,18 @@ export class Kit {
     const group = new THREE.Group();
     for (const b of this.buckets.values()) {
       const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
-      g.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
-      g.computeBoundingSphere();
+      g.setAttribute('position', b.pos.attribute());
+      g.setAttribute('normal', b.nrm.attribute());
+      g.setAttribute('color', b.col.attribute());
+      g.computeBoundingSphere();                                   // (needs the positions: before they are freed)
+      for (const a of Object.values(g.attributes)) a.onUpload(freeAfterUpload);
       const mesh = new THREE.Mesh(g, getMaterial(b.mat));
       mesh.castShadow = castShadow && b.mat !== 'road' && b.mat !== 'lit';
       mesh.receiveShadow = receiveShadow;
       mesh.matrixAutoUpdate = false;
       group.add(mesh);
     }
+    this.buckets.clear();                                          // the build buffers are no longer needed
     return group;
   }
 }

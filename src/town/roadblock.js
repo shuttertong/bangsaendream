@@ -121,7 +121,7 @@ function drawBoard(c, w, h) {
   c.fillStyle = SB.board; c.fillRect(0, 0, w, h);
   // little beach scene on the left: sun, sea, sand, an umbrella
   const bw = h * 0.72, bx = pad, by = (h - bw) / 2;
-  c.save(); c.beginPath(); c.roundRect(bx, by, bw, bw, 28); c.clip();
+  c.save(); c.beginPath(); if (c.roundRect) c.roundRect(bx, by, bw, bw, 28); else c.rect(bx, by, bw, bw); c.clip();   // (roundRect: iOS 16+)
   c.fillStyle = '#bfe6f4'; c.fillRect(bx, by, bw, bw);
   c.fillStyle = '#f4c43c'; c.beginPath(); c.arc(bx + bw * 0.72, by + bw * 0.26, bw * 0.13, 0, Math.PI * 2); c.fill();
   c.fillStyle = '#4fb3a8'; c.fillRect(bx, by + bw * 0.55, bw, bw * 0.2);
