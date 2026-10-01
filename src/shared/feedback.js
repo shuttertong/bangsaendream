@@ -10,6 +10,7 @@ const COOL_KEY = 'bangsaen.feedback.last';
 /** ctx: { root (#hud), audio, place() → nearest place id or '' } */
 export function createFeedback({ root, audio, place = () => '' }) {
   const F = FEEDBACK;
+  if (!F.key) return { open() {}, close() {} };                  // not configured yet: no button
   let kind = F.kinds[0].id, sending = false;
 
   const btn = document.createElement('button');

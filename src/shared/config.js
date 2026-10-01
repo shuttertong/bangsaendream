@@ -4,8 +4,8 @@
 export const GAME_VERSION = '2026.10.01';
 
 export const FEEDBACK = {
-  url: 'https://vyvmxmqbxoxyngzzisqe.supabase.co/rest/v1/game_feedback',
-  key: 'sb_publishable_HZ_xvmYhprSJOegr0Gixcg_-JrA-wES',
+  url: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1/game_feedback',   // the game's own project (not the flood map's)
+  key: '',                                   // publishable key (sb_publishable_…); empty = the 💌 button stays hidden
   kinds: [                                   // id must match the table's check constraint
     { id: 'idea', icon: '💡' }, { id: 'bug', icon: '🐞' }, { id: 'like', icon: '❤️' }, { id: 'game', icon: '🎮' },
   ],

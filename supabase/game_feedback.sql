@@ -1,5 +1,5 @@
 -- บางแสนในฝัน: players' requests and feedback (the in-game 💌 form, src/shared/feedback.js).
--- Run once in the Supabase dashboard → SQL Editor (project vyvmxmqbxoxyngzzisqe).
+-- Run once in project rlkmjujiidvtjmvfrrfw (the game's own project): dashboard → SQL Editor, or via the Supabase MCP.
 -- Anyone may ADD a message through the public (publishable) key; nobody can read, change or
 -- delete messages through it — only you, in the dashboard (Table Editor → game_feedback).
 -- No personal data is collected: no names, emails or phone numbers, just the message and a
