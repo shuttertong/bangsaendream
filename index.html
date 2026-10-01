@@ -24,6 +24,7 @@
   <div id="debug" hidden></div>
   <div id="credit"></div>
 </div>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});   // re-check files with the server on every load (sw.js)</script>
 <script type="module" src="src/town/main.js"></script>
 </body>
 </html>
