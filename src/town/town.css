@@ -352,3 +352,19 @@ body.scope #ui .top, body.scope #ui .prompt, body.scope #touch, body.scope .mp-l
 #scope .sc-bar button { border: 0; background: var(--panel); border-radius: 999px; min-width: 44px; height: 44px; padding: 0 14px; font: 600 18px 'Kanit', sans-serif; cursor: pointer; }
 #scope .sc-bar .sc-exit { background: var(--accent); color: #fff; font-size: 15px; }
 #scope .sc-hint { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%); color: #f4efe4; font-size: 13px; background: rgba(0, 0, 0, .35); border-radius: 999px; padding: 4px 14px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 💌 feedback panel ---------- */
+.fb-panel .panel { max-width: 460px; }
+.fb-panel .fb-lead { margin: 0 4px 12px; font-size: 15px; line-height: 1.45; }
+.fb-panel .fb-kinds { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.fb-panel .fb-kinds button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 12px; font: 500 15px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; }
+.fb-panel .fb-kinds button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fb-panel textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font: 400 16px 'Sarabun', sans-serif; color: var(--ink); background: #fff; resize: vertical; }
+.fb-panel textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.fb-panel .fb-row { display: flex; justify-content: space-between; gap: 10px; margin: 6px 4px 0; font-size: 12px; color: #8a7a64; }
+.fb-panel .fb-msg { min-height: 20px; margin: 8px 4px 0; font-size: 14px; }
+.fb-panel .fb-msg.ok { color: #2f8a4a; } .fb-panel .fb-msg.err { color: #c8322a; }
+.fb-panel .fb-actions { display: flex; gap: 8px; margin-top: 10px; }
+.fb-panel .fb-send { flex: 1; border: 0; background: var(--accent); color: #fff; border-radius: 14px; padding: 11px; font: 600 17px 'Kanit', sans-serif; cursor: pointer; }
+.fb-panel .fb-send:disabled { opacity: .45; cursor: default; }
+.fb-panel .close { border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 11px 18px; font: 500 16px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; }

@@ -32,6 +32,7 @@ import { buildKhaoSamMuk } from './khaosammuk.js';
 import { buildHillRoads } from './hillroad.js';
 import { buildViewpoint } from './viewpoint.js';
 import { createBinoculars } from './binoculars.js';
+import { createFeedback } from '../shared/feedback.js';
 import { buildFishingVillage } from './fishingvillage.js';
 import { createChunkCuller } from './chunkcull.js';
 import { buildWalkingStreet } from './walkingstreet.js';
@@ -180,6 +181,13 @@ async function boot() {
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
   const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
+  // 💌 requests & feedback for the developer (Supabase, insert-only); sends the nearest travel stop as context
+  const nearestPlace = () => {
+    const p = player.state; let best = '', bd = 250;
+    for (const pl of Object.values(hub.places)) { const d = Math.hypot(pl.x - p.x, pl.z - p.z); if (d < bd) { bd = d; best = pl.id; } }
+    return best;
+  };
+  const feedback = createFeedback({ root: $('hud'), audio, place: nearestPlace });
   const drone = createDrone({ camera, input, map, root: $('hud'), canvas: $('c'), player, tpc, audio });   // 🚁 overlook any area from above
   const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
 
@@ -242,7 +250,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, viewpoint, binos, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
