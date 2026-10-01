@@ -4,8 +4,9 @@ A small 3D browser game set on a real map of Bang Saen Beach, Chonburi, Thailand
 You spend a school break at Grandma's house, meet the people along the beach, and try
 five mini-games from local life. Thai first, English too.
 
-**Play:** open `index.html` from any static web server (see below). Works on desktop,
-phones and iPad (touch joystick).
+**Play online:** https://shuttertong.github.io/bangsaendream/ (single-player). Or open `index.html`
+from any static web server (see below). Works on desktop, phones and iPad (touch joystick).
+Local Wi-Fi multiplayer needs `python3 tools/serve.py 8000`.
 
 ## The five mini-games
 | | | |
@@ -37,3 +38,7 @@ elevation by `tools/bake_map.py`. Developer notes are in `CLAUDE.md`.
 Map data © OpenStreetMap contributors (ODbL). Elevation: Mapzen Terrarium (AWS Open Data).
 Fonts: Kanit and Sarabun (SIL OFL). three.js (MIT). See `CREDITS.md`.
 All characters and shops are fictional.
+
+## Licence
+Source code: MIT (see `LICENSE`). The baked map data in `src/town/data/` is derived from
+OpenStreetMap and stays under the ODbL 1.0, © OpenStreetMap contributors.

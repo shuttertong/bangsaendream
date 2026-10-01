@@ -4,7 +4,7 @@
 const NET = { path: '/mp', tries: 3, backoff: [1000, 15000] };
 
 export function connect({ onOpen, onMessage, onClose }) {
-  if (!/^https?:$/.test(location.protocol)) return null;
+  if (location.protocol !== 'http:') return null;               // the relay (serve.py) is plain http; https = static host (GitHub Pages): single-player
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${NET.path}`;
   let ws = null, ever = false, fails = 0, wait = NET.backoff[0], stopped = false;
 
