@@ -369,3 +369,13 @@ body.scope #ui .top, body.scope #ui .prompt, body.scope #touch, body.scope .mp-l
 .fb-panel .fb-send { flex: 1; border: 0; background: var(--accent); color: #fff; border-radius: 14px; padding: 11px; font: 600 17px 'Kanit', sans-serif; cursor: pointer; }
 .fb-panel .fb-send:disabled { opacity: .45; cursor: default; }
 .fb-panel .close { border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 11px 18px; font: 500 16px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; }
+
+/* ---------- 🎟️ partner coupon panel ---------- */
+.cp-card { --shop: #d8743a; background: #fff; border: 2px dashed var(--shop); border-radius: 16px; padding: 14px 16px; text-align: center; }
+.cp-shop { font: 600 20px 'Kanit', sans-serif; color: var(--shop); }
+.cp-what { font: 500 16px 'Kanit', sans-serif; margin-top: 2px; }
+.cp-code { font: 600 clamp(30px, 10vw, 44px) 'Kanit', sans-serif; letter-spacing: .1em; white-space: nowrap; margin: 8px 0 2px; font-variant-numeric: tabular-nums; }
+.cp-exp { font-size: 13px; color: #8a7a64; }
+.cp-hint { margin: 12px 4px 0; font-size: 15px; }
+.cp-panel h3 { font: 600 15px 'Kanit', sans-serif; margin: 16px 4px 6px; color: #8a7a64; }
+.cp-row { margin-top: 6px; }

@@ -33,6 +33,7 @@ import { buildHillRoads } from './hillroad.js';
 import { buildViewpoint } from './viewpoint.js';
 import { createBinoculars } from './binoculars.js';
 import { createFeedback } from '../shared/feedback.js';
+import { createPartners } from './partners.js';
 import { buildFishingVillage } from './fishingvillage.js';
 import { createChunkCuller } from './chunkcull.js';
 import { buildWalkingStreet } from './walkingstreet.js';
@@ -165,6 +166,7 @@ async function boot() {
   const binos = createBinoculars({ spots: viewpoint.scopes, camera, input, map, root: $('hud'), audio, player, toast: m => { hub.hud.toast(m); audio.play('coin'); } });   // look through the viewpoint's coin binoculars
   const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, scopes: binos });
 
+  hub.partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร from Supabase (none until the admin adds some)
   const culler = createChunkCuller([town, beach.group]);             // hide map chunks far behind the haze
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {

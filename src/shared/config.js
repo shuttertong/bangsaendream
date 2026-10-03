@@ -1,7 +1,7 @@
 // Public settings for the deployed game. The Supabase publishable key is meant to be public:
 // it ships to every browser, and the table's row-level security only lets it ADD feedback
 // (supabase/game_feedback.sql) — never read, change or delete anything.
-export const GAME_VERSION = '2026.10.03-3';                 // shown on the title card: bump on each deploy
+export const GAME_VERSION = '2026.10.03-4';                 // shown on the title card: bump on each deploy
 
 export const FEEDBACK = {
   url: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1/game_feedback',   // the game's own project (not the flood map's)
@@ -23,4 +23,16 @@ export const REALTIME = {
   heartbeat: 25, tries: 3, backoff: [1000, 15000],   // seconds; failed attempts before staying single-player; ms
   hostTimeout: 3,                                    // seconds of silence before another player hosts the trucks
   rates: { sendHz: 4, keepAlive: 3, truckHz: 3, delay: 0.35 },   // vs. Wi-Fi: 10 / 2 / 10 / 0.15
+};
+
+// ร้านพันธมิตร — real shops on the map (supabase/partners.sql, admin.html, town/partners.js). Prices in THB.
+export const PARTNERS = {
+  rest: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1',
+  key: FEEDBACK.key,
+  range: 3.2,                                // metres from the counter to get the coupon prompt
+  visitRange: 12,                            // metres that count as a visit (once per browser session)
+  prices: {
+    pin: { th: 'หมุด', price: 300 }, shop: { th: 'ร้าน', price: 900 }, game: { th: 'สปอนเซอร์มินิเกม', price: 2500 },
+    event: { th: 'อีเวนต์', price: 3000 }, coupon: { th: 'คูปอง (ต่อใบที่ใช้)', price: 15 },
+  },
 };

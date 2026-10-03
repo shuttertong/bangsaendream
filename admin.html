@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>บางแสนในฝัน · จัดการร้านพันธมิตร</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #f6efe2; --panel: #fffaf0; --ink: #3a3228; --muted: #7d6e5c; --line: rgba(120, 90, 50, .18); --accent: #d8743a; --sea: #2a8f9a; --ok: #3a8a4a; --bad: #c8322a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 'Sarabun', system-ui, sans-serif; }
+h1, h2, h3 { font-family: 'Kanit', sans-serif; font-weight: 600; margin: 0; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 18px; } header .sp { flex: 1; } header small { color: var(--muted); }
+nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
+nav button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 14px; font: 500 14px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; position: relative; }
+nav button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+nav button i { position: absolute; top: -6px; right: -4px; background: var(--bad); color: #fff; font: 600 11px 'Kanit', sans-serif; font-style: normal; border-radius: 999px; min-width: 18px; padding: 1px 5px; text-align: center; }
+nav button i:empty { display: none; }
+main, #login { max-width: 980px; margin: 0 auto; padding: 14px 16px 60px; }
+section > h2 { font-size: 20px; margin-bottom: 10px; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+.row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-top: 8px; flex-wrap: wrap; }
+.row .grow { flex: 1; min-width: 180px; } .row small { color: var(--muted); }
+.row button, .acts button, .f-actions button, #f-redeem button, #f-login button { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 7px 12px; font: 500 14px 'Kanit', sans-serif; color: var(--ink); }
+button.ok, .f-actions button[type=submit], #f-redeem button, #f-login button { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.pill { font: 500 12px 'Kanit', sans-serif; padding: 2px 9px; border-radius: 999px; background: #efe2c4; white-space: nowrap; }
+.pill.approved, .pill.paid { background: #dff1e2; color: var(--ok); } .pill.pending, .pill.due { background: #fde9cf; color: #a35a1c; } .pill.rejected, .pill.void { background: #f7dcd9; color: var(--bad); } .pill.paused { background: #e6e2da; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 10px; }
+.card .hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .card .hd small { color: var(--muted); }
+.card .logo { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; background: #fff; margin-top: 8px; }
+.kv { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; margin-top: 8px; font-size: 14px; } .kv span:nth-child(odd) { color: var(--muted); }
+.check { font-size: 13px; color: var(--sea); background: #e7f4f2; border-radius: 10px; padding: 8px 10px; margin: 10px 0 0; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; } .acts input { flex: 1; min-width: 160px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+form.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; }
+form.grid label { display: grid; gap: 4px; font: 500 13px 'Kanit', sans-serif; color: var(--muted); }
+form.grid label.wide { grid-column: 1 / -1; }
+form.grid input, form.grid select, form.grid textarea { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; color: var(--ink); font: 400 15px 'Sarabun', sans-serif; width: 100%; }
+form.grid input[type=color] { padding: 2px; height: 38px; } form.grid input[type=checkbox] { width: auto; }
+.chk { display: flex !important; align-items: center; gap: 8px; grid-template-columns: none !important; }
+#map { width: 100%; height: 360px; border-radius: 14px; border: 1px solid var(--line); background: #9fd3d6; touch-action: none; cursor: crosshair; }
+.f-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .f-actions small { color: var(--muted); }
+#p-logo-now { width: 56px; height: 56px; object-fit: contain; border-radius: 10px; background: #fff; }
+fieldset { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; } legend { font: 500 13px 'Kanit', sans-serif; color: var(--muted); padding: 0 6px; }
+#f-redeem { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#f-redeem input { font: 600 32px 'Kanit', sans-serif; letter-spacing: .25em; width: 220px; text-align: center; border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+#r-out { font: 500 18px 'Kanit', sans-serif; margin-top: 12px; min-height: 28px; } #r-out.ok { color: var(--ok); } #r-out.bad { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 12px; overflow: hidden; font-size: 14px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; } th { font: 500 12px 'Kanit', sans-serif; color: var(--muted); } .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tablewrap { overflow-x: auto; } #stats h3 { margin-top: 20px; }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 999px; opacity: 0; transition: .2s; pointer-events: none; font: 500 14px 'Kanit', sans-serif; }
+#toast.on { opacity: 1; transform: translateX(-50%); } #toast.bad { background: var(--bad); }
+#login .box { max-width: 420px; margin: 40px auto; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+#login p { color: var(--muted); font-size: 14px; } #f-login { display: grid; gap: 10px; } #f-login input { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+#prices { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+#list-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } #list-head select { border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+</style>
+</head>
+<body>
+<header><h1>🏪 ร้านพันธมิตร · บางแสนในฝัน</h1><small>เฉพาะเจ้าของเกม</small><span class="sp"></span><small id="who"></small><button id="logout" class="pill">ออกจากระบบ</button></header>
+
+<div id="login" hidden>
+  <div class="box">
+    <h2>เข้าสู่ระบบ</h2>
+    <p>ใส่อีเมลของเจ้าของเกม ระบบจะส่งลิงก์เข้าสู่ระบบไปให้ (ต้องเป็นอีเมลที่อยู่ในตาราง app_admins)</p>
+    <form id="f-login"><input id="email" type="email" placeholder="อีเมล" required autocomplete="email"><input id="code" inputmode="numeric" placeholder="รหัส 6 หลักจากอีเมล (ถ้ามี)"><button type="submit">ส่งลิงก์ / เข้าสู่ระบบ</button></form>
+    <p id="login-msg"></p>
+  </div>
+</div>
+
+<div id="app" hidden>
+<nav>
+  <button data-tab="list" class="on">ร้านทั้งหมด</button>
+  <button data-tab="queue">รออนุมัติ <i id="n-pending"></i></button>
+  <button data-tab="edit">เพิ่มร้าน</button>
+  <button data-tab="redeem">ยืนยันคูปอง</button>
+  <button data-tab="stats">สถิติ · บิล</button>
+</nav>
+<main>
+  <section data-tab="list">
+    <div id="list-head"><h2>ร้านทั้งหมด</h2><span class="sp"></span><select id="filter"><option value="">ทุกสถานะ</option><option value="approved">แสดงในเกม</option><option value="pending">รออนุมัติ</option><option value="paused">พักไว้</option><option value="rejected">ส่งกลับ</option></select><button id="add" class="pill">+ เพิ่มร้าน</button></div>
+    <div id="prices"></div>
+    <div id="list"></div>
+  </section>
+
+  <section data-tab="queue" hidden><h2>รออนุมัติ</h2><div id="queue"></div></section>
+
+  <section data-tab="edit" hidden>
+    <h2 id="edit-title">เพิ่มร้านพันธมิตร</h2>
+    <form id="f-edit" class="grid" autocomplete="off">
+      <label class="wide">เจ้าของร้าน (พาร์ทเนอร์)<select id="p-partner"></select></label>
+      <fieldset id="new-partner"><legend>ร้านใหม่: ข้อมูลติดต่อ</legend>
+        <label>ชื่อเจ้าของ / ชื่อกิจการ<input id="p-partner_name"></label><label>โทร<input id="p-partner_phone"></label><label>LINE ID<input id="p-partner_line"></label><label>อีเมล (สำหรับให้ร้านเข้าระบบเองภายหลัง)<input id="p-partner_email" type="email"></label>
+      </fieldset>
+      <label>ชื่อร้านในเกม (ไทย, ≤ 40)<input id="p-name" required maxlength="40"></label>
+      <label>ชื่ออังกฤษ<input id="p-name_en" maxlength="40"></label>
+      <label>ประเภท<select id="p-kind"><option value="cafe">คาเฟ่</option><option value="restaurant">ร้านอาหาร</option><option value="shop">ร้านค้า</option><option value="rental">ร้านเช่า</option><option value="hotel">ที่พัก</option><option value="other">อื่น ๆ</option></select></label>
+      <label>แพ็กเกจ<select id="p-package"><option value="pin">หมุด ฿300</option><option value="shop">ร้าน ฿900</option><option value="game">สปอนเซอร์มินิเกม ฿2,500</option><option value="event">อีเวนต์ ฿3,000</option></select></label>
+      <label>สีร้าน<input id="p-color" type="color" value="#d8743a"></label>
+      <label>เวลาเปิด (แสดงบนป้าย)<input id="p-hours" maxlength="40" placeholder="08:00–18:00"></label>
+      <label class="wide">ตำแหน่ง: คลิกบนแผนที่ตรงที่ร้านอยู่จริง<canvas id="map"></canvas></label>
+      <label>x (เมตร)<input id="p-x" type="number" step="0.1" readonly></label>
+      <label>z (เมตร)<input id="p-z" type="number" step="0.1" readonly></label>
+      <label>โซน<select id="p-zone"><option value="beach">ถนนเลียบหาด</option><option value="walking">ถนนคนเดิน</option><option value="laemthaen">แหลมแท่น</option><option value="ksm">เขาสามมุข</option><option value="village">หมู่บ้านชาวประมง</option></select></label>
+      <label>หันหน้า (เรเดียน, ลองปรับแล้วดูเส้นบนแผนที่)<input id="p-yaw" type="number" step="0.1" value="0"></label>
+      <label>โลโก้ (PNG/JPG ≤ 1 MB, ร้านยืนยันว่าเป็นเจ้าของ)<input id="p-logo" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      <label>โลโก้ปัจจุบัน<img id="p-logo-now" alt="" hidden></label>
+      <fieldset><legend>คูปอง</legend>
+        <label class="chk"><input id="p-coupon" type="checkbox"> เปิดคูปอง (฿15 ต่อใบที่ใช้จริง)</label>
+        <label>คูปองให้อะไร (≤ 60)<input id="p-coupon_text" maxlength="60" placeholder="ลด ฿10 เมื่อซื้อครบ ฿50"></label>
+        <label>เพดานต่อวัน<input id="p-coupon_cap_day" type="number" min="0" max="500" value="20"></label>
+      </fieldset>
+      <fieldset><legend>บทพูดพนักงาน NPC (เฟส 2, ≤ 80 ตัวอักษร)</legend><label>บรรทัด 1<input id="p-line1" maxlength="80"></label><label>บรรทัด 2<input id="p-line2" maxlength="80"></label><label>บรรทัด 3<input id="p-line3" maxlength="80"></label></fieldset>
+      <label>เริ่มแสดง<input id="p-starts_on" type="date"></label>
+      <label>สิ้นสุด<input id="p-ends_on" type="date"></label>
+      <div class="f-actions"><button type="submit">บันทึก</button><small>ร้านใหม่จะเข้าคิว "รออนุมัติ" ก่อน แล้วค่อยกดแสดงในเกม</small></div>
+    </form>
+  </section>
+
+  <section data-tab="redeem" hidden>
+    <h2>ยืนยันคูปอง</h2>
+    <p>พิมพ์รหัส 6 หลักที่เด็กโชว์จากมือถือ</p>
+    <form id="f-redeem"><input id="r-code" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off"><button type="submit">ยืนยัน</button></form>
+    <div id="r-out"></div>
+  </section>
+
+  <section data-tab="stats" hidden><h2>สถิติและใบแจ้งหนี้</h2><div class="tablewrap" id="stats"></div></section>
+</main>
+</div>
+<div id="toast"></div>
+<script type="module" src="src/admin/main.js"></script>
+</body>
+</html>
