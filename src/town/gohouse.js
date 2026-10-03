@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import { t, onLang } from '../shared/i18n.js';
 
 export const GO_HOUSE = {
-  near: [598, 1194],                 // local metres: the shophouse row nearest this point becomes the Go house
-  roads: ['secondary', 'tertiary'],
+  near: [470, 1044],                 // local metres: the shophouse row nearest this point becomes the Go house (on the beach road, a short walk from the start)
+  roads: ['tertiary'],               // not 'secondary': road 3137 is closed, a house on it sits behind the roadblock
   lot: 4,                            // shophouse unit width (buildings.js FRONTAGE.lot)
   units: 3, bigRow: 120,             // dress at most this many units; a longer row counts as this much further away
   sign: { h: 1.05, y: 3.5 },
