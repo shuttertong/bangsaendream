@@ -10,7 +10,7 @@ import * as THREE from 'three';
 export const TOON = {
   up: 0.85,             // head centre above the head bone (× head radius): the head sits on the neck
   eyeY: -0.08, mouthY: -0.42, hatY: 0.8,   // × head radius, from the head centre
-  eye: { x: 0.42, w: 0.19, h: 0.275 },     // eye centre x and half-size (× head radius): big toon eyes
+  eye: { x: 0.43, w: 0.215, h: 0.245 },    // eye centre x and half-size (× head radius): big, round toon eyes
   shape: [1, 0.97, 0.95], chin: 0.14,      // head ellipsoid radii (× R), chin taper
   seg: { head: [32, 24], limb: [6, 14], round: [18, 12] },
   // natural, tapered limbs (radius at the top / widest point / bottom, and where the widest point sits)
