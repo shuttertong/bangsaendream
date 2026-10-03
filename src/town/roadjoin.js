@@ -21,7 +21,7 @@ const segDist = (x, z, a, b) => {
 
 /** Extends dangling road ends in map.roads in place. Returns { joined, links: [[x, z, len]] }. */
 export function joinRoadEnds(map) {
-  const J = JOIN, roads = map.roads.filter(r => roadWidth(r.k) && r.p.length >= 2), links = [];
+  const J = JOIN, roads = map.roads.filter(r => roadWidth(r) && r.p.length >= 2), links = [];
   const blocked = (a, b) => {
     for (let k = 1; k < 4; k++) {
       const x = a[0] + (b[0] - a[0]) * k / 4, z = a[1] + (b[1] - a[1]) * k / 4;

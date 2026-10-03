@@ -36,7 +36,7 @@ export function buildViewpoint(kit, map, layout) {
     const [ax, az] = road.p[k - 1], [bx, bz] = road.p[k], dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1;
     const t = Math.max(0, Math.min(1, ((V.at[0] - ax) * dx + (V.at[1] - az) * dz) / (L * L)));
     const px = ax + dx * t, pz = az + dz * t, d = Math.hypot(px - V.at[0], pz - V.at[1]);
-    if (roadWidth(road.k) && (!best || d < best.d)) best = { d, px, pz, dx: dx / L, dz: dz / L, hw: roadWidth(road.k) / 2 };
+    if (roadWidth(road) && (!best || d < best.d)) best = { d, px, pz, dx: dx / L, dz: dz / L, hw: roadWidth(road) / 2 };
   }
   if (!best || best.d > 20) return { decks: [], solids: [], scopes: [] };
   const side = [1, -1].map(s => ({ s, h: map.heightAt(best.px - best.dz * s * 15, best.pz + best.dx * s * 15) })).sort((a, b) => a.h - b.h)[0].s;

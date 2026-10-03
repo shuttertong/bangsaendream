@@ -9,6 +9,7 @@ export const GO_HOUSE = {
   near: [598, 1194],                 // local metres: the shophouse row nearest this point becomes the Go house
   roads: ['secondary', 'tertiary'],
   lot: 4,                            // shophouse unit width (buildings.js FRONTAGE.lot)
+  units: 3, bigRow: 120,             // dress at most this many units; a longer row counts as this much further away
   sign: { h: 1.05, y: 3.5 },
   colors: { wood: '#5a3d26', trim: '#c9a25a', black: '#23221f', white: '#f4f1ea', lantern: '#d8322a', mat: '#8a3a2a', board: '#dcb36a', stool: '#7a5a3a' },
 };
@@ -20,7 +21,7 @@ export function goRow(rows) {
   let best = null, bd = Infinity;
   for (const r of rows) {
     if (r.kind !== 'shop' || !GO_HOUSE.roads.includes(r.road)) continue;
-    const d = Math.hypot(r.x - nx, r.z - nz);
+    const d = Math.hypot(r.x - nx, r.z - nz) + (r.n > GO_HOUSE.units ? GO_HOUSE.bigRow : 0);   // prefer a small row: the whole building is the club
     if (d < bd) { bd = d; best = r; }
   }
   return best;
@@ -30,7 +31,7 @@ export function goRow(rows) {
 export function buildGoHouse(kit, scene, rows) {
   const row = goRow(rows);
   if (!row) return null;
-  const G = GO_HOUSE, C = G.colors, f = kit.frame(row.x, row.y, row.z, row.ry), W = row.n * G.lot, front = row.D / 2, solids = [];
+  const G = GO_HOUSE, C = G.colors, f = kit.frame(row.x, row.y, row.z, row.ry), W = Math.min(row.n, G.units) * G.lot, front = row.D / 2, solids = [];
   // signboard across the whole front, with a trim frame
   f.box('wall', 0, G.sign.y, front + 0.14, W - 0.3, G.sign.h + 0.16, 0.1, col(C.trim));
   f.box('wall', 0, G.sign.y, front + 0.17, W - 0.46, G.sign.h, 0.1, col(C.wood));

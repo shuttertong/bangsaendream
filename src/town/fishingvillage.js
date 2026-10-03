@@ -130,7 +130,7 @@ export function buildFishingVillage(kit, map, layout, scene) {
   const H = V.house, { seaDist, roadIdx, occ } = layout;
   for (const road of map.roads) {
     if (!V.roads.includes(road.k) || !road.p.some(([x, z]) => in_(x, z, V.shore))) continue;
-    const hw = roadWidth(road.k) / 2;
+    const hw = roadWidth(road) / 2;
     let left = 0, gap = 0, next = 0;
     walkLine(road.p, 1, (x, z, dx, dz) => {
       if (!in_(x, z, V.shore) || seaDist(x, z) > V.roadSea) { left = 0; return; }

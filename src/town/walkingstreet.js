@@ -69,7 +69,7 @@ export function buildWalkingStreet(kit, map, layout) {
   const sideRuns = [];                                               // where each side's stalls go (for the lights)
   for (const road of map.roads) {
     if (!W.roads.includes(road.k) || !road.p.some(([x, z]) => inBox(x, z, b))) continue;
-    const hw = roadWidth(road.k) / 2;
+    const hw = roadWidth(road) / 2;
     walkLine(road.p, W.stall.spacing, (x, z, dx, dz) => {
       if (!inBox(x, z, b)) return;
       for (const s of [-1, 1]) {

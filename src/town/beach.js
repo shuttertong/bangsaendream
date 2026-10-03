@@ -181,7 +181,7 @@ function buildPoles(map, ctx, kit, r) {
   const out = [], m = new THREE.Matrix4(), cable = new THREE.Color(STREET.cableColor);
   for (const road of map.roads) {
     if (!STREET.roads.includes(road.k) || road.p.length < 2) continue;
-    const off = roadWidth(road.k) / 2 + 0.9;
+    const off = roadWidth(road) / 2 + 0.9;
     let prev = null;
     walkLine(road.p, STREET.poleEvery, (x, z, dx, dz) => {
       // pick the land side (further from the sea)

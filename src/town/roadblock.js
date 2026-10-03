@@ -32,7 +32,7 @@ export function buildRoadblocks(kit, scene, map, layout, walkable) {
 
   // ---- crossings: a road leaves the walkable area and carries on ----
   for (const road of map.roads) {
-    if (!roadWidth(road.k)) continue;
+    if (!roadWidth(road)) continue;
     const pts = [];
     for (let k = 1; k < road.p.length; k++) {
       const [ax, az] = road.p[k - 1], [bx, bz] = road.p[k], L = Math.hypot(bx - ax, bz - az);
@@ -56,7 +56,7 @@ export function buildRoadblocks(kit, scene, map, layout, walkable) {
     const y = (u, w) => { const q = f.P(u, 0, w); return ground(q.x, q.z); };
     // kerb to kerb: widen each side while the line (or just past it) is on a road or its pavement
     const covered = u => [0, R.span.probe].some(w => { const q = f.P(u, 0, w); return roadIdx.clearance(q.x, q.z, 12) < R.span.pave; });
-    const minHalf = roadWidth(p.road.k) / 2 + 1;
+    const minHalf = roadWidth(p.road) / 2 + 1;
     const reach = s => { let last = 0; for (let d = 0; d <= R.span.max; d += 0.5) { if (covered(s * d)) last = d; else if (d - last > R.span.gap) break; } return Math.max(minHalf, last + 0.6); };
     const u0 = -reach(-1), u1 = reach(1);
 

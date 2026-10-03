@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { songthaewTemplate, TRUCK } from './assets/songthaew.js';
 import { walkLine } from './layout.js';
+import { roadWidth, lanesOf, LANES } from './roads.js';
 import { rng } from '../core/rng.js';
 
 const RUN = {
@@ -57,6 +58,15 @@ function buildRoutes(map, collision) {
   const edge = (map.core.nx - 1) * map.core.step / 2 - ROUTES.edge;
   const inside = ([x, z]) => Math.abs(x) < edge && Math.abs(z) < edge && (!collision || collision.inArea(x, z));   // not past a roadblock
   const ways = map.roads.filter(r => RUN.roads.includes(r.k) && r.p.length >= 2).map(r => r.p);
+  const wide = map.roads.filter(r => lanesOf(r) && r.p.length >= 2);
+  const wideAt = (x, z) => {                                   // width of the wide road this point lies on, or 0
+    for (const r of wide) for (let i = 1; i < r.p.length; i++) {
+      const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i], dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L));
+      if (Math.hypot(ax + t * dx - x, az + t * dz - z) < 1) return roadWidth(r);
+    }
+    return 0;
+  };
   const routes = [];
   for (const chain of chainWays(ways)) {
     const pts = [];
@@ -68,7 +78,10 @@ function buildRoutes(map, collision) {
     if (best.length * 2 < RUN.minLength) continue;
     const cum = [0];
     for (let i = 1; i < best.length; i++) cum.push(cum[i - 1] + Math.hypot(best[i][0] - best[i - 1][0], best[i][1] - best[i - 1][1]));
-    routes.push({ pts: best, cum, length: cum[cum.length - 1] });
+    // on a wide (3+ lane) road the truck keeps to the left-hand lane; ease the offset in over a few points
+    const raw = best.map(([x, z]) => { const w = wideAt(x, z); return w ? w / 2 - LANES.shoulder / 2 - LANES.w / 2 : RUN.lane; });
+    const lane = raw.map((_, i) => { let a = 0, n = 0; for (let k = Math.max(0, i - 6); k <= Math.min(raw.length - 1, i + 6); k++) { a += raw[k]; n++; } return a / n; });
+    routes.push({ pts: best, cum, lane, length: cum[cum.length - 1] });
   }
   // longest first; drop the other half of a dual carriageway (a route running alongside a kept one)
   routes.sort((a, b) => b.length - a.length);
@@ -90,7 +103,8 @@ function sample(route, s) {
   while (i < cum.length - 1 && cum[i] < s) i++;
   const a = pts[i - 1], b = pts[i], seg = cum[i] - cum[i - 1] || 1, k = (s - cum[i - 1]) / seg;
   const dx = (b[0] - a[0]) / seg, dz = (b[1] - a[1]) / seg;
-  return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, dx, dz };
+  const la = route.lane ? route.lane[i - 1] + (route.lane[i] - route.lane[i - 1]) * k : RUN.lane;
+  return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, dx, dz, lane: la };
 }
 
 export function createSongthaews(scene, map, collision = null) {
@@ -112,7 +126,7 @@ export function createSongthaews(scene, map, collision = null) {
   const place = t => {
     const p = sample(t.route, t.s);
     const fx = p.dx * t.dir, fz = p.dz * t.dir;                  // travel direction
-    t.x = p.x + fz * RUN.lane; t.z = p.z - fx * RUN.lane;        // left of travel (x east, z south): (fz, −fx)
+    t.x = p.x + fz * p.lane; t.z = p.z - fx * p.lane;        // left of travel (x east, z south): (fz, −fx)
     t.yaw = Math.atan2(fx, fz);
     t.g.position.set(t.x, Math.max(map.heightAt(t.x, t.z), map.sea) + RUN.lift, t.z);
     t.g.rotation.y = t.yaw;

@@ -8,10 +8,10 @@ export const AUDIT = { sea: 160, bump: 0.35, steep: 0.12, tilt: 0.1, sink: 0.05,
 
 export function auditRoads({ map, collision, layout, lift }) {
   const A = AUDIT, near = (x, z) => collision.inArea(x, z) && layout.seaDist(x, z) < A.sea;
-  const roads = map.roads.filter(r => roadWidth(r.k) && r.p.length >= 2);
+  const roads = map.roads.filter(r => roadWidth(r) && r.p.length >= 2);
   const stats = {}, worst = { below: [], bump: [], steep: [], tilt: [], sink: [] };
   for (const r of roads) {
-    const w = roadWidth(r.k), s = stats[r.k] ||= { m: 0, below: 0, bump: 0, steep: 0, tilt: 0, sink: 0 };
+    const w = roadWidth(r), s = stats[r.k] ||= { m: 0, below: 0, bump: 0, steep: 0, tilt: 0, sink: 0 };
     const pts = [];
     for (let k = 1; k < r.p.length; k++) {
       const [ax, az] = r.p[k - 1], [bx, bz] = r.p[k], L = Math.hypot(bx - ax, bz - az);

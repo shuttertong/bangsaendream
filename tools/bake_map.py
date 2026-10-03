@@ -412,7 +412,12 @@ def main():
         elif t.get('highway') in ROAD_KINDS or t.get('waterway'):
             key, kind = ('roads', t['highway']) if t.get('highway') in ROAD_KINDS else ('streams', t['waterway'])
             runs = [p] if inland == math.inf else clip_near(p, keep_line)
-            data[key] += [{'k': kind, 'p': clean_line(r)} for r in runs]
+            extra = {}
+            if key == 'roads':                       # lanes / one-way from OSM, so wide roads can be drawn as they are
+                try: extra['l'] = max(1, min(8, int(t['lanes'])))
+                except (KeyError, ValueError): pass
+                if t.get('oneway') == 'yes': extra['o'] = 1
+            data[key] += [{'k': kind, **extra, 'p': clean_line(r)} for r in runs]
         elif closed and area in AREA_KINDS:
             ring = touches(p, keep) and clean_ring(p)
             if ring:

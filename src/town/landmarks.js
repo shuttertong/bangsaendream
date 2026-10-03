@@ -87,7 +87,7 @@ function dressRoundabout(kit, map, layout, palms, solids) {
   // zebra crossings where roads leave the ring
   for (const road of map.roads) {
     if (road.k === L.road && road.p.every(([px, pz]) => Math.abs(Math.hypot(px - L.x, pz - L.z) - L.ring) < 4)) continue;   // the ring itself
-    const w = roadWidth(road.k);
+    const w = roadWidth(road);
     if (!w) continue;
     walkLine(road.p, 1, (px, pz, dx, dz) => {
       const d = Math.hypot(px - L.x, pz - L.z);

@@ -64,7 +64,7 @@ export function buildBuildings(kit, map, ctx, near) {
   let best = null;
   for (const road of map.roads) {
     if (!GRANDMA.roads.includes(road.k) || road.p.length < 2) continue;
-    const off = roadWidth(road.k) / 2 + FRONTAGE.setback;
+    const off = roadWidth(road) / 2 + FRONTAGE.setback;
     for (const side of [1, -1]) walkLine(road.p, 3, (x, z, dx, dz) => {
       const nx = -dz * side, nz = dx * side, cx = x + nx * off, cz = z + nz * off;
       const d = Math.hypot(cx - near.x, cz - near.z);
@@ -88,7 +88,7 @@ export function buildBuildings(kit, map, ctx, near) {
   for (const road of map.roads) {
     const chance = FRONTAGE.roads[road.k];
     if (!chance || road.p.length < 2) continue;
-    const off = roadWidth(road.k) / 2 + FRONTAGE.setback;
+    const off = roadWidth(road) / 2 + FRONTAGE.setback;
     for (const side of [1, -1]) {
       if (!r.chance(chance)) continue;
       let run = [];

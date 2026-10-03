@@ -34,7 +34,18 @@ const PROM_CELL = 1;
 const promCells = new Set();
 const promKey = (x, z) => `${Math.floor(x / PROM_CELL)},${Math.floor(z / PROM_CELL)}`;
 const STEP = 2, STEP_HILL = 1, HILL_ROAD = 18, DASH = 3, GAP = 5;   // ribbon sample spacing (m); roads that climb above HILL_ROAD are sampled finer
-export const roadWidth = k => ROAD_STYLE[k]?.w || 0;
+// Lanes from OSM (baked as road.l, one-way as road.o): main roads with 3+ lanes are drawn as wide as they
+// really are (ถนนบางแสนสาย 1 along the beach is 4 lanes), with lane lines and a double yellow centre line.
+export const LANES = { kinds: ['secondary', 'tertiary'], w: 3.25, shoulder: 1.0, max: 4, yellow: '#e8c23a' };
+export const lanesOf = r => (LANES.kinds.includes(r.k) && r.l >= 3 ? Math.min(LANES.max, r.l) : 0);   // 0 = plain road, width by kind
+/** Width (m) of a road object { k, l } — or of a highway kind given as a string. */
+export const roadWidth = r => {
+  if (typeof r === 'string') return ROAD_STYLE[r]?.w || 0;
+  const st = ROAD_STYLE[r?.k];
+  if (!st) return 0;
+  const n = lanesOf(r);
+  return n ? Math.max(st.w, n * LANES.w + LANES.shoulder) : st.w;
+};
 
 /** How high the walkable surface is above the terrain at (x, z): road, pavement or 0. */
 export function surfaceLift(roadIdx, x, z) {
@@ -154,7 +165,7 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
     const lift = ROAD_LIFT + (order.indexOf(r.k) + 1) * 0.004;
     const mid = F.pts[F.pts.length >> 1];
     const at = { x: mid[0], z: mid[1] };
-    const hw = st.w / 2, base = new THREE.Color(st.col), c = new THREE.Color();
+    const W = roadWidth(r), hw = W / 2, base = new THREE.Color(st.col), c = new THREE.Color();
 
     // the real beach promenade (an OSM pedestrian way along the beach): brick paving + dressing
     const mid2 = F.pts[F.pts.length >> 1];
@@ -180,7 +191,7 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
     } else {
       // asphalt: darker worn wheel tracks down each lane, lighter near the edges
       // (smooth per-vertex shading; the material's world noise adds the fine grain)
-      const cols = st.w >= 5 ? 8 : 4;
+      const cols = W >= 12 ? 12 : W >= 5 ? 8 : 4;
       strip(kit, map, F, -hw, hw, cols, lift, (s, t) => {
         const lane = Math.abs(t) / hw;                               // 0 centre … 1 edge
         const track = Math.exp(-(((lane - 0.5) / 0.14) ** 2)) * -0.03;
@@ -191,11 +202,20 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
 
     if (st.dash) {
       // centre dashes + solid white edge lines
-      let s = 0;
-      for (let i = 1; i < F.pts.length; i++) {
-        const segL = F.along[i] - F.along[i - 1];
-        if ((s % (DASH + GAP)) < DASH) strip(kit, map, { pts: [F.pts[i - 1], F.pts[i]], nrm: [F.nrm[i - 1], F.nrm[i]], along: [0, segL] }, -0.08, 0.08, 1, lift + 0.01, () => white, at, false, ownSurface);
-        s += segL;
+      // lane lines: white dashes between lanes; a two-way road with 4 lanes gets a double solid yellow centre
+      const n = lanesOf(r) || 2, lw = (W - (n > 2 ? LANES.shoulder : 0)) / n, yellow = new THREE.Color(LANES.yellow);
+      for (let b = 1; b < n; b++) {
+        const tb = -lw * n / 2 + b * lw;
+        if (n > 2 && !r.o && b === n / 2) {
+          for (const e of [-0.14, 0.14]) strip(kit, map, F, tb + e - 0.05, tb + e + 0.05, 1, lift + 0.01, () => yellow, at, false, ownSurface);
+          continue;
+        }
+        let s = 0;
+        for (let i = 1; i < F.pts.length; i++) {
+          const segL = F.along[i] - F.along[i - 1];
+          if ((s % (DASH + GAP)) < DASH) strip(kit, map, { pts: [F.pts[i - 1], F.pts[i]], nrm: [F.nrm[i - 1], F.nrm[i]], along: [0, segL] }, tb - 0.08, tb + 0.08, 1, lift + 0.01, () => white, at, false, ownSurface);
+          s += segL;
+        }
       }
       for (const e of [-1, 1]) { const a = e * (hw - 0.45), b = e * (hw - 0.3); strip(kit, map, F, Math.min(a, b), Math.max(a, b), 1, lift + 0.01, () => white, at, false, ownSurface); }
     }

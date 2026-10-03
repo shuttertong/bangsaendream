@@ -66,7 +66,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   const S = K.seawall;
   for (const road of map.roads) {
     if (!S.roads.includes(road.k) || road.p.length < 2 || !road.p.some(([x, z]) => inBox(x, z, K.box))) continue;
-    const hw = roadWidth(road.k) / 2;
+    const hw = roadWidth(road) / 2;
     let run = 0, prevRail = null;
     walkLine(road.p, S.every, (x, z, dx, dz) => {
       if (!inBox(x, z, K.box) || inBox(x, z, VILLAGE.shore)) { prevRail = null; return; }   // the village has houses, not a seawall

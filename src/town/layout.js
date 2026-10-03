@@ -20,7 +20,7 @@ export class RoadIndex {
     this.cell = cell;
     this.grid = new Map();
     for (const r of roads) {
-      const hw = widthOf(r.k) / 2;
+      const hw = widthOf(r) / 2;
       if (!hw) continue;
       for (let i = 1; i < r.p.length; i++) {
         const s = { ax: r.p[i - 1][0], az: r.p[i - 1][1], bx: r.p[i][0], bz: r.p[i][1], hw, k: r.k, road: r };
@@ -62,7 +62,7 @@ export class RoadIndex {
         if (d < bd) { bd = d; best = s; }
       }
     }
-    return best ? { d: bd, k: best.k } : null;
+    return best ? { d: bd, k: best.k, hw: best.hw } : null;
   }
 
   /** Distance from (x, z) to the nearest road edge (negative = on the road). */

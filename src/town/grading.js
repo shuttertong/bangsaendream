@@ -55,13 +55,13 @@ export function gradeRoads(map) {
     return best;
   };
 
-  const roads = map.roads.filter(r => roadWidth(r.k) && r.p.length >= 2)
+  const roads = map.roads.filter(r => roadWidth(r) && r.p.length >= 2)
     .map(r => ({ r, rank: G.rank.indexOf(r.k) < 0 ? G.rank.length : G.rank.indexOf(r.k), len: r.p.reduce((a, p, i) => a + (i ? Math.hypot(p[0] - r.p[i - 1][0], p[1] - r.p[i - 1][1]) : 0), 0) }))
     .sort((a, b) => a.rank - b.rank || b.len - a.len);
   const all = [];
   let pinned = 0;
   for (const { r } of roads) {
-    const hw = roadWidth(r.k) / 2, win = G.window[r.k] ?? 16;
+    const hw = roadWidth(r) / 2, win = G.window[r.k] ?? 16;
     // samples every G.step along the polyline (plus its last point)
     const S = [];
     for (let k = 1; k < r.p.length; k++) {
