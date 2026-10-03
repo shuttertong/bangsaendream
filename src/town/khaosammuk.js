@@ -14,7 +14,7 @@ import { VILLAGE } from './fishingvillage.js';
 
 export const KSM = {
   box: ROCKY_SHORE[0],                                        // the hill and its shore (terrain.js keeps it rocky)
-  forest: { step: 7, from: 6, dens: 0.55, mix: [['rainTree', 0.55], ['casuarina', 0.3], ['frangipani', 0.15]] },
+  forest: { step: 7, from: 6, roadGap: 7, dens: 0.55, mix: [['rainTree', 0.55], ['casuarina', 0.3], ['frangipani', 0.15]] },
   outcrop: { step: 13, mask: 0.6, size: [3.5, 9], tall: [0.9, 1.8], per: [1, 3], sink: 0.35, colors: ['#c7b99c', '#b8a88c', '#d2c5aa', '#a89a80'] },   // angular granite crags
   seawall: { roads: ['secondary', 'tertiary', 'residential', 'unclassified'], sea: 14, every: 3, walk: 3, drop: 3.2, canopyEvery: 21, canopyFrom: 0.35 },
   monkeys: { near: [-652, -1942], count: 16, spread: 16 },
@@ -104,7 +104,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   const O = K.outcrop, b = K.box;
   for (let x = b.x0; x < b.x1; x += O.step) for (let z = b.z0; z < b.z1; z += O.step) {
     const px = x + (r() - 0.5) * O.step, pz = z + (r() - 0.5) * O.step, y = map.heightAt(px, pz);
-    if (y < map.sea + 1 || rockMask(px, y, pz) < O.mask || roadIdx.clearance(px, pz, 8) < 3 || occ.test(px, pz, 3, 3)) continue;
+    if (y < map.sea + 1 || rockMask(px, y, pz) < O.mask || roadIdx.clearance(px, pz, 8) < 5 || occ.test(px, pz, 3, 3)) continue;
     const n = Math.round(THREE.MathUtils.lerp(...O.per, r()));
     for (let i = 0; i < n; i++) {
       const s = THREE.MathUtils.lerp(...O.size, r() ** 1.6), bx = px + (r() - 0.5) * 6, bz = pz + (r() - 0.5) * 6, by = map.heightAt(bx, bz);
@@ -123,7 +123,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   for (let x = b.x0; x < b.x1; x += F.step) for (let z = b.z0; z < b.z1; z += F.step) {
     const px = x + (r() - 0.5) * F.step, pz = z + (r() - 0.5) * F.step, y = map.heightAt(px, pz);
     if (y < F.from || r() > F.dens * (1 - rockMask(px, y, pz))) continue;
-    if (roadIdx.clearance(px, pz, 8) < 3 || occ.test(px, pz, 2, 2)) continue;
+    if (roadIdx.clearance(px, pz, 12) < F.roadGap || occ.test(px, pz, 2, 2)) continue;   // crowns stay clear of the road (seen from above)
     let k = r() * total, sp = F.mix[0][0];
     for (const [name, w] of F.mix) { k -= w; if (k <= 0) { sp = name; break; } }
     trees[sp].push({ x: px, z: pz, y: y - 0.2, rot: r() * 6.28, s: 0.8 + r() * 0.5 });

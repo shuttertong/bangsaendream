@@ -112,14 +112,14 @@ export function gradeRoads(map) {
   // pull the grid toward the profiles: full weight under the road and its shoulders, then ease out
   const W = new Float32Array(nx * nz), T = new Float32Array(nx * nz), D = new Float32Array(nx * nz).fill(Infinity);
   for (const s of all) {
-    const R = s.hw + G.flat + G.blend;
+    const flat = G.flat, R = s.hw + flat + G.blend;
     const i0 = Math.max(0, Math.floor((s.x - R - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((s.x + R - x0) / step));
     const j0 = Math.max(0, Math.floor((s.z - R - z0) / step)), j1 = Math.min(nz - 1, Math.ceil((s.z + R - z0) / step));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       const n = j * nx + i, d = Math.hypot(x0 + i * step - s.x, z0 + j * step - s.z) - s.hw;   // metres past the road edge
-      if (d > G.flat + G.blend) continue;
+      if (d > flat + G.blend) continue;
       if (orig[n] < sea && d > G.wetReach) continue;                                      // don't push the shoreline out
-      const w = d <= G.flat ? 1 : 1 - smoothstep((d - G.flat) / G.blend);
+      const w = d <= flat ? 1 : 1 - smoothstep((d - flat) / G.blend);
       if (w > W[n] + 1e-4 || (w >= W[n] - 1e-4 && d < D[n])) { W[n] = w; T[n] = s.h; D[n] = d; }
     }
   }

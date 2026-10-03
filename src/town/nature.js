@@ -15,7 +15,7 @@ const RULES = [
   { sp: 'palm', sea: [48, 999], dens: 0.05, areas: { residential: 0.2, park: 0.3 }, clear: 1.2, space: 2.2 },
   { sp: 'frangipani', sea: [32, 999], dens: 0.06, areas: { park: 0.4, residential: 0.3 }, clear: 1.0, space: 1.6 },
 ];
-const HILL = { height: 14, bonus: { rainTree: 0.5, casuarina: 0.25 } };   // forest on Khao Sam Muk
+const HILL = { height: 14, bonus: { rainTree: 0.5, casuarina: 0.25 }, roadGap: 4.5 };   // forest on Khao Sam Muk; roadGap: extra clearance (m) so crowns don't cover the hill roads
 const VARIANTS = 2;
 const LOD = { near: 150, rebuild: 15 };   // metres
 const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
@@ -47,7 +47,7 @@ export function buildNature(map, ctx, extra = {}) {
         expect -= 1;
         const x = cx + (r() - 0.5) * step, z = cz + (r() - 0.5) * step, d = seaDist(x, z);
         if (d < rule.sea[0] || d > rule.sea[1] || strip(x, z) > 0) continue;
-        if (roadIdx.clearance(x, z, 8) < rule.clear) continue;
+        if (roadIdx.clearance(x, z, 8) < rule.clear + (map.heightAt(x, z) > HILL.height ? HILL.roadGap : 0)) continue;
         if (occ.test(x, z, rule.space / 2, rule.space / 2)) continue;
         occ.mark(x, z, rule.space / 2, rule.space / 2);
         placed[rule.sp].push({ x, z, y: map.heightAt(x, z) - 0.15, rot: r() * Math.PI * 2, s: 0.85 + r() * 0.3, v: Math.floor(r() * VARIANTS) });
