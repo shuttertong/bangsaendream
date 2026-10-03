@@ -402,3 +402,29 @@ body.wardrobe #ui .prompt, body.wardrobe #touch { display: none !important; }
 .wd-act { border: 0; background: var(--accent); color: #fff; border-radius: 12px; padding: 10px 14px; font: 600 15px 'Kanit', sans-serif; cursor: pointer; } .wd-act:disabled { opacity: .45; cursor: default; }
 .wd-off { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 9px 12px; font: 500 14px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; }
 .wd-panel .close { margin-top: 10px; }
+
+/* friends: 🤝 button, panel with the friends map */
+.b-friends { position: relative; }
+.b-friends i { position: absolute; top: -4px; right: -4px; font: 600 11px Kanit, sans-serif; font-style: normal; background: #2f9a5f; color: #fff; border-radius: 9px; padding: 0 5px; }
+.b-friends i:empty { display: none; }
+.fr-ask {
+  position: absolute; left: 50%; bottom: calc(176px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: none; pointer-events: auto;
+  border: 2px solid #2f9a5f; background: #fff; color: var(--ink); border-radius: 999px; padding: 9px 18px; font: 600 16px Kanit, sans-serif;
+  box-shadow: 0 4px 16px rgba(20, 60, 40, .25); white-space: nowrap;
+}
+.fr-ask.on { display: block; }
+.fr-ask:disabled { border-color: #c9c2b4; color: #8a7a66; }
+.fr-ask.pulse { background: #2f9a5f; color: #fff; animation: frpulse 1s ease-in-out infinite; }
+@keyframes frpulse { 50% { transform: translateX(-50%) scale(1.06); } }
+body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-ask, body.in-game .fr-ask { display: none !important; }
+.fr-panel .panel { width: min(460px, calc(100vw - 28px)); }
+.fr-panel .fr-map { display: block; width: 100%; height: min(300px, 38dvh); border-radius: 14px; border: 1px solid var(--line); touch-action: none; margin-bottom: 10px; }
+.fr-panel .fr-card { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; background: #f3f8f0; border: 1px solid #cfe2cf; border-radius: 14px; padding: 9px 12px; margin-bottom: 10px; }
+.fr-panel .fr-card b { font: 600 17px Kanit, sans-serif; }
+.fr-panel .fr-card span { flex: 1; min-width: 120px; font-size: 14px; color: #5f6a5a; }
+.fr-panel .fr-card button { border: 0; border-radius: 10px; padding: 7px 12px; font: 500 14px Kanit, sans-serif; background: #2f9a5f; color: #fff; }
+.fr-panel .fr-card .fr-del { background: #efe6d4; color: var(--ink); }
+.fr-panel .dest.off { opacity: .6; }
+.fr-panel .dest.sel { border-color: #2f9a5f; }
+.fr-panel .dest .here { color: #5f6a5a; }
+.fr-panel .fr-how { font-size: 13px; color: #8a7a66; margin: 10px 4px 0; }

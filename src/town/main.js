@@ -51,6 +51,7 @@ import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
 import { createMultiplayer } from './multiplayer.js';
 import { createCoop } from './coop.js';
+import { createFriends } from './friends.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
 import * as P from '../shared/progress.js';
@@ -203,6 +204,7 @@ async function boot() {
   const feedback = createFeedback({ root: $('hud'), audio, place: nearestPlace });
   const drone = createDrone({ camera, input, map, root: $('hud'), canvas: $('c'), player, tpc, audio });   // 🚁 overlook any area from above
   const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
+  const friends = createFriends({ root: $('hud'), mp, player, hub, drone, map, audio });   // 👫 add friends face to face + the friends map (G)
 
   // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
   let bots = null;
@@ -213,6 +215,7 @@ async function boot() {
     auras.update(time);
     mp.update(dt, !game && !free);
     coop.update(dt, !!game || loading);
+    friends.update(dt, !game && !free);
     bots?.update(dt);
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
@@ -264,7 +267,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

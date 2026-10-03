@@ -27,10 +27,14 @@ export function createBots(n, { map, lift, collision, trucks, player }) {
       if (collision.free(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r, 0.3)) { x = p.x + Math.cos(a) * r; z = p.z + Math.sin(a) * r; break; }
     }
     const look = Object.fromEntries(Object.entries(LOOKS).map(([key, list]) => [key, Math.floor(Math.random() * list.length)]));
-    const b = { id: null, x, z, yaw: Math.random() * 6.28, mode: 'wander', timer: rand(...BOT.wander), tx: x, tz: z, truck: null, chatIn: rand(2, 8), sendIn: 0 };
+    const b = { uid: [Math.floor(Math.random() * 1e6), Math.floor(Math.random() * 1e6)], id: null, x, z, yaw: Math.random() * 6.28, mode: 'wander', timer: rand(...BOT.wander), tx: x, tz: z, truck: null, chatIn: rand(2, 8), sendIn: 0 };
     b.net = connect({
       onOpen: () => b.net.send({ t: 'hello', bot: true, n1: Math.floor(Math.random() * NAMES.length), n2: 1 + Math.floor(Math.random() * 99), look }),
-      onMessage: m => { if (m.t === 'welcome') b.id = m.id; },
+      onMessage: m => {
+        if (m.t === 'welcome') b.id = m.id;
+        // 🤝 back when someone asks to be friends (bots have a throwaway id), so the friends flow can be tested alone
+        else if (m.t === 'co' && m.d?.k === 'friend') setTimeout(() => b.net.send({ t: 'co', to: [m.from], d: { k: 'friend', n: b.uid[0], i: b.uid[1] } }), 1500);
+      },
     });
     bots.push(b);
   }
