@@ -52,6 +52,7 @@ import { createHub } from './hub.js';
 import { createMultiplayer } from './multiplayer.js';
 import { createCoop } from './coop.js';
 import { createFriends } from './friends.js';
+import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
 import * as P from '../shared/progress.js';
@@ -109,6 +110,8 @@ async function boot() {
   createBobbingBoats(scene, navyFleet);
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
+  const goHouse = buildGoHouse(kit, scene, counts.rows);   // บ้านหมากล้อม: one shophouse row dressed as the Go club
+  counts.goHouse = goHouse?.place || null;
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
   const inZone = (x, z) => landmarks.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
@@ -121,7 +124,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
@@ -267,7 +270,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

@@ -155,7 +155,7 @@ function placeRun(kit, map, r, run, kind, occ, counts, roadIdx) {
   const y = Math.max(front / n, map.sea);
   const drop = Math.max(0, y - lowest);
   const main = kind === 'secondary' || kind === 'tertiary';
-  const row = { x, z: zz, ry, n, D, road: kind, kind: 'empty', top: y + 14 - map.heightAt(x, zz) };
+  const row = { x, y, z: zz, ry, n, D, road: kind, kind: 'empty', top: y + 14 - map.heightAt(x, zz) };
   counts.rows.push(row);
   if (main && n >= 5 && D >= 12 && r.chance(FRONTAGE.condoChance)) {
     const floors = 6 + Math.floor(r() * 7);

@@ -25,6 +25,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   const places = resolvePlaces({
     map, collision, seaDist, start,
     grandma: buildings.grandma,
+    goHouse: buildings.goHouse,
     rentals: beach.rentals,
     welcome, viewpoint,
     shops: buildings.rows.filter(r => r.kind === 'shop' && (r.road === 'tertiary' || r.road === 'secondary')),

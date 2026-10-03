@@ -6,7 +6,8 @@
 import { t } from '../shared/i18n.js';
 
 export const COOP = {
-  games: { banana: { max: 4, icon: '🍌', title: 'bananaTitle' } },
+  // time: seconds the lobby waits (default lobbyTime); full: set off as soon as every seat is taken
+  games: { banana: { max: 4, icon: '🍌', title: 'bananaTitle' }, go: { max: 2, icon: '⚫', title: 'goTitle', time: 180, full: true, wait: 'goWaiting', empty: 'goEmptySeat', team: 'goTable' } },
   lobbyTime: 25,           // seconds before the boat leaves anyway
   inviteEvery: 2,          // the leader re-announces (so late arrivals see it)
   inviteTTL: 6,            // an invite disappears if not re-announced
@@ -29,7 +30,7 @@ export function createCoop({ root, mp, hub, startGame, audio }) {
 
   function host(game) {
     if (lobby) return;
-    lobby = { room: mp.id, game, seats: [mp.id], leader: true, t: COOP.lobbyTime };
+    lobby = { room: mp.id, game, seats: [mp.id], leader: true, t: COOP.games[game].time ?? COOP.lobbyTime };
     announceIn = 0;
     draw();
   }
@@ -93,10 +94,10 @@ export function createCoop({ root, mp, hub, startGame, audio }) {
     let html = '';
     if (lobby) {
       const G = COOP.games[lobby.game], seats = [];
-      for (let i = 0; i < G.max; i++) seats.push(lobby.seats[i] != null ? `<li>${G.icon} ${nameOf(lobby.seats[i])}${lobby.seats[i] === mp.id ? ` <small>(${t('coYou')})</small>` : ''}</li>` : `<li class="empty">${t('coEmpty')}</li>`);
-      html = `<div class="co-lobby"><h3>${G.icon} ${t(G.title)} · ${t('coTeam')}</h3><ul>${seats.join('')}</ul>
-        <p>${lobby.pending ? t('coJoinSent') : lobby.leader ? t('coStartsIn', { n: Math.ceil(lobby.t) }) : t('coWaiting', { n: Math.ceil(lobby.t) })}</p>
-        <div class="co-btns">${lobby.leader ? `<button class="go">${t('coStart')}</button>` : ''}<button class="out">${lobby.leader ? t('coCancel') : t('coLeave')}</button></div></div>`;
+      for (let i = 0; i < G.max; i++) seats.push(lobby.seats[i] != null ? `<li>${G.icon} ${nameOf(lobby.seats[i])}${lobby.seats[i] === mp.id ? ` <small>(${t('coYou')})</small>` : ''}</li>` : `<li class="empty">${t(G.empty || 'coEmpty')}</li>`);
+      html = `<div class="co-lobby"><h3>${G.icon} ${t(G.title)} · ${t(G.team || 'coTeam')}</h3><ul>${seats.join('')}</ul>
+        <p>${lobby.pending ? t('coJoinSent') : lobby.leader ? t(G.wait || 'coStartsIn', { n: Math.ceil(lobby.t) }) : t('coWaiting', { n: Math.ceil(lobby.t) })}</p>
+        <div class="co-btns">${lobby.leader ? `<button class="go">${t(G.wait ? 'goPlayTeacher' : 'coStart')}</button>` : ''}<button class="out">${lobby.leader ? t('coCancel') : t('coLeave')}</button></div></div>`;
     } else {
       const inv = [...invites.entries()].find(([room]) => room !== mp.id);
       if (inv) {
@@ -124,7 +125,7 @@ export function createCoop({ root, mp, hub, startGame, audio }) {
       if (lobby.leader) {
         announceIn -= dt;
         if (announceIn <= 0) { announceIn = COOP.inviteEvery; mp.co.send(null, { k: 'invite', room: lobby.room, game: lobby.game, seats: lobby.seats, t: Math.ceil(lobby.t) }); }
-        if (lobby.t <= 0 && !busy) go();
+        if (!busy && (lobby.t <= 0 || (COOP.games[lobby.game].full && lobby.seats.length >= COOP.games[lobby.game].max))) go();
       }
       if (!mp.online) lobby = null;
     }

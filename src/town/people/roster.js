@@ -136,6 +136,19 @@ export const ROSTER = [
     ],
   },
   {
+    id: 'kru', place: 'goHouse', game: 'go',
+    name: { th: 'ครูหมาก', en: 'Teacher Mak' },
+    look: { ...ADULT, skin: '#c99a74', shirt: '#f4f1e8', sleeves: 'long', bottom: 'pants', bottomColor: '#3a3a3a', hat: 'none', hairStyle: 'short', hair: '#8a8680', glasses: true },
+    script: () => [
+      { say: { th: 'ยินดีต้อนรับสู่บ้านหมากล้อม! วางหมากล้อมพื้นที่ให้ได้มากกว่าอีกฝ่าย ล้อมหมากเขาได้ก็จับกินได้นะ', en: 'Welcome to the Go house! Surround more of the board than the other side. Surround their stones and you capture them.' } },
+      { ask: [
+        { label: { th: '⚫ เล่นกับครู', en: '⚫ Play the teacher' }, then: [{ game: 'go' }] },
+        { label: { th: '⚫👫 เปิดกระดานรอเพื่อน', en: '⚫👫 Open a table for a friend' }, then: [{ coop: 'go' }] },
+        { label: { th: 'ขอดูก่อนครับ', en: 'Just looking' }, then: [] },
+      ] },
+    ],
+  },
+  {
     id: 'nuan', place: 'shop', game: 'stall',
     name: { th: 'ป้านวล', en: 'Aunt Nuan' },
     look: { ...ADULT, scale: 1.24, skin: '#c99a74', shirt: '#e8958a', hairStyle: 'bun', bottom: 'skirt', bottomColor: '#3a5a7a', apron: '#f4f1e8', hat: 'none', belly: 0.5 },

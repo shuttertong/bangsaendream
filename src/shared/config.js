@@ -1,7 +1,7 @@
 // Public settings for the deployed game. The Supabase publishable key is meant to be public:
 // it ships to every browser, and the table's row-level security only lets it ADD feedback
 // (supabase/game_feedback.sql) — never read, change or delete anything.
-export const GAME_VERSION = '2026.10.03-13';                 // shown on the title card: bump on each deploy
+export const GAME_VERSION = '2026.10.03-14';                 // shown on the title card: bump on each deploy
 
 export const FEEDBACK = {
   url: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1/game_feedback',   // the game's own project (not the flood map's)
