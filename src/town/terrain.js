@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { paintedMaterial } from '../world/materials.js';
 import { PALETTE } from '../shared/palette.js';
 
-const OUTER_HALF = 8000, OUTER_STEP = 80;
+const OUTER_HALF = 8000, OUTER_STEP = 80, OUTER_UNDER = 2;   // OUTER_UNDER: metres the outer mesh stays below the core's lowest ground nearby
 const TILE = 75;        // core terrain tile size in grid cells (600 m) for frustum culling
 const BEACH_W = 50;     // metres of sand behind the waterline (up to and around the beach promenade)
 // rocky shores with only a thin strip of sand: Khao Sam Muk's seawall coast
@@ -135,11 +135,19 @@ function outerMesh(map) {
   const g = new THREE.PlaneGeometry(OUTER_HALF * 2, OUTER_HALF * 2, n, n);
   g.rotateX(-Math.PI / 2);
   const { x0, z0 } = map.core, x1 = x0 + map.size.w, z1 = z0 + map.size.d;
-  const pos = g.attributes.position, heightOut = outerHeights(map);
+  const pos = g.attributes.position, heightOut = outerHeights(map), fine = map.core.step;
+  const lowest = (x, z) => {
+    let m = Infinity;
+    for (let a = -OUTER_STEP; a <= OUTER_STEP; a += fine) for (let b = -OUTER_STEP; b <= OUTER_STEP; b += fine) m = Math.min(m, map.heightAt(Math.min(x1, Math.max(x0, x + a)), Math.min(z1, Math.max(z0, z + b))));
+    return m;
+  };
   for (let k = 0; k < pos.count; k++) {
     const x = pos.getX(k), z = pos.getZ(k);
-    const inside = x > x0 + 1 && x < x1 - 1 && z > z0 + 1 && z < z1 - 1;
-    pos.setY(k, inside ? map.heightAt(x, z) - 6 : heightOut(x, z));   // inside: hide under the core mesh
+    const inside = x > x0 + 1 && x < x1 - 1 && z > z0 + 1 && z < z1 - 1, onEdge = !inside && x >= x0 && x <= x1 && z >= z0 && z <= z1;
+    // inside: hide under the core mesh. A coarse triangle between "height − 6" corners still rose above the fine
+    // ground on a steep hill and covered the Khao Sam Muk roads, so each corner takes the LOWEST fine height within
+    // one coarse cell around it: every point of the triangle is then below the core mesh
+    pos.setY(k, inside ? lowest(x, z) - OUTER_UNDER : onEdge ? lowest(x, z) : heightOut(x, z));
   }
   g.computeVertexNormals();
   const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();
