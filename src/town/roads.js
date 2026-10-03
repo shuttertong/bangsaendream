@@ -33,7 +33,7 @@ export const PROMENADE = {
 const PROM_CELL = 1;
 const promCells = new Set();
 const promKey = (x, z) => `${Math.floor(x / PROM_CELL)},${Math.floor(z / PROM_CELL)}`;
-const STEP = 2, DASH = 3, GAP = 5;
+const STEP = 2, STEP_HILL = 1, HILL_ROAD = 18, DASH = 3, GAP = 5;   // ribbon sample spacing (m); roads that climb above HILL_ROAD are sampled finer
 export const roadWidth = k => ROAD_STYLE[k]?.w || 0;
 
 /** How high the walkable surface is above the terrain at (x, z): road, pavement or 0. */
@@ -46,9 +46,9 @@ export function surfaceLift(roadIdx, x, z) {
 }
 
 /** Densified polyline with per-point unit normals (mitred at corners). */
-function frame(p) {
+function frame(p, step = STEP) {
   const pts = [];
-  walkLine(p, STEP, (x, z) => pts.push([x, z]));
+  walkLine(p, step, (x, z) => pts.push([x, z]));
   const last = p[p.length - 1];
   if (!pts.length || Math.hypot(pts[pts.length - 1][0] - last[0], pts[pts.length - 1][1] - last[1]) > 0.3) pts.push([...last]);
   const nrm = pts.map((q, i) => {
@@ -147,7 +147,9 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
   for (const r of map.roads) {
     const st = ROAD_STYLE[r.k];
     if (!st || r.p.length < 2) continue;
-    const F = frame(r.p);
+    // a ribbon of straight 2 m chords cuts through the 8 m terrain triangles on a steep, curving hill road (the
+    // ground pokes up through its edge): sample hill roads every metre
+    const F = frame(r.p, r.p.some(([x, z]) => map.heightAt(x, z) > HILL_ROAD) ? STEP_HILL : STEP);
     const ownSurface = roadIdx ? (x, z) => !roadIdx.onOtherRoad(x, z, r) : null;   // markings stop where another road crosses
     const lift = ROAD_LIFT + (order.indexOf(r.k) + 1) * 0.004;
     const mid = F.pts[F.pts.length >> 1];
