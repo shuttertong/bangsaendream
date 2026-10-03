@@ -30,6 +30,9 @@ import { buildLandmarks, completeRoundabout } from './landmarks.js';
 import { buildLaemThaen } from './laemthaen.js';
 import { buildKhaoSamMuk } from './khaosammuk.js';
 import { buildHillRoads } from './hillroad.js';
+import { hillSamples } from './hillgeom.js';
+import { buildHillMarks } from './hillmarks.js';
+import { buildHillSigns } from './hillsigns.js';
 import { buildViewpoint } from './viewpoint.js';
 import { createBinoculars } from './binoculars.js';
 import { createFeedback } from '../shared/feedback.js';
@@ -95,7 +98,10 @@ async function boot() {
   const laem = buildLaemThaen(kit, map, layout, scene);                // park, plaza, lattice pier, boulders
   const viewpoint = buildViewpoint(kit, map, layout);                   // จุดชมวิว terrace (before the hill forest, so trees keep off the view)
   const ksm = buildKhaoSamMuk(kit, scene, map, layout);                // seawall, rocks, hill forest, monkeys, mussel poles
-  const hillRoads = buildHillRoads(kit, map, layout);                  // red-white kerbs, guardrails, lamps, monkeys on the hill roads
+  const hillSamp = hillSamples(map);                                   // the hill roads, sampled every metre (heading, bends, bank / drop sides)
+  const hillRoads = buildHillRoads(kit, map, layout, hillSamp);         // kerbs (red-white at bends), guardrails, lamps, monkeys
+  const hillMarks = buildHillMarks(kit, map, layout, hillSamp);         // edge + centre lines, drain gutters, retaining walls
+  const hillSigns = buildHillSigns(kit, scene, map, layout, hillSamp);  // ระวังลิง, curve and speed signs, chevrons, mirrors
   const village = buildFishingVillage(kit, map, layout, scene);               // stilt houses, jetties, boats, the long pier
   const walking = buildWalkingStreet(kit, map, layout);                // market stalls, bulbs, the paved seafront lot
   const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
@@ -114,7 +120,7 @@ async function boot() {
   scene.add(nature.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
@@ -258,7 +264,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
