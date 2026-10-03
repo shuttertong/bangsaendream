@@ -18,7 +18,8 @@ export const DEFAULT_LOOK = {
   skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | bald
   shirt: '#7fc4e8', shirtTrim: '#f4f1e8', sleeves: 'short',  // short | long | none
   bottom: 'shorts', bottomColor: '#34507a',                   // shorts | pants | skirt
-  shoe: '#8a5a3a', apron: null, vest: null, glasses: false,
+  shoe: '#8a5a3a', sock: '#f4f1e8', apron: null, vest: null, glasses: false,
+  print: null, printBg: null,                                // chest print colours (null = auto from the shirt; 'none' = plain)
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
