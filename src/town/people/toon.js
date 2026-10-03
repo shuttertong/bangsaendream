@@ -10,7 +10,7 @@ import * as THREE from 'three';
 export const TOON = {
   up: 0.85,             // head centre above the head bone (× head radius): the head sits on the neck
   eyeY: -0.08, mouthY: -0.42, hatY: 0.8,   // × head radius, from the head centre
-  eye: { x: 0.4, w: 0.155, h: 0.225 },     // eye centre x and half-size (× head radius): big toon eyes
+  eye: { x: 0.42, w: 0.19, h: 0.275 },     // eye centre x and half-size (× head radius): big toon eyes
   shape: [1, 0.97, 0.95], chin: 0.14,      // head ellipsoid radii (× R), chin taper
   seg: { head: [32, 24], limb: [6, 14], round: [18, 12] },
   // natural, tapered limbs (radius at the top / widest point / bottom, and where the widest point sits)
@@ -107,8 +107,8 @@ function headParts(K, R) {
   const head = [colored(skull, K.skin)];
   const face = (g, hex, x, y, lift, roll = 0) => head.push(colored(onFace(g, R, x * R, y * R, lift * R, 0, roll), hex));
   for (const s of [-1, 1]) {
-    face(patch(0.14 * R, 0.075 * R), K.cheek, s * 0.56, -0.3, 0.004);                                   // blush
-    face(patch(0.115 * R, 0.03 * R, 0.02 * R), darker(K.hair, 0.1), s * 0.4, 0.3, 0.012, -s * 0.18);     // brows, gently arched
+    face(patch(0.14 * R, 0.07 * R), K.cheek, s * 0.6, -0.42, 0.004);                                    // blush (below the big eyes)
+    face(patch(0.125 * R, 0.03 * R, 0.02 * R), darker(K.hair, 0.1), s * 0.42, 0.33, 0.012, -s * 0.18);   // brows, gently arched
     head.push(colored(at(sc(sph(0.14 * R, 10, 8), 0.55, 0.95, 0.75), s * R * 0.99, -0.04 * R, -0.03 * R), K.skin));   // ears
   }
   face(sc(sph(1, 10, 8), 0.045 * R, 0.04 * R, 0.035 * R), K.skin, 0, -0.19, 0.012);                       // soft nose (shading shows it)
