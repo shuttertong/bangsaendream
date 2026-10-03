@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { rng, inPoly } from './layout.js';
 import { SPECIES } from './assets/trees.js';
+import { HILL as HILL_BOX, inBox } from './hillgeom.js';
 import { cardMaterial, frondMaterial } from '../world/foliage.js';
 import { getMaterial } from '../world/materials.js';
 
@@ -16,6 +17,8 @@ const RULES = [
   { sp: 'frangipani', sea: [32, 999], dens: 0.06, areas: { park: 0.4, residential: 0.3 }, clear: 1.0, space: 1.6 },
 ];
 const HILL = { height: 14, bonus: { rainTree: 0.5, casuarina: 0.25 }, roadGap: 4.5 };   // forest on Khao Sam Muk; roadGap: extra clearance (m) so crowns don't cover the hill roads
+/** How far a crown reaches sideways from the trunk (m, at scale 1; leaf cards included). On the hill a tree stands at least this far from the road edge. */
+export const CROWN_REACH = { rainTree: 9.5, casuarina: 4.8, palm: 5, frangipani: 1.5 };
 const VARIANTS = 2;
 const LOD = { near: 150, rebuild: 15 };   // metres
 const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
@@ -47,10 +50,11 @@ export function buildNature(map, ctx, extra = {}) {
         expect -= 1;
         const x = cx + (r() - 0.5) * step, z = cz + (r() - 0.5) * step, d = seaDist(x, z);
         if (d < rule.sea[0] || d > rule.sea[1] || strip(x, z) > 0) continue;
-        if (roadIdx.clearance(x, z, 8) < rule.clear + (map.heightAt(x, z) > HILL.height ? HILL.roadGap : 0)) continue;
+        const s = 0.85 + r() * 0.3, onHill = map.heightAt(x, z) > HILL.height || inBox(x, z, HILL_BOX.box);   // the foot of the hill too: its roads are hill roads
+        if (roadIdx.clearance(x, z, 16) < (onHill ? Math.max(rule.clear + HILL.roadGap, CROWN_REACH[rule.sp] * s) : rule.clear)) continue;
         if (occ.test(x, z, rule.space / 2, rule.space / 2)) continue;
         occ.mark(x, z, rule.space / 2, rule.space / 2);
-        placed[rule.sp].push({ x, z, y: map.heightAt(x, z) - 0.15, rot: r() * Math.PI * 2, s: 0.85 + r() * 0.3, v: Math.floor(r() * VARIANTS) });
+        placed[rule.sp].push({ x, z, y: map.heightAt(x, z) - 0.15, rot: r() * Math.PI * 2, s, v: Math.floor(r() * VARIANTS) });
       }
     }
   }
