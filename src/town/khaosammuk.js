@@ -11,11 +11,11 @@ import { monkeyGeometry } from '../monkey/models.js';
 import { MONKEYS } from '../monkey/species.js';
 import { getMaterial } from '../world/materials.js';
 import { VILLAGE } from './fishingvillage.js';
-import { CROWN_REACH } from './nature.js';
+import { CROWN_REACH, CROWN_OVER } from './nature.js';
 
 export const KSM = {
   box: ROCKY_SHORE[0],                                        // the hill and its shore (terrain.js keeps it rocky)
-  forest: { step: 7, from: 6, roadGap: 7, dens: 0.55, mix: [['rainTree', 0.55], ['casuarina', 0.3], ['frangipani', 0.15]], narrow: ['casuarina', 'frangipani'] },
+  forest: { step: 7, from: 6, roadGap: 2.6, dens: 0.55, mix: [['rainTree', 0.55], ['casuarina', 0.3], ['frangipani', 0.15]], narrow: ['casuarina', 'frangipani'] },
   outcrop: { step: 13, mask: 0.6, size: [3.5, 9], tall: [0.9, 1.8], per: [1, 3], sink: 0.35, colors: ['#c7b99c', '#b8a88c', '#d2c5aa', '#a89a80'] },   // angular granite crags
   seawall: { roads: ['secondary', 'tertiary', 'residential', 'unclassified'], sea: 14, every: 3, walk: 3, drop: 3.2, canopyEvery: 21, canopyFrom: 0.35 },
   monkeys: { near: [-652, -1942], count: 16, spread: 16 },
@@ -130,8 +130,8 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
     for (const [name, w] of F.mix) { k -= w; if (k <= 0) { sp = name; break; } }
     const s = 0.8 + r() * 0.5;
     // crowns stay clear of the road (seen from above): beside a road, a wide tree gives way to a narrower kind
-    for (const alt of F.narrow) { if (gap >= CROWN_REACH[sp] * s) break; sp = alt; }
-    if (gap < CROWN_REACH[sp] * s) continue;
+    for (const alt of F.narrow) { if (gap >= CROWN_REACH[sp] * s - CROWN_OVER) break; sp = alt; }
+    if (gap < CROWN_REACH[sp] * s - CROWN_OVER) continue;
     trees[sp].push({ x: px, z: pz, y: y - 0.2, rot: r() * 6.28, s });
   }
 
