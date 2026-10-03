@@ -19,6 +19,7 @@ import { createDrone } from './drone.js';
 import { buildRoadblocks, createRoadblockNotice, ROADBLOCK } from './roadblock.js';
 import { joinRoadEnds } from './roadjoin.js';
 import { gradeRoads } from './grading.js';
+import { flattenLowland } from './flatland.js';
 import { auditRoads } from './roadaudit.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
@@ -73,6 +74,7 @@ async function boot() {
   const map = await loadMap();
   completeRoundabout(map);                                            // the bake clips the ring's far side
   const joins = joinRoadEnds(map);                                    // close small gaps between roads
+  const flat = flattenLowland(map);                                   // the beach and town are flat in reality: press the DEM's mounds down
   const graded = gradeRoads(map);                                     // smooth, level roads that never dip under the sea
   const renderer = createRenderer($('c'));
   const scene = new THREE.Scene();
@@ -270,7 +272,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

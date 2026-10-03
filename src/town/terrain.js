@@ -13,7 +13,7 @@ export const ROCKY_SHORE = [{ x0: -1050, x1: -250, z0: -2480, z1: -1330, sand: 6
 export const PARKS = [{ x: -1340, z: -762, r: 82, sand: 7, lawn: '#78a24c' }];
 
 /** Chamfer distance (m) from every grid cell to the nearest sea cell. */
-function seaDistance(map) {
+export function seaDistance(map) {
   const { nx, nz, step } = map.core, h = map.heights, sea = map.sea;
   const d = new Float32Array(nx * nz).fill(1e9);
   for (let k = 0; k < d.length; k++) if (h[k] < sea) d[k] = 0;
