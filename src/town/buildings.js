@@ -14,6 +14,9 @@ const FRONTAGE = {
   minSeaDist: 26,         // keep off the sand
   backOverhang: 25,       // lots may reach this far past the strip edge (facades stay inside)
   maxSlope: 1.6,          // max height difference across a footprint (m)
+  // Khao Sam Muk: generated lots stay off the hill. A lot there must stand on gentle, low ground (the slope
+  // behind a facade would bury it) — OSM's own buildings are unaffected.
+  hill: { box: { x0: -1100, x1: -100, z0: -2480, z1: -1250 }, height: 9, slope: 0.7, depthSlope: 0.9 },
   rowMax: 9,              // units per row before a soi gap
   condoChance: 0.12,      // per long row on a main road
   houseChance: 0.5,       // short runs become houses (else small shophouse rows)
@@ -46,6 +49,12 @@ export function buildBuildings(kit, map, ctx, near) {
       lo = Math.min(lo, h); hi = Math.max(hi, h);
     }
     if (hi - lo > FRONTAGE.maxSlope) return false;
+    const H = FRONTAGE.hill;
+    if (cx > H.box.x0 && cx < H.box.x1 && cz > H.box.z0 && cz < H.box.z1) {
+      if (hi > H.height || hi - lo > H.slope) return false;
+      // the ground right behind the back wall must not climb above the roof line's first floor
+      if (map.heightAt(cx - fx * (D + 3), cz - fz * (D + 3)) - lo > H.depthSlope) return false;
+    }
     // the whole footprint (every metre), not just its corners, must stay off every road
     if (!clearOfRoads(roadIdx, cx, cz, fx, fz, hw, D)) return false;
     return !occ.test(cx - fx * D / 2, cz - fz * D / 2, hw, D / 2 + 0.3, Math.atan2(fx, fz));
