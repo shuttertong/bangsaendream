@@ -6,13 +6,15 @@
 // Everything is vertex-coloured and merged by body.js into one skinned mesh.
 // Geometry per bone, in bone-local rest space (limbs hang down −y, the face looks along +z).
 import * as THREE from 'three';
+import { fantasyParts } from './fantasy.js';
+import { colored, at, sc, sph, cap, lathe, ring } from './geo.js';
 
 export const TOON = {
   up: 0.85,             // head centre above the head bone (× head radius): the head sits on the neck
   eyeY: -0.08, mouthY: -0.42, hatY: 0.8,   // × head radius, from the head centre
   eye: { x: 0.43, w: 0.215, h: 0.245 },    // eye centre x and half-size (× head radius): big, round toon eyes
   shape: [1, 0.97, 0.95], chin: 0.14,      // head ellipsoid radii (× R), chin taper
-  seg: { head: [32, 24], limb: [6, 14], round: [18, 12] },
+  seg: { head: [32, 24] },
   // natural, tapered limbs (radius at the top / widest point / bottom, and where the widest point sits)
   limb: {
     arm: [0.041, 0.039, 0.033, 0.35], fore: [0.033, 0.034, 0.026, 0.3],
@@ -23,23 +25,6 @@ export const TOON = {
   skirt: { pleats: 14, depth: 0.012, len: 0.42 },
 };
 
-function colored(g, hex) {
-  g = g.index ? g.toNonIndexed() : g;
-  if (g.attributes.uv) g.deleteAttribute('uv');
-  const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) c.toArray(a, i * 3);
-  g.setAttribute('color', new THREE.BufferAttribute(a, 3));
-  return g;
-}
-const at = (g, x, y, z) => { g.translate(x, y, z); return g; };
-const sc = (g, x, y, z) => { g.scale(x, y, z); return g; };
-const sph = (r, w = TOON.seg.round[0], h = TOON.seg.round[1]) => new THREE.SphereGeometry(r, w, h);
-const cap = (r, len) => new THREE.CapsuleGeometry(r, Math.max(0.001, len), TOON.seg.limb[0], TOON.seg.limb[1]);
-/** Lathe of an [r, y] profile; the profile may run either way (it is turned to face outward). */
-const lathe = (pts, seg = 22) => {
-  if (pts[0][1] > pts[pts.length - 1][1]) pts = [...pts].reverse();
-  return new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
-};
 const hermite = (a, b, t) => a + (b - a) * t * t * (3 - 2 * t);
 const darker = (hex, k) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#000000'), k).getHexString();
 const lighter = (hex, k) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), k).getHexString();
@@ -59,8 +44,6 @@ function taper(len, r0, r1, r2, mid = 0.3) {
 const tube = (y0, y1, ra, rb) => lathe([[rb, y1], [rb * 1.01, y1 + 0.01], [(ra + rb) / 2, (y0 + y1) / 2], [ra, y0 - 0.01], [ra * 0.7, y0]], 18);
 /** A sleeve: a rounded shoulder dome over the joint, flaring to the hem at −len. */
 const sleeve = (len, ra, rb, dome = 0.05) => lathe([[rb, -len], [rb * 1.01, -len + 0.01], [ra, -len * 0.45], [ra * 1.02, 0], [ra * 0.9, dome * 0.6], [ra * 0.55, dome * 0.92], [0, dome]], 18);
-/** Thin ring (collar, hem trim, waistband) lying flat at y, radius r, thickness t. */
-const ring = (r, t, y, depth = 1) => at(sc(new THREE.TorusGeometry(r, t, 6, 24).rotateX(Math.PI / 2), 1, 1, depth), 0, y, 0);
 
 /** Point + outward normal on the head ellipsoid (centre at the origin) at face coords (x, y). */
 function surface(R, x, y) {
@@ -214,7 +197,7 @@ function chestPrint(K, y, z) {
 export function toonParts(K, B) {
   const hs = K.headScale, R = B.head;
   const { head, eyes, mouth } = headParts(K, R);
-  const hat = hatParts(K, R);
+  const hat = K.fxHat ? [] : hatParts(K, R);                           // a fantasy head item replaces the hat
   for (const g of [...head, ...eyes, ...mouth, ...hat]) g.scale(hs, hs, hs);
 
   const long = K.sleeves === 'long', bare = K.sleeves === 'none';
@@ -274,5 +257,7 @@ export function toonParts(K, B) {
     hips.push(colored(sc(g, 1, 1, 0.82), K.bottomColor), colored(ring(0.168, 0.005, -S.len + 0.004, 0.82), darker(K.bottomColor, 0.2)));
   }
 
-  return { hips, spine, head, hat, eyes, mouth, ...side('L'), ...side('R') };
+  const out = { hips, spine, head, hat, eyes, mouth, ...side('L'), ...side('R') };
+  for (const [bone, geos] of Object.entries(fantasyParts(K, R, B, hs))) (out[bone] ||= []).push(...geos);   // wardrobe items
+  return out;
 }

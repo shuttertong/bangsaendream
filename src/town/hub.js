@@ -119,7 +119,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
 
   // deck chairs (rented) and public benches (free)
   const seats = createSeats({ list: beach.seats, player, collision, toast });
-  let nearSeat = null, seatT = 0, nearScope = null, nearShop = null, partners = null;   // binocular viewer (binoculars.js) / partner shop (partners.js) in reach
+  let nearSeat = null, seatT = 0, nearScope = null, nearShop = null, partners = null, wardrobe = null;   // binocular viewer (binoculars.js) / partner shop (partners.js) in reach
 
   let near = null, talkingTo = null;
   const act = () => {
@@ -183,9 +183,11 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       P.setBest(id, { baht: Math.max(prev?.baht || 0, res.baht), biggest: Math.max(prev?.biggest || 0, res.biggest?.size || 0), plays: (prev?.plays || 0) + 1 });
     },
     /** True while the player shouldn't move (dialogue, menus). */
-    get frozen() { return talk.active || travel.open; },
+    get frozen() { return talk.active || travel.open || !!wardrobe?.open; },
     /** main.js sets this: ร้านพันธมิตร (partners.js) — created after the hub because it adds travel places. */
     set partners(p) { partners = p; },
+    /** main.js sets this: the wardrobe panel (wardrobe.js) freezes the kid while it is open. */
+    set wardrobe(w) { wardrobe = w; },
     update(dt) {
       const p = player.state;
       trucks.update(dt, [{ x: p.x, z: p.z, ride: riding }, ...trucks.extra], camera.cam?.position);

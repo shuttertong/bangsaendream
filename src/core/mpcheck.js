@@ -8,6 +8,7 @@ export const LIMITS = {
   poses: [null, 'bench', 'lounge'],
   games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam'],
   look: ['shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom'],
+  fx: ['hat', 'wings', 'back', 'hand', 'tail', 'aura'], fxMax: 64,   // wardrobe item indices (0 = none)
   coKeys: ['k', 'room', 'game', 'seats', 't', 'seed', 'lean', 's', 'e', 'ev', 'phase', 'n', 'i', 'side', 'team', 'r'],
 };
 const L = LIMITS, WORD = /^[a-z]{1,12}$/;
@@ -19,7 +20,8 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 export function cleanHello(m) {
   const look = m?.look || {};
   if (!int(m?.n1, 0, 64) || !int(m?.n2, 0, 100) || !L.look.every(k => int(look[k], 0, 32))) return null;
-  return { n1: m.n1, n2: m.n2, look: Object.fromEntries(L.look.map(k => [k, look[k]])) };
+  const fxIn = m.fx || {}, fx = Object.fromEntries(L.fx.map(k => [k, int(fxIn[k], 0, L.fxMax + 1) ? fxIn[k] : 0]));
+  return { n1: m.n1, n2: m.n2, look: Object.fromEntries(L.look.map(k => [k, look[k]])), fx };
 }
 
 export function cleanState(m) {

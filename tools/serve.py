@@ -73,7 +73,9 @@ def clean_hello(m):
         return None
     if not all(ok(k, 32) for k in ('shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom')):
         return None
-    return {'n1': m['n1'], 'n2': m['n2'], 'look': {k: look[k] for k in ('shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom')}}
+    fx_in = m.get('fx') or {}
+    fx = {k: (fx_in[k] if isinstance(fx_in.get(k), int) and 0 <= fx_in[k] <= 64 else 0) for k in ('hat', 'wings', 'back', 'hand', 'tail', 'aura')}   # wardrobe items
+    return {'n1': m['n1'], 'n2': m['n2'], 'look': {k: look[k] for k in ('shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom')}, 'fx': fx}
 
 
 def clean_state(m):

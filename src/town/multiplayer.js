@@ -9,6 +9,8 @@ import { connect } from '../core/net.js';
 import { createKid } from './kid/index.js';
 import { seatPose, SEAT_HIP } from './player.js';
 import { lookOf, nameOf, wearLook, saveProfile, reroll } from '../shared/avatar.js';
+import { fxOf, wornOf } from '../shared/wardrobe.js';
+import * as P from '../shared/progress.js';
 import { PHRASES, EMOTES } from '../shared/phrases.js';
 import { t, tr, onLang } from '../shared/i18n.js';
 
@@ -21,7 +23,8 @@ const MP = {
   emote: { wave: 2.2, dance: 3.5, cheer: 1.6, heart: 2 },
 };
 
-export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy }) {
+export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy, auras = null }) {
+  const hello = () => ({ t: 'hello', ...profile, fx: fxOf(P.get().wardrobe?.worn) });   // name + look + wardrobe (all indices)
   const remotes = new Map(), coFns = new Set();
   let myId = null, hostId = null, sendT = 0, keepT = 0, truckT = 0, last = '';
   const trucks = hub.trucks, slotOf = id => id % trucks.seats;
@@ -70,7 +73,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
       reroll(profile, b.dataset.r);
       saveProfile(profile);
       if (b.dataset.r !== 'name') { wearLook(profile.look); player.setLook(lookOf(profile.look)); }
-      net?.send({ t: 'hello', ...profile });
+      net?.send(hello());
       audio?.play('click');
       drawPanel();
     }));
@@ -105,7 +108,9 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   // ---------- remote players ----------
   function add(p) {
     remove(p.id);
-    const kid = createKid(scene, lookOf(p.look));
+    const kid = createKid(scene, lookOf(p.look, p.fx));
+    const aura = wornOf(p.fx).aura;
+    if (aura) auras?.set(`p${p.id}`, aura, v => (remotes.get(p.id)?.kid.mesh.visible ? v.copy(remotes.get(p.id).kid.mesh.position).setY(remotes.get(p.id).kid.mesh.position.y + 0.9) : null)); else auras?.remove(`p${p.id}`);
     const tag = document.createElement('div');
     tag.className = 'mp-tag';
     tag.innerHTML = `<span></span><i></i>`;
@@ -121,6 +126,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     return r;
   }
   function remove(id) {
+    auras?.remove(`p${id}`);
     const r = remotes.get(id);
     if (!r) return;
     scene.remove(r.kid.mesh);
@@ -136,7 +142,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   }
 
   const net = connect({
-    onOpen: () => net.send({ t: 'hello', ...profile }),
+    onOpen: () => net.send(hello()),
     onClose: () => { for (const id of [...remotes.keys()]) remove(id); myId = null; hub.seatSlot = 0; setHost(null); btn.classList.remove('on'); },
     onFail: () => { if (net?.rates) hub.hud?.toast(t('mpOffline')); },   // online hub unreachable (Wi-Fi relay failing is normal on static hosts)
     onMessage: m => {
@@ -294,5 +300,5 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   // co-op mini-game channel: to = [ids] or null for everyone; d = small numeric payload
   const co = { send: (to, d) => net?.send({ t: 'co', to, d }), on: fn => coFns.add(fn), off: fn => coFns.delete(fn) };
 
-  return { update, remotes, info, co, get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
+  return { update, remotes, info, co, rehello: () => net?.send(hello()), get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
 }

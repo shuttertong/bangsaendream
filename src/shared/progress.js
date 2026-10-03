@@ -13,6 +13,7 @@ const fresh = () => ({
   quests: {},         // questId → 'active' | 'done'
   best: {},           // mini-game id → best result
   lang: null,
+  wardrobe: { owned: {}, worn: {}, gift: null },   // fantasy wardrobe: itemId → 1, slot → itemId, last daily-gift day
 });
 
 let data = fresh(), dirty = false, timer = 0;
@@ -23,7 +24,7 @@ function read() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh();
     const d = JSON.parse(raw);
-    return { ...fresh(), ...d };
+    return { ...fresh(), ...d, wardrobe: { ...fresh().wardrobe, ...(d.wardrobe || {}) } };
   } catch { return fresh(); }
 }
 
@@ -53,6 +54,9 @@ export function setFlag(k, v = true) { data.flags[k] = v; changed('flags'); }
 export function meet(id) { if (!data.met[id]) { data.met[id] = true; changed('met'); } }
 export function setQuest(id, state) { data.quests[id] = state; changed('quests'); }
 export function setBest(game, result) { data.best[game] = result; changed('best'); }
+export function buyWardrobe(id, price) { if (data.baht < price || data.wardrobe.owned[id]) return false; data.baht -= price; data.wardrobe.owned[id] = 1; changed('wardrobe'); changed('baht'); return true; }
+export function wearWardrobe(slot, id) { if (id) data.wardrobe.worn[slot] = id; else delete data.wardrobe.worn[slot]; changed('wardrobe'); }
+export function takeGift(n) { data.wardrobe.gift = new Date().toISOString().slice(0, 10); data.baht += n; changed('baht'); }
 /** Position changes a lot; mark dirty without notifying listeners. */
 export function setPos(x, z, yaw) { data.pos = { x: +x.toFixed(2), z: +z.toFixed(2), yaw: +yaw.toFixed(3) }; dirty = true; }
 

@@ -4,6 +4,7 @@
 // every mini-game wear the chosen look.
 import { KID_LOOK } from '../town/kid/model.js';
 import { tr } from './i18n.js';
+import { fxLook, wornOf } from './wardrobe.js';
 
 export const NAMES = [
   { th: 'ปูลม', en: 'Ghost Crab' }, { th: 'โลมา', en: 'Dolphin' }, { th: 'ลิงน้อย', en: 'Little Monkey' },
@@ -37,16 +38,17 @@ export function saveProfile(p) {
   try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* storage blocked */ }
 }
 
-/** buildPerson() look for look indices. */
-export function lookOf(l) {
+/** buildPerson() look for look indices (+ optional wardrobe indices fx). */
+export function lookOf(l, fx = null) {
   return {
+    ...fxLook(wornOf(fx)),
     ...BASE, shirt: LOOKS.shirt[l.shirt] || BASE.shirt, skin: LOOKS.skin[l.skin], hat: LOOKS.hat[l.hat],
     hatColor: LOOKS.hatColor[l.hatColor], hairStyle: LOOKS.hair[l.hair], bottomColor: LOOKS.bottom[l.bottom],
     ...(LOOKS.hat[l.hat] === 'cap' ? { hatBand: '#f4f1e8' } : {}),
   };
 }
 /** Make the local kid (hub + mini-games) wear this look. */
-export function wearLook(l) { Object.assign(KID_LOOK, lookOf(l)); }
+export function wearLook(l) { const { fxHat, fxWings, fxBack, fxHand, fxTail, fxAura, ...base } = lookOf(l); Object.assign(KID_LOOK, base); }   // (wardrobe fields are the wardrobe's)
 
 export const nameOf = (n1, n2) => `${tr(NAMES[n1 % NAMES.length])} ${n2}`;
 

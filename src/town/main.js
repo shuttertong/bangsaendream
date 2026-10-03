@@ -34,6 +34,8 @@ import { buildViewpoint } from './viewpoint.js';
 import { createBinoculars } from './binoculars.js';
 import { createFeedback } from '../shared/feedback.js';
 import { createPartners } from './partners.js';
+import { createWardrobe } from './wardrobe.js';
+import { createAuras } from './aura.js';
 import { buildFishingVillage } from './fishingvillage.js';
 import { createChunkCuller } from './chunkcull.js';
 import { buildWalkingStreet } from './walkingstreet.js';
@@ -181,7 +183,10 @@ async function boot() {
   const quality = createQuality(renderer, resize);
 
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
-  const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null) });
+  const auras = createAuras(scene);                                   // wardrobe auras (the kid's and other players')
+  const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null), auras });
+  const wardrobe = createWardrobe({ root: $('hud'), player, tpc, hub, auras, audio, onWorn: () => mp.rehello() });   // 👗 fantasy wardrobe (K)
+  hub.wardrobe = wardrobe;
   const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
   // 💌 requests & feedback for the developer (Supabase, insert-only); sends the nearest travel stop as context
   const nearestPlace = () => {
@@ -199,6 +204,7 @@ async function boot() {
 
   addSystem((dt, time) => {
     U.time.value = time;
+    auras.update(time);
     mp.update(dt, !game && !free);
     coop.update(dt, !!game || loading);
     bots?.update(dt);
