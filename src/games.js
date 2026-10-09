@@ -18,6 +18,7 @@ export const GAMES = {
   jetski: { load: () => import('./jetski/index.js') },
   khaolam: { load: () => import('./khaolam/index.js') },
   go: { load: () => import('./go/index.js') },
+  football: { load: () => import('./football/index.js') },
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };

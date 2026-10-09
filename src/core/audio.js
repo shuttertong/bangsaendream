@@ -149,6 +149,9 @@ export function createAudio() {
     monkey: t => { for (let i = 0; i < 3; i++) tone(900 + i * 120, t + i * 0.08, 0.07, { type: 'square', gain: 0.03, slide: 1.4 }); },
     fanfare: t => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, t + i * 0.11, 0.3, { type: 'triangle', gain: 0.1 })),
     reel: t => tone(2200, t, 0.03, { type: 'square', gain: 0.02 }),
+    kick: t => { tone(150, t, 0.13, { gain: 0.32, slide: 0.45 }); burst(t, 0.06, { freq: 900, gain: 0.3 }); },                 // foot on ball
+    whistle: t => { tone(2350, t, 0.42, { type: 'square', gain: 0.045 }); tone(2470, t, 0.42, { type: 'square', gain: 0.04 }); },   // two close tones: the pea's trill
+    cheer: t => { burst(t, 1.7, { type: 'bandpass', freq: 1000, q: 0.6, gain: 0.3, slide: 1.6 }); burst(t + 0.12, 1.3, { type: 'bandpass', freq: 2300, q: 0.9, gain: 0.13 }); },
   };
   function play(name) {
     if (!ctx || muted || !FX[name]) return;

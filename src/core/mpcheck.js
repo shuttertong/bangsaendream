@@ -6,7 +6,7 @@ export const LIMITS = {
   players: 32, trucks: 64, phrases: 64,
   emotes: ['wave', 'dance', 'cheer', 'heart'],
   poses: [null, 'bench', 'lounge'],
-  games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go'],
+  games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football'],
   look: ['shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom'],
   fx: ['hat', 'wings', 'back', 'hand', 'tail', 'aura'], fxMax: 64,   // wardrobe item indices (0 = none)
   coKeys: ['k', 'room', 'game', 'seats', 't', 'seed', 'lean', 's', 'e', 'ev', 'phase', 'n', 'i', 'side', 'team', 'r'],

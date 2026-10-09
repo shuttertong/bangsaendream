@@ -58,18 +58,24 @@ export const ROSTER = [
     },
   },
   {
-    id: 'tonkla', place: 'beach',
+    id: 'tonkla', place: 'beach', game: 'football',
     name: { th: 'ต้นกล้า', en: 'Tonkla' },
     look: { shirt: '#f0b43a', bottomColor: '#3a6a4a', hat: 'cap', hatColor: '#d8443a', hatBand: '#f4f1e8', skin: '#c68f66' },
-    script: s => s.met.tonkla ? [
+    script: s => [...(s.met.tonkla ? [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
         : s.quests.playAll === 'active'
-        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ช่วยยายขายข้าวหลาม ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Grandma's khao lam, squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, and Tom's banana boat, sofa boat and jet ski." } }
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ช่วยยายขายข้าวหลาม ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม เตะบอลกับเรา แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Grandma's khao lam, squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, football with me, and Tom's banana boat, sofa boat and jet ski." } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },
       { say: { th: 'ที่นี่สนุกนะ มีทั้งลิงที่เขาสามมุข ปูลม แล้วก็ส้มตำป้านวลอร่อยสุด ๆ', en: 'It\'s fun here: monkeys on Khao Sam Muk, ghost crabs, and Aunt Nuan\'s som tam is the best.' } },
+    ]),
+      { say: { th: 'เด็กหาดวอนนภามาท้าเตะบอลอีกแล้ว มาอยู่ทีมเดียวกับเราไหม?', en: 'The kids from Wonnapha beach want a game of football again. Will you be on my team?' } },
+      { ask: [
+        { label: { th: '⚽ เตะบอลชายหาด', en: '⚽ Play beach football' }, then: [{ game: 'football' }] },
+        { label: { th: 'ไว้ก่อนนะ', en: 'Maybe later' }, then: [] },
+      ] },
     ],
   },
   {
