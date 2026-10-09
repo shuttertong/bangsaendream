@@ -21,7 +21,7 @@ MAX_PLAYERS = 32
 MAX_MSG = 4096
 EMOTES = {'wave', 'dance', 'cheer', 'heart'}
 POSES = {None, 'bench', 'lounge'}
-GAMES = {None, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football'}
+GAMES = {None, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football', 'volley'}
 
 clients = {}                    # id -> Client
 clients_lock = threading.Lock()

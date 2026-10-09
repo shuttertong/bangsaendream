@@ -8,11 +8,11 @@ import { createSky } from '../world/sky.js';
 import { SPECIES as TREES } from '../town/assets/trees.js';
 import { cardMaterial } from '../world/foliage.js';
 import * as PROPS from '../town/assets/props.js';
-import { bakePerson, personMaterial } from '../town/people/body.js';
 import { PALETTE } from '../shared/palette.js';
 import { rng } from '../core/rng.js';
 import { PITCH, BALL } from './rules.js';
 import { goalFrame, placeNet, GOAL_COLORS } from './goal.js';
+import { paint, seaMaterial, watcherMesh } from '../shared/beachset.js';
 
 const { L, W } = PITCH, G = PITCH.goal;
 export const SET = {
@@ -23,73 +23,7 @@ export const SET = {
   watchers: 11,
 };
 
-function paint(g, hex) {
-  g = g.index ? g.toNonIndexed() : g;
-  if (g.attributes.uv) g.deleteAttribute('uv');
-  const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) c.toArray(a, i * 3);
-  g.setAttribute('color', new THREE.BufferAttribute(a, 3));
-  return g;
-}
 export const groundAt = x => (x < SET.shore ? (x - SET.shore) * SET.slope : 0);
-
-function waterMaterial() {
-  return new THREE.ShaderMaterial({
-    transparent: true,
-    uniforms: {
-      time: { value: 0 }, edge: { value: SET.shore + SET.sea / SET.slope },   // edge: the waterline (x)
-      shallow: { value: new THREE.Color('#7fd8c8') }, mid: { value: new THREE.Color(PALETTE.seaShallow) }, deep: { value: new THREE.Color(PALETTE.seaMid) },
-      haze: { value: new THREE.Color(PALETTE.haze) },
-    },
-    vertexShader: /* glsl */`
-      varying vec3 vW;
-      void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vW = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`,
-    fragmentShader: /* glsl */`
-      uniform float time, edge; uniform vec3 shallow, mid, deep, haze;
-      varying vec3 vW;
-      float h2(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-      float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-        return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
-      void main() {
-        float wash = sin(time * 0.9 + vW.z * 0.33) * 0.55 + sin(time * 0.55 + vW.z * 0.12 + 1.7) * 0.45;   // the water's edge runs up and down the sand
-        float d = edge - vW.x + wash * 0.7;                                                               // metres out from the edge
-        if (d < 0.0) discard;
-        vec3 col = mix(shallow, mid, smoothstep(0.0, 16.0, d));
-        col = mix(col, deep, smoothstep(16.0, 90.0, d));
-        col *= 0.9 + 0.2 * n2(vW.xz * vec2(0.45, 1.5) + vec2(time * 0.4, 0.0));
-        float roll = sin(d * 0.5 + time * 1.1 + n2(vec2(vW.z * 0.15, 3.0)) * 2.5);                         // low waves rolling in along the shore
-        float foam = smoothstep(1.3, 0.0, d) * (0.55 + 0.45 * n2(vW.xz * 3.0 + time * 0.6))
-          + smoothstep(0.86, 1.0, roll) * smoothstep(1.5, 5.0, d) * smoothstep(45.0, 12.0, d) * n2(vW.xz * 2.2) * 0.8;
-        col = mix(col, vec3(0.97), clamp(foam, 0.0, 0.9));
-        float fogF = 1.0 - exp(-pow(length(vW - cameraPosition) * 0.006, 2.0));
-        gl_FragColor = vec4(mix(col, haze, fogF), mix(0.6, 0.95, smoothstep(0.0, 3.0, d)));
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-      }`,
-  });
-}
-
-/** People watching from behind the boards on the umbrella side (one merged, static mesh). */
-function watchers(r) {
-  const ADULT = { scale: 1.3, headScale: 0.86, print: 'none' }, pick = a => a[Math.floor(r() * a.length)];
-  const shirts = ['#f4f1e8', '#f0b43a', '#e8958a', '#7fc4e8', '#9ad0b0', '#e2553f', '#c9b0e0'], skins = ['#c68f66', '#b8835c', '#d9a57c', '#a8764f'];
-  const poses = [
-    b => { b.armL.rotation.set(0, 0, 2.7); b.armR.rotation.set(0, 0, -2.7); },                       // both arms up
-    b => { b.armR.rotation.set(-2.6, 0, -0.3); b.foreR.rotation.x = -0.4; },                           // one arm up
-    b => { b.armL.rotation.set(-0.5, 0, 0.5); b.foreL.rotation.x = -1.9; b.armR.rotation.set(-0.5, 0, -0.5); b.foreR.rotation.x = -1.9; },   // hands together
-    () => {},
-  ];
-  const geos = [];
-  for (let i = 0; i < SET.watchers; i++) {
-    const kid = r() < 0.4, look = { ...(kid ? { scale: 0.95 + r() * 0.1 } : ADULT), skin: pick(skins), shirt: pick(shirts), bottomColor: pick(['#34507a', '#5a4a3a', '#3a3a3a', '#f4f1e8']),
-      hairStyle: pick(['short', 'long', 'bun', 'short']), hat: pick(['none', 'none', 'cap', 'straw', 'bucket']), bottom: pick(['shorts', 'shorts', 'pants', 'skirt']) };
-    const z = -L + 2 + ((L * 2 - 4) * (i + r() * 0.6)) / SET.watchers, x = W + 1.1 + r() * 1.3;
-    geos.push(bakePerson(look, pick(poses), 0.5).rotateY(-Math.PI / 2 + (r() - 0.5) * 0.7).translate(x, 0, z));
-  }
-  const mesh = new THREE.Mesh(mergeGeometries(geos), personMaterial());
-  mesh.castShadow = mesh.receiveShadow = true;
-  return mesh;
-}
 
 export function buildScene() {
   const scene = new THREE.Scene(), r = rng(47);
@@ -118,7 +52,7 @@ export function buildScene() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const waterMat = waterMaterial();
+  const waterMat = seaMaterial('x', SET.shore + SET.sea / SET.slope);   // the waterline
   const water = new THREE.Mesh(new THREE.PlaneGeometry(600, 900).rotateX(-Math.PI / 2).translate(SET.shore - 296, SET.sea, -150), waterMat);
   water.renderOrder = 1;
   scene.add(water);
@@ -157,7 +91,9 @@ export function buildScene() {
   scene.add(pitch);
   const nets = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(netLines, 3)),
     new THREE.LineBasicMaterial({ color: GOAL_COLORS.net, transparent: true, opacity: 0.55 }));
-  scene.add(nets, watchers(r));
+  // people watching from behind the boards on the umbrella side
+  const spots = Array.from({ length: SET.watchers }, (_, i) => ({ x: W + 1.1 + r() * 1.3, z: -L + 2 + ((L * 2 - 4) * (i + r() * 0.6)) / SET.watchers, yaw: -Math.PI / 2 + (r() - 0.5) * 0.7 }));
+  scene.add(nets, watcherMesh(spots, r));
 
   // the beach behind the right-hand boards: umbrellas and chairs, then palms and casuarinas
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);

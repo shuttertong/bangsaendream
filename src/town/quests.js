@@ -6,7 +6,7 @@ import { tr, t } from '../shared/i18n.js';
 
 const FRIENDS = ['tonkla', 'daeng', 'piak', 'chai', 'fon', 'nuan'];
 // who runs which mini-game (roster ids)
-const HOSTS = { khaolam: 'grandma', crab: 'daeng', squid: 'piak', monkey: 'chai', tube: 'fon', stall: 'nuan', banana: 'tom', sofa: 'tom', jetski: 'tom', go: 'kru', football: 'tonkla' };
+const HOSTS = { khaolam: 'grandma', crab: 'daeng', squid: 'piak', monkey: 'chai', tube: 'fon', stall: 'nuan', banana: 'tom', sofa: 'tom', jetski: 'tom', go: 'kru', football: 'tonkla', volley: 'tonkla' };
 const hostsOf = games => [...new Set(games.map(g => HOSTS[g]))];
 const hasSeafood = s => Object.keys(s.bag).some(k => (k.startsWith('squid_') || k.startsWith('crab_')) && s.bag[k] > 0);
 

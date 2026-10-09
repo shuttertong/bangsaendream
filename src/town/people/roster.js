@@ -65,15 +65,16 @@ export const ROSTER = [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
         : s.quests.playAll === 'active'
-        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ช่วยยายขายข้าวหลาม ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม เตะบอลกับเรา แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Grandma's khao lam, squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, football with me, and Tom's banana boat, sofa boat and jet ski." } }
+        ? { say: { th: 'ลองให้ครบทุกอย่างสิ! ช่วยยายขายข้าวหลาม ตกหมึก ไล่ลิง ลอยห่วงยาง ช่วยป้านวลขายส้มตำ จับปูลม เล่นวอลเลย์กับเตะบอลกับเรา แล้วก็บานาน่าโบ๊ท โซฟาโบ๊ท กับเจ็ทสกีของพี่ต้อม', en: "Try it all! Grandma's khao lam, squid, monkeys, the tube, helping Aunt Nuan, ghost crabs, volleyball and football with me, and Tom's banana boat, sofa boat and jet ski." } }
         : { say: { th: 'เย็นนี้ไปจับปูลมกันไหม? ถามลุงแดงดูสิ', en: 'Want to catch ghost crabs tonight? Ask Uncle Daeng.' } },
     ] : [
       { say: { th: 'หวัดดี! มาเที่ยวบ้านยายเหรอ? เราชื่อต้นกล้า', en: 'Hi! Visiting your grandma? I\'m Tonkla.' } },
       { say: { th: 'ที่นี่สนุกนะ มีทั้งลิงที่เขาสามมุข ปูลม แล้วก็ส้มตำป้านวลอร่อยสุด ๆ', en: 'It\'s fun here: monkeys on Khao Sam Muk, ghost crabs, and Aunt Nuan\'s som tam is the best.' } },
     ]),
-      { say: { th: 'เด็กหาดวอนนภามาท้าเตะบอลอีกแล้ว มาอยู่ทีมเดียวกับเราไหม?', en: 'The kids from Wonnapha beach want a game of football again. Will you be on my team?' } },
+      { say: { th: 'เด็กหาดวอนนภามาท้าแข่งอีกแล้ว มาอยู่ทีมเดียวกับเราไหม? เล่นอะไรดี?', en: 'The kids from Wonnapha beach want a match again. Will you be on my team? What shall we play?' } },
       { ask: [
-        { label: { th: '⚽ เตะบอลชายหาด', en: '⚽ Play beach football' }, then: [{ game: 'football' }] },
+        { label: { th: '🏐 วอลเลย์บอลชายหาด', en: '🏐 Beach volleyball' }, then: [{ game: 'volley' }] },
+        { label: { th: '⚽ เตะบอลชายหาด', en: '⚽ Beach football' }, then: [{ game: 'football' }] },
         { label: { th: 'ไว้ก่อนนะ', en: 'Maybe later' }, then: [] },
       ] },
     ],
