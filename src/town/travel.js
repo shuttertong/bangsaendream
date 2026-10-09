@@ -1,5 +1,6 @@
 // Travel menu: pick a place, fade out, move the kid there (facing whoever stands
-// there), fade in. Also the bag panel, which shares the modal styling.
+// there, or what the place is about), fade in. A place can be closed (`locked`) while a
+// quest wants the player to walk there. Also the bag panel, which shares the modal styling.
 import { t, tr } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
 import { ITEMS } from '../shared/items.js';
@@ -7,7 +8,7 @@ import { ITEMS } from '../shared/items.js';
 const ICON = { partner: '🏪', market: '🛍️', anchor: '⚓', sign: '🐬', speedboat: '🚤', home: '🏠', beach: '🏖️', tube: '🛟', food: '🥗', crab: '🦀', boat: '🦑', hill: '🐒', go: '⚫' };
 const FADE_MS = 380, ARRIVE = 2.6;      // metres in front of the place's NPC
 
-export function createTravel(root, { places, player, camera, npcAt, collision = null }) {
+export function createTravel(root, { places, player, camera, npcAt, collision = null, locked = () => false, onLocked = null }) {
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = '<div class="panel"><h2></h2><div class="list"></div><button class="close"></button></div>';
@@ -59,9 +60,10 @@ export function createTravel(root, { places, player, camera, npcAt, collision = 
     for (const place of Object.values(places)) {
       const b = document.createElement('button');
       b.className = 'dest';
-      const isHere = place === here && Math.hypot(place.x - p.x, place.z - p.z) < 25;
-      b.innerHTML = `<span class="ic">${ICON[place.icon] || '📍'}</span><span class="nm">${tr(place.name)}</span>${isHere ? `<span class="here">${t('here')}</span>` : ''}`;
-      b.addEventListener('pointerdown', e => { e.stopPropagation(); go(place); });
+      const isHere = place === here && Math.hypot(place.x - p.x, place.z - p.z) < 25, lock = !isHere && locked(place);
+      b.classList.toggle('locked', lock);
+      b.innerHTML = `<span class="ic">${ICON[place.icon] || '📍'}</span><span class="nm">${tr(place.name)}</span>${isHere ? `<span class="here">${t('here')}</span>` : lock ? `<span class="here">🔒 ${t('walkFirst')}</span>` : ''}`;
+      b.addEventListener('pointerdown', e => { e.stopPropagation(); if (lock) { close(); onLocked?.(place); } else go(place); });
       list.appendChild(b);
     }
     modal.classList.add('on');

@@ -10,7 +10,7 @@ import { fishingBoatGeometry } from './fishingvillage.js';
 export const NAVY = {
   find: { x0: -1180, x1: -1030, z0: -1020, z1: -950 },
   dir: [0.15, -0.99],                          // out to sea (north)
-  len: 105, w: 8, top: 2.2, sala: { w: 10, d: 10 },
+  len: 105, w: 8, top: 2.2, sala: { w: 10, d: 10 }, arrive: 14,   // arrive: metres before the pier's root where travel sets the kid down
   boats: 4, hulls: [['#6f7a82', '#f4f2ec', '#2f4a8a'], ['#8d9aa3', '#f4f2ec', '#d8443a']],
   colors: { deck: '#cfc9bc', edge: '#bdb6a8', rail: '#f4f2ec', post: '#a8a298', lamp: '#4a5058', bollard: '#2e3338',
     anchor: '#3a4048', plinth: '#e8e4d8', salaPost: '#f4efe4', roof: '#c9542e', roof2: '#2f6a8a', gold: '#d8ac48', flag: ['#2f4a8a', '#f4f2ec', '#d8443a'] },
@@ -94,5 +94,5 @@ export function buildNavyPier(kit, map, layout, fleet) {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(p.x, map.sea - 0.35, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry + (r() < 0.5 ? 0 : Math.PI)), new THREE.Vector3(1.1, 1.1, 1.1));
     fleet.push({ geo: geos[i % geos.length], m });
   }
-  return { decks, solids, root };
+  return { decks, solids, root, place: { x: root[0] - dx * N.arrive, z: root[1] - dz * N.arrive, yaw: ry } };   // travel arrives on land, looking out along the pier
 }

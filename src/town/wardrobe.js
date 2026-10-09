@@ -7,7 +7,8 @@ import { KID_LOOK } from './kid/model.js';
 import { t, tr, onLang } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
 
-const MIRROR = { dist: 2.6, pitch: 0.06 };
+const DEG = Math.PI / 180;
+const MIRROR = { dist: 2.6, pitch: 0.06, tall: 1.9, mid: 0.5 };   // tall: metres of kid (hat, wings) that must fit in view; mid: how far below the head the middle of that is
 
 export function createWardrobe({ root, player, tpc, hub, auras, audio, onWorn }) {
   const btn = document.createElement('button');
@@ -69,7 +70,22 @@ export function createWardrobe({ root, player, tpc, hub, auras, audio, onWorn })
       $('.wd-off').textContent = t('takeOffSlot');
     }
     $('.close').textContent = t('close');
+    if (open) frame();
   }
+  // The panel is a bottom sheet on phones and a side panel on desktop. Shift the picture (camera view
+  // offset) so the kid stands in the middle of the part it leaves free, and step back until they fit.
+  function frame() {
+    const cam = tpc.cam, r = $('.panel').getBoundingClientRect(), w = innerWidth, h = innerHeight;
+    const top = (root.querySelector('#ui .top')?.getBoundingClientRect().bottom || 0) + 6;   // under the top bar
+    const side = r.width < w * 0.7, freeW = side ? r.left : w, freeH = Math.max(80, (side ? h : r.top) - top);
+    const span = 2 * Math.tan(DEG * cam.fov / 2);                       // metres seen top to bottom at 1 m
+    const dist = Math.max(MIRROR.dist, MIRROR.tall / (span * freeH / h));
+    const drop = MIRROR.mid * h / (span * dist);                              // px from the head down to the kid's middle
+    tpc.state.dist = dist;
+    cam.setViewOffset(w, h, w / 2 - freeW / 2, h / 2 - (top + freeH / 2) + drop, w, h);
+    cam.updateProjectionMatrix();
+  }
+  addEventListener('resize', () => { if (open) requestAnimationFrame(frame); });
   onLang(refresh); P.onChange(() => { if (open) refresh(); else refresh(); });
 
   $('.wd-tabs').addEventListener('click', stop(e => { const b = e.target.closest('button'); if (!b) return; slot = b.dataset.s; selected = null; tryOn = null; apply(W().worn); refresh(); }));
@@ -102,6 +118,7 @@ export function createWardrobe({ root, player, tpc, hub, auras, audio, onWorn })
     if (!open) return;
     open = false; tryOn = null; apply(W().worn);
     if (saved) { tpc.setYaw(saved.yaw); Object.assign(tpc.state, { pitch: saved.pitch, dist: saved.dist }); }
+    tpc.cam.clearViewOffset();
     modal.classList.remove('on'); document.body.classList.remove('wardrobe');
   }
   btn.addEventListener('pointerdown', stop(() => (open ? hide() : show())));

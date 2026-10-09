@@ -8,7 +8,8 @@ import { createPeople } from './people/index.js';
 import { createTalk } from './people/talk.js';
 import { createHUD } from './hud.js';
 import { createTravel } from './travel.js';
-import { updateQuests, questText } from './quests.js';
+import { updateQuests, questText, walkOnly } from './quests.js';
+import { createGuide } from './guide.js';
 import { Kit } from './assets/kit.js';
 import { somTamCart, khaoLamStand } from './assets/stall.js';
 import { speedboatGeometry, bananaGeometry, sofaGeometry, jetskiGeometry } from '../boats/models.js';
@@ -21,9 +22,9 @@ import { createSeats } from './seats.js';
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint, scopes = null }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint, spots = {}, scopes = null }) {
   const places = resolvePlaces({
-    map, collision, seaDist, start,
+    map, collision, seaDist, start, spots,
     grandma: buildings.grandma,
     goHouse: buildings.goHouse,
     rentals: beach.rentals,
@@ -90,7 +91,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     onGame: id => { if (!startGame(id)) { toast(t('comingSoon')); P.setFlag(`asked_${id}`); } },
     onCoop: id => (coopHandler ? coopHandler(id) : startGame(id)),   // co-op lobby when multiplayer is on
   });
-  const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id), collision });
+  let guide = null;
+  // a place is closed to fast travel while a quest wants the player to walk to whoever stands there
+  const walkThere = place => { const n = people.at(place.id); return !!n && walkOnly().includes(n.id); };
+  const travel = createTravel(root, { places, player, camera, npcAt: id => people.at(id), collision, locked: walkThere, onLocked: () => guide?.point() });
 
   // red songthaews on the beach road
   const trucks = createSongthaews(scene, map, collision);             // routes stay inside the walkable area
@@ -142,8 +146,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   };
   talk.onEnd = () => { talkingTo = null; hud.hideDuringTalk(false); document.body.classList.remove('talking'); };
 
-  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { trucks.setHold(riding, false); riding = null; alighting = 0; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act });
+  hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { trucks.setHold(riding, false); riding = null; alighting = 0; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act, onGoal: () => guide?.point() });
   let quest = updateQuests(toast);
+  guide = createGuide({ scene, root, tpc: camera, player, people, input, quest: () => quest, toast });   // marker + arrow to the active goal
   hud.setGoal(() => questText(quest));
   P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
   addEventListener('keydown', e => { if (e.code === 'KeyF' && !talk.active) act(); });
@@ -165,7 +170,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       engine: riding ? 1 : clamp01(1 - truckD / 30) });
   }
   return {
-    places, people, talk, travel, hud, trucks, seats,
+    places, people, talk, travel, hud, trucks, seats, guide,
     get riding() { return riding; },
     /** coop.js sets this: (gameId) → open a co-op lobby. */
     set coopHandler(fn) { coopHandler = fn; },
@@ -225,6 +230,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       nearScope = near || nearTruck || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
       nearShop = near || nearTruck || nearSeat || nearScope || busy || !partners || partners.active ? null : partners.nearest(p);
       partners?.update(p);
+      guide.update(dt);
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
       hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : seatKey,
         near ? near.def.name : null, seatVars || null);

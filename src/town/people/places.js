@@ -37,7 +37,9 @@ function faceSea(x, z, seaDist) {
 }
 
 /**
- * ctx: { map, collision, seaDist, start: {x, z}, grandma: {x, z, yaw}, rentals: [{x, z, yaw}], shops: [rows], welcome: {x, z, ry} }
+ * ctx: { map, collision, seaDist, start: {x, z}, grandma: {x, z, yaw}, rentals: [{x, z, yaw}], shops: [rows], welcome: {x, z, ry},
+ *        spots: { placeId: {x, z, yaw} } } — spots come from the module that built the place (walking street, navy pier):
+ * where to stand and which way to face so the attraction is in front of you on arrival.
  * Returns { id: { id, name, icon, x, z, yaw } }.
  */
 export function resolvePlaces(ctx) {
@@ -46,8 +48,11 @@ export function resolvePlaces(ctx) {
   const nearest = (list, p) => list.reduce((best, q) => (!best || dist2(q, p) < dist2(best, p) ? q : best), null);
   for (const [id, def] of Object.entries(PLACES)) {
     let x, z, yaw;
-    const a = def.anchor;
-    if (a === 'grandma' && ctx.grandma) {
+    const a = def.anchor, spot = ctx.spots?.[id];
+    if (spot) {
+      [x, z] = freeSpot(spot.x, spot.z, ctx);
+      yaw = spot.yaw;
+    } else if (a === 'grandma' && ctx.grandma) {
       ({ x, z, yaw } = ctx.grandma);
     } else if (a === 'rental' && ctx.rentals.length) {
       const s = nearest(ctx.rentals, ctx.start);

@@ -75,7 +75,7 @@ export function createGameUI(root, { title, how, keys, audio }) {
       $('.g-pops').appendChild(d);
       setTimeout(() => d.remove(), 1600);
     },
-    /** rows: [{ icon, name: {th,en}, count, best (cm) | detail (text), baht }] */
+    /** rows: [{ icon, name: {th,en}, count, best (cm) | detail (text), baht }]; record: this round beats the saved best */
     results(rows, total, record) {
       $('.g-top').hidden = true;
       audio?.play('fanfare');
@@ -90,7 +90,8 @@ export function createGameUI(root, { title, how, keys, audio }) {
         d.innerHTML = `<span class="ic">${row.icon}</span><span class="nm">${tr(row.name)} ×${row.count}</span><span class="sz">${row.detail ?? t('cm', { n: row.best })}</span><span class="bt">฿${row.baht}</span>`;
         list.appendChild(d);
       }
-      r.querySelector('.g-sum').innerHTML = `${t('total')} <b>฿${total}</b>${record ? ` <span class="rec">${t('newRecord')}</span>` : ''}`;
+      // a "new record" needs something earned: a first round that ends on ฿0 is not one
+      r.querySelector('.g-sum').innerHTML = `${t('total')} <b>฿${total}</b>${record && total > 0 ? ` <span class="rec">${t('newRecord')}</span>` : ''}`;
       r.querySelector('.g-back').textContent = t('back');
     },
     dispose() { el.remove(); },

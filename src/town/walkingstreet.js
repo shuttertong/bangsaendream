@@ -11,6 +11,8 @@ export const WALK = {
   box: { x0: -1300, x1: -1100, z0: -1000, z1: -880 },
   roads: ['residential', 'service', 'unclassified', 'tertiary', 'living_street'],
   stall: { spacing: 3.4, off: 1.9, skip: 0.12 },
+  arrive: 2,                                                         // travel arrives this many stalls in from the end of the street
+  people: { seller: 0.85, sit: 0.45, shopper: 0.24 },                // chance of a seller per stall (and that they sit), of a shopper per place at the table
   lights: { every: 13, height: 4.2, sag: 0.6, bulbs: 9 },
   lot: { step: 4, minSea: 4 },
   colors: {
@@ -25,7 +27,7 @@ const inBox = (x, z, b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1;
 
 export function buildWalkingStreet(kit, map, layout) {
   const W = WALK, r = rng(1717), col = h => new THREE.Color(h), c = W.colors, { occ, seaDist, roadIdx } = layout;
-  const solids = [];
+  const solids = [], people = [], rp = rng(2323);                    // people: spots for the background crowd (crowd.js); own rng, so the stalls stay as they were
   (layout.noBeach ||= []).push(W.box);                                // a market, not beach umbrellas
   const inBuilding = (x, z) => map.buildings.some(b => inPoly(x, z, b.p));
 
@@ -65,11 +67,23 @@ export function buildWalkingStreet(kit, map, layout) {
     if (r() < 0.3) { f.box('wall', 0.6, 0.55, 0.6, 1.2, 0.8, 0.7, col('#c9cdd0')); f.box('wall', 0.6, 0.97, 0.6, 1.25, 0.05, 0.75, col('#e8e6e0')); }   // steel food cart
     f.box('wall', -0.6, 0.22, 0.7, 0.32, 0.44, 0.32, col(r.pick(c.stool)));
     solids.push({ x, z, r: 1.3, top: y + 3 });
+    // who is here: the seller behind the table (on the stool, or standing) and maybe someone looking at the goods
+    if (rp() < W.people.seller) {
+      const sit = rp() < W.people.sit, p = sit ? f.P(-0.6, 0, 0.7) : f.P(0.2 + (rp() - 0.5) * 0.9, 0, 0.02);
+      people.push({ x: p.x, y, z: p.z, yaw: ry + Math.PI + (rp() - 0.5) * 0.5, role: 'seller', sit });
+    }
+    for (const u of [-0.6, 0.55]) {
+      if (rp() > W.people.shopper) continue;
+      const p = f.P(u + (rp() - 0.5) * 0.3, 0, -1.62 - rp() * 0.15);
+      people.push({ x: p.x, y, z: p.z, yaw: ry + (rp() - 0.5) * 0.6, role: 'shopper' });
+      solids.push({ x: p.x, z: p.z, r: 0.3, top: y + 1.7 });
+    }
   }
   const sideRuns = [];                                               // where each side's stalls go (for the lights)
+  let street = [];                                                   // the longest run of market road (where travel arrives)
   for (const road of map.roads) {
     if (!W.roads.includes(road.k) || !road.p.some(([x, z]) => inBox(x, z, b))) continue;
-    const hw = roadWidth(road) / 2;
+    const hw = roadWidth(road) / 2, from = sideRuns.length;
     walkLine(road.p, W.stall.spacing, (x, z, dx, dz) => {
       if (!inBox(x, z, b)) return;
       for (const s of [-1, 1]) {
@@ -81,7 +95,11 @@ export function buildWalkingStreet(kit, map, layout) {
       }
       sideRuns.push({ x, z, dx, dz, hw });
     });
+    if (sideRuns.length - from > street.length) street = sideRuns.slice(from);
   }
+  // travel arrives on the road at one end of the market, looking down the street of stalls
+  const a = street[Math.min(W.arrive, street.length - 1)];
+  const place = a ? { x: a.x, z: a.z, yaw: Math.atan2(a.dx, a.dz) } : null;
 
   // ---- strings of bulbs across the road between poles ----
   const Li = W.lights;
@@ -105,5 +123,5 @@ export function buildWalkingStreet(kit, map, layout) {
       prev = q;
     }
   }
-  return { solids, stalls: solids.length, lot: cell.length };
+  return { solids, people, stalls: solids.length, lot: cell.length, place };
 }

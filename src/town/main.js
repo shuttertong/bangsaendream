@@ -47,6 +47,7 @@ import { buildNavyPier } from './navypier.js';
 import { createBobbingBoats } from './boats.js';
 import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
+import { buildCrowd } from './crowd.js';
 import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
@@ -56,6 +57,7 @@ import { createFriends } from './friends.js';
 import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
+import { createTutorial } from './tutorial.js';
 import * as P from '../shared/progress.js';
 import { GAMES } from '../games.js';
 
@@ -124,7 +126,9 @@ async function boot() {
   for (const set of [ksm.trees, laem.trees, landmarks.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
   const nature = buildNature(map, layout, planted);
   scene.add(nature.group);
-  if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
+  const crowd = buildCrowd([...walking.people, ...promenade.people]);   // sellers, shoppers and people at the tables (one mesh per map chunk)
+  scene.add(crowd.group);
+  if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, 'crowd', crowd.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
@@ -178,10 +182,10 @@ async function boot() {
     return true;
   };
   const binos = createBinoculars({ spots: viewpoint.scopes, camera, input, map, root: $('hud'), audio, player, toast: m => { hub.hud.toast(m); audio.play('coin'); } });   // look through the viewpoint's coin binoculars
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, scopes: binos });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place }, scopes: binos });
 
   hub.partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร from Supabase (none until the admin adds some)
-  const culler = createChunkCuller([town, beach.group]);             // hide map chunks far behind the haze
+  const culler = createChunkCuller([town, beach.group, crowd.group]);   // hide map chunks far behind the haze
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
     camera.aspect = innerWidth / innerHeight;
@@ -200,6 +204,7 @@ async function boot() {
   const wardrobe = createWardrobe({ root: $('hud'), player, tpc, hub, auras, audio, onWorn: () => mp.rehello() });   // 👗 fantasy wardrobe (K)
   hub.wardrobe = wardrobe;
   const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
+  const tutorial = createTutorial({ root: $('hud'), player, input });   // first-time controls card
   // 💌 requests & feedback for the developer (Supabase, insert-only); sends the nearest travel stop as context
   const nearestPlace = () => {
     const p = player.state; let best = '', bd = 250;
@@ -230,6 +235,7 @@ async function boot() {
     else {
       if (!hub.seated) player.update(dt, tpc.state.yaw, hub.frozen);
       roadNotice(dt);
+      tutorial.update(dt);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
       tpc.update(dt, player.state); focus = tpc.target;
     }
@@ -255,7 +261,8 @@ async function boot() {
     dbg?.(dt, quality.ratio);
   });
   $('loading').textContent = '';
-  if (!params.has('view') && !params.has('notitle')) showTitle($('hud'), { onStart: () => audio.unlock() });
+  if (params.has('notitle')) tutorial.start();
+  else if (!params.has('view')) showTitle($('hud'), { onStart: () => { audio.unlock(); tutorial.start(); } });
 
   // bench(n): median GPU+CPU ms per full frame, measured synchronously (not limited by rAF throttling)
   const bench = (n = 20, warm = 30) => {
@@ -272,7 +279,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
