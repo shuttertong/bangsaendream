@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applyHaze } from '../../world/haze.js';
 import { toonParts, TOON } from './toon.js';
+import { DETAIL } from './geo.js';
 import { patch, replaceInclude } from '../../core/shaderPatch.js';
 
 // Proportions in kid units (≈1.3 m tall); adults use look.scale and a smaller head.
@@ -64,6 +65,8 @@ const softLight = {
 };
 const material = () => applyHaze(patch(new THREE.MeshLambertMaterial({ vertexColors: true }), softLight));
 let sharedMat = null;
+/** The people material, for static (baked) figures: its own instance, so it can take extra shader patches. */
+export const personMaterial = material;
 
 export function buildPerson(lookIn = {}) {
   const look = { ...DEFAULT_LOOK, ...lookIn }, body = bodyFor(look);
@@ -97,4 +100,29 @@ export function buildPerson(lookIn = {}) {
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false;
   return { mesh, bones, look, body };                         // body: this person's proportions (leg IK)
+}
+
+/**
+ * A person frozen in a pose, as plain geometry (position, normal, colour; the look's scale applied,
+ * standing at the origin): for the background crowd (crowd.js), which merges many of these into one
+ * mesh. `pose(bones)` turns the bones first; `detail` < 1 meshes the figure more coarsely.
+ */
+export function bakePerson(look, pose, detail = 1) {
+  DETAIL.k = detail;
+  let built;
+  try { built = buildPerson(look); } finally { DETAIL.k = 1; }
+  const { mesh, bones } = built;
+  pose?.(bones);
+  mesh.updateMatrixWorld(true);
+  const sk = mesh.skeleton, g = mesh.geometry, pos = g.attributes.position, nrm = g.attributes.normal, idx = g.attributes.skinIndex;
+  const mats = sk.bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(b.matrixWorld, sk.boneInverses[i]));
+  const nms = mats.map(m => new THREE.Matrix3().getNormalMatrix(m));
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    const b = idx.getX(i);
+    v.fromBufferAttribute(pos, i).applyMatrix4(mats[b]); pos.setXYZ(i, v.x, v.y, v.z);
+    v.fromBufferAttribute(nrm, i).applyMatrix3(nms[b]).normalize(); nrm.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.deleteAttribute('skinIndex'); g.deleteAttribute('skinWeight');
+  return g;
 }

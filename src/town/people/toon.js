@@ -7,7 +7,7 @@
 // Geometry per bone, in bone-local rest space (limbs hang down −y, the face looks along +z).
 import * as THREE from 'three';
 import { fantasyParts } from './fantasy.js';
-import { colored, at, sc, sph, cap, lathe, ring } from './geo.js';
+import { colored, at, sc, sph, cap, lathe, ring, seg } from './geo.js';
 
 export const TOON = {
   up: 0.85,             // head centre above the head bone (× head radius): the head sits on the neck
@@ -31,13 +31,13 @@ const lighter = (hex, k) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#ff
 /** A limb hanging from the joint (y = 0) down to −len: radius r0 at the top, widest r1 at `mid` (0–1), r2 at the
  *  bottom, with round ends that tuck into the neighbouring joints. */
 function taper(len, r0, r1, r2, mid = 0.3) {
-  const pts = [];
-  for (let k = 0; k <= 4; k++) { const a = (k / 4) * Math.PI / 2; pts.push([r2 * Math.sin(a), -len - r2 * Math.cos(a)]); }   // bottom cap
-  for (let k = 1; k < 12; k++) {
-    const t = 1 - k / 12, y = -len * t;                               // t: 0 at the top joint, 1 at the bottom
+  const pts = [], C = seg(4, 2), M = seg(12, 3);                      // rows in each round end and along the limb
+  for (let k = 0; k <= C; k++) { const a = (k / C) * Math.PI / 2; pts.push([r2 * Math.sin(a), -len - r2 * Math.cos(a)]); }   // bottom cap
+  for (let k = 1; k < M; k++) {
+    const t = 1 - k / M, y = -len * t;                                // t: 0 at the top joint, 1 at the bottom
     pts.push([t > mid ? hermite(r1, r2, (t - mid) / (1 - mid)) : hermite(r0, r1, t / mid), y]);
   }
-  for (let k = 0; k <= 4; k++) { const a = (1 - k / 4) * Math.PI / 2; pts.push([r0 * Math.sin(a), r0 * Math.cos(a)]); }       // top cap
+  for (let k = 0; k <= C; k++) { const a = (1 - k / C) * Math.PI / 2; pts.push([r0 * Math.sin(a), r0 * Math.cos(a)]); }       // top cap
   return lathe(pts, 16);
 }
 /** An open tube (shorts leg) from y0 down to y1, radius ra at the top flaring to rb at the hem. */
@@ -118,10 +118,10 @@ function headParts(K, R) {
   if (K.hairStyle !== 'bald') {
     const H = K.hair, Rh = R * 1.07;
     // shell: crown all round + back/sides, leaving the face open (sphere phi = π/2 is +z)
-    head.push(colored(at(new THREE.SphereGeometry(Rh, 32, 10, 0, Math.PI * 2, 0, Math.PI * 0.34), 0, 0.02 * R, -0.01 * R), H));
-    head.push(colored(at(new THREE.SphereGeometry(Rh, 28, 14, Math.PI * 0.5 + Math.PI * 0.3, Math.PI * 2 - Math.PI * 0.6, 0, Math.PI * 0.64), 0, 0.02 * R, -0.01 * R), H));
+    head.push(colored(at(new THREE.SphereGeometry(Rh, seg(32, 8), seg(10), 0, Math.PI * 2, 0, Math.PI * 0.34), 0, 0.02 * R, -0.01 * R), H));
+    head.push(colored(at(new THREE.SphereGeometry(Rh, seg(28, 8), seg(14), Math.PI * 0.5 + Math.PI * 0.3, Math.PI * 2 - Math.PI * 0.6, 0, Math.PI * 0.64), 0, 0.02 * R, -0.01 * R), H));
     // anime crown shine: a lighter band across the front of the crown
-    head.push(colored(at(new THREE.TorusGeometry(Rh * 0.86, 0.022 * R, 6, 28, Math.PI * 0.8).rotateX(Math.PI / 2).rotateY(0.1 * Math.PI), 0, 0.56 * R, -0.01 * R), lighter(H, 0.22)));
+    head.push(colored(at(new THREE.TorusGeometry(Rh * 0.86, 0.022 * R, seg(6, 3), seg(28, 6), Math.PI * 0.8).rotateX(Math.PI / 2).rotateY(0.1 * Math.PI), 0, 0.56 * R, -0.01 * R), lighter(H, 0.22)));
     // bangs: a fan of tapered locks across the forehead
     const long = K.hairStyle === 'long', n = 7, bangLen = (long ? 0.3 : 0.24) * R;
     for (let i = 0; i < n; i++) {
@@ -142,7 +142,7 @@ function headParts(K, R) {
       }
     } else if (K.hairStyle === 'bun') {                                // a bun with a wrapped band
       head.push(colored(at(sph(0.4 * R), 0, 0.7 * R, -0.7 * R), H));
-      head.push(colored(at(new THREE.TorusGeometry(0.3 * R, 0.035 * R, 6, 20).rotateX(0.4), 0, 0.66 * R, -0.52 * R), darker(H, 0.25)));
+      head.push(colored(at(new THREE.TorusGeometry(0.3 * R, 0.035 * R, seg(6, 3), seg(20, 6)).rotateX(0.4), 0, 0.66 * R, -0.52 * R), darker(H, 0.25)));
     } else {                                                           // short: a few soft spikes at the back
       for (let i = 0; i < 5; i++) {
         const a = (i / 4 - 0.5) * 1.8, g = lock(0.2 * R, 0.3 * R, 0.1 * R).rotateX(-0.6);
@@ -151,7 +151,7 @@ function headParts(K, R) {
     }
   }
   if (K.glasses) {
-    for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry(0.2 * R, 0.03 * R, 6, 18), R, s * E.x * R, T.eyeY * R, 0.05 * R), '#2a2a2a'));
+    for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry(0.2 * R, 0.03 * R, seg(6, 3), seg(18, 6)), R, s * E.x * R, T.eyeY * R, 0.05 * R), '#2a2a2a'));
     head.push(colored(onFace(sc(sph(1, 8, 6), 0.06 * R, 0.02 * R, 0.02 * R), R, 0, T.eyeY * R, 0.055 * R), '#2a2a2a'));   // bridge
   }
   for (const g of head) g.translate(0, up, 0);
@@ -160,14 +160,14 @@ function headParts(K, R) {
 
 /** Hats, in hat-bone space (the bone sits near the top of the head). */
 function hatParts(K, R) {
-  const cyl = (a, b, h, s = 32) => new THREE.CylinderGeometry(a, b, h, s);
+  const cyl = (a, b, h, s = 32) => new THREE.CylinderGeometry(a, b, h, seg(s, 8));
   const k = R / 0.125;                                                  // sizes were drawn for R = 0.125
   const parts = {
     straw: [colored(sc(cyl(0.22, 0.23, 0.012), 1, 1, 1), K.hatColor), colored(at(cyl(0.118, 0.132, 0.1), 0, 0.05, 0), K.hatColor),
       colored(at(cyl(0.134, 0.134, 0.026), 0, 0.018, 0), K.hatBand)],
     bucket: [colored(at(cyl(0.125, 0.19, 0.06), 0, -0.005, 0), K.hatColor), colored(at(cyl(0.112, 0.127, 0.09), 0, 0.05, 0), K.hatColor),
       colored(at(cyl(0.129, 0.129, 0.014), 0, 0.028, 0), darker(K.hatColor, 0.2))],   // stitched band
-    cap: [colored(at(sc(new THREE.SphereGeometry(0.14, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), 1, 0.8, 1.02), 0, -0.02, 0), K.hatColor),
+    cap: [colored(at(sc(new THREE.SphereGeometry(0.14, seg(28, 8), seg(12), 0, Math.PI * 2, 0, Math.PI / 2), 1, 0.8, 1.02), 0, -0.02, 0), K.hatColor),
       colored(at(sc(sph(0.1, 20, 6), 1, 0.08, 1), 0, -0.02, 0.15), K.hatBand),
       colored(at(sph(0.016, 8, 6), 0, 0.09, 0), K.hatColor)],
     none: [],
@@ -216,7 +216,7 @@ export function toonParts(K, B) {
     [`leg${s}`]: [colored(taper(B.thigh, ...L.thigh), legCover),
       ...(K.bottom === 'skirt' ? [] : [colored(tube(L.thigh[0] * 1.3, -B.thigh * (pants ? 1.02 : L.shorts[2]), L.shorts[0], L.shorts[1]), K.bottomColor)])],   // shorts / trouser leg
     [`shin${s}`]: [colored(taper(B.shin, ...L.shin), legCover),
-      ...(pants ? [] : [colored(at(new THREE.CylinderGeometry(L.shin[2] * 1.12, L.shin[2] * 1.05, 0.035, 14), 0, -B.shin + 0.02, 0), sock)])],   // sock
+      ...(pants ? [] : [colored(at(new THREE.CylinderGeometry(L.shin[2] * 1.12, L.shin[2] * 1.05, 0.035, seg(14, 6)), 0, -B.shin + 0.02, 0), sock)])],   // sock
     [`foot${s}`]: [colored(at(sc(sph(1), 0.054, 0.028, 0.104), 0, -B.ankle + 0.013, 0.03), TOON.sole),             // sole
       colored(at(sc(sph(1), 0.048, 0.046, 0.094), 0, -B.ankle + 0.034, 0.03), K.shoe),                            // rounded shoe
       colored(at(sc(sph(1, 12, 8), 0.04, 0.03, 0.05), 0, -B.ankle + 0.03, 0.065), lighter(K.shoe, 0.25))],      // toe cap
@@ -237,7 +237,7 @@ export function toonParts(K, B) {
     for (const y of [0.04, 0.15]) spine.push(colored(ring(0.166 + belly * 0.03, 0.012, y, 0.84 + belly * 0.3), '#1a1a1a'));
   }
   if (K.apron) {                                                       // bib + skirt panel wrapped round the front, neck band and waist tie
-    const front = (r0, y0, r1, y1, span) => new THREE.LatheGeometry([new THREE.Vector2(r1, y1), new THREE.Vector2(r0, y0)], 16, -span / 2, span).scale(1, 1, depth);   // (lathe angle 0 = +z, the front)
+    const front = (r0, y0, r1, y1, span) => new THREE.LatheGeometry([new THREE.Vector2(r1, y1), new THREE.Vector2(r0, y0)], seg(16, 6), -span / 2, span).scale(1, 1, depth);   // (lathe angle 0 = +z, the front)
     spine.push(colored(front(0.134 + belly * 0.04, 0.26, 0.138 + belly * 0.04, 0.1, 0.9), K.apron));           // bib
     spine.push(colored(front(0.137 + belly * 0.04, 0.1, 0.165, -0.3, 1.7), K.apron));                           // skirt panel, flaring out
     spine.push(colored(ring(0.05, 0.007, B.torso - 0.06), darker(K.apron, 0.1)));                              // neck band

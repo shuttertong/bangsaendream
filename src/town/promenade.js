@@ -11,6 +11,8 @@ import * as PROPS from './assets/props.js';
 export const DRESS = {
   palms: { sea: { every: 7, off: 0.9 }, road: { every: 9, off: 0.8 }, scale: [1.15, 1.5], skip: 0.1 },
   stalls: { spacing: 3.3, run: [4, 11], gap: [8, 22], off: 1.5 },
+  people: { seller: 0.45, sit: 0.6, guest: 0.3 },                    // chance of a seller per stall (and that they sit), of someone on each stool at a table
+  tableSet: { table: [0.2, -1.9], stools: [[0.2, -1.2], [0.2, -2.6], [-0.45, -1.9], [0.85, -1.9]] },   // the plastic table behind a cart (cart frame: u, w)
   cart: ['#2f6fc4', '#d8443a', '#f4f1e8', '#3a9a6a', '#f0c23a'],
   goods: ['#e8543a', '#f0c23a', '#4fb3a8', '#f4f1e8', '#e8958a', '#7fc4e8', '#9a5a8a'],
   stool: ['#d8443a', '#2f6fc4', '#3a9a6a'],
@@ -19,6 +21,7 @@ export const DRESS = {
 export function dressPromenades(kit, map, layout, promenades) {
   const { occ, roadIdx } = layout;
   const r = rng(3131), palms = [], stalls = [];
+  const people = [], rp = rng(5151), Pp = DRESS.people, T = DRESS.tableSet;   // spots for the background crowd (crowd.js)
   const canopy = PROPS.umbrellaCanopy();
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), tmp = new THREE.Color();
   const addBaked = (geo, x, y, z, ry) => {
@@ -55,14 +58,26 @@ export function dressPromenades(kit, map, layout, promenades) {
       const px = x + nx * t, pz = z + nz * t, y = map.heightAt(px, pz);
       if (y < map.sea + 0.3 || roadIdx.clearance(px, pz, 6) < 1 || occ.test(px, pz, 0.9, 0.9)) { left = 0; gap = r.range(...S.gap); return; }
       const ry = Math.atan2(-nx, -nz);                            // front of the cart faces the walk
-      stall(kit, r, { x: px, y, z: pz, ry, color, tables: withTables && r() < 0.7 });
+      const tables = withTables && r() < 0.7;
+      stall(kit, r, { x: px, y, z: pz, ry, color, tables });
+      // the seller behind the cart (on the stool, or standing), and people at the table
+      const f = kit.frame(px, y, pz, ry);
+      if (rp() < Pp.seller) {
+        const sit = rp() < Pp.sit, p = sit ? f.P(0.9, 0, -0.7) : f.P(-0.15 + rp() * 0.3, 0, -0.8);
+        people.push({ x: p.x, y, z: p.z, yaw: ry + (sit ? -0.3 : 0) + (rp() - 0.5) * 0.4, role: 'seller', sit });
+      }
+      if (tables) for (const [u, w] of T.stools) {
+        if (rp() > Pp.guest) continue;
+        const p = f.P(u, 0, w);
+        people.push({ x: p.x, y, z: p.z, yaw: ry + Math.atan2(T.table[0] - u, T.table[1] - w), role: 'guest', sit: true });
+      }
       addBaked(canopy, px - nx * 0.2, y + 0.15, pz - nz * 0.2, r() * Math.PI);
       occ.mark(px, pz, 1.6, 1.6);
       stalls.push({ x: px, z: pz, ry });
       if (--left <= 0) { left = 0; gap = r.range(...S.gap); }
     });
   }
-  return { palms, stalls };
+  return { palms, stalls, people };
 }
 
 /** A beach stall: cart with goods on top, a stool for the seller, maybe a plastic table set behind. */
@@ -80,7 +95,8 @@ function stall(kit, r, { x, y, z, ry, color, tables }) {
   f.rod('wall', [0, 0, -0.2], [0, 2.3, -0.2], 0.025, col('#d9d4c8'));             // umbrella pole
   if (!tables) return;
   const tc = r.pick(DRESS.stool);
-  f.box('wall', 0.2, 0.7, -1.9, 0.75, 0.04, 0.75, col('#f4f2ec'));                 // plastic table behind, on the sand
+  const [tu, tw] = DRESS.tableSet.table;
+  f.box('wall', tu, 0.7, tw, 0.75, 0.04, 0.75, col('#f4f2ec'));                    // plastic table behind, on the sand
   for (const [u, w] of [[-0.2, -1.55], [0.6, -1.55], [-0.2, -2.25], [0.6, -2.25]]) f.box('wall', u, 0.35, w, 0.04, 0.7, 0.04, col('#f4f2ec'));
-  for (const [u, w] of [[0.2, -1.2], [0.2, -2.6], [-0.45, -1.9], [0.85, -1.9]]) f.box('wall', u, 0.22, w, 0.3, 0.44, 0.3, col(tc));
+  for (const [u, w] of DRESS.tableSet.stools) f.box('wall', u, 0.22, w, 0.3, 0.44, 0.3, col(tc));
 }
