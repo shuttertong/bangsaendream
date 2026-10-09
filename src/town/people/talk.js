@@ -82,7 +82,7 @@ export function createTalk(root, { onGame, onCoop, onToast, onEnding, audio }) {
     choices.innerHTML = '';
     waitingChoice = false;
     n.setTalking(true);
-    P.meet(n.id);
+    if (!n.ambient) P.meet(n.id);                    // (background people are small talk: not kept in the save)
     run();
   }
 

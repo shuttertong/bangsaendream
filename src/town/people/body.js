@@ -68,7 +68,8 @@ let sharedMat = null;
 /** The people material, for static (baked) figures: its own instance, so it can take extra shader patches. */
 export const personMaterial = material;
 
-export function buildPerson(lookIn = {}) {
+/** detail < 1 meshes the person more coarsely (background people; see geo.js DETAIL). */
+export function buildPerson(lookIn = {}, detail = 1) {
   const look = { ...DEFAULT_LOOK, ...lookIn }, body = bodyFor(look);
   const bones = {}, list = [];
   for (const [name, [parent, off]] of Object.entries(bonesFor(body))) {
@@ -83,7 +84,10 @@ export function buildPerson(lookIn = {}) {
   }
   bones.hips.updateMatrixWorld(true);
 
-  const geos = [], P = toonParts(look, body);
+  const geos = [];
+  let P;
+  DETAIL.k = detail;
+  try { P = toonParts(look, body); } finally { DETAIL.k = 1; }
   list.forEach((b, idx) => {
     for (const g of P[b.name] || []) {
       g.applyMatrix4(b.matrixWorld);                           // rest pose in model space
@@ -108,10 +112,7 @@ export function buildPerson(lookIn = {}) {
  * mesh. `pose(bones)` turns the bones first; `detail` < 1 meshes the figure more coarsely.
  */
 export function bakePerson(look, pose, detail = 1) {
-  DETAIL.k = detail;
-  let built;
-  try { built = buildPerson(look); } finally { DETAIL.k = 1; }
-  const { mesh, bones } = built;
+  const { mesh, bones } = buildPerson(look, detail);
   pose?.(bones);
   mesh.updateMatrixWorld(true);
   const sk = mesh.skeleton, g = mesh.geometry, pos = g.attributes.position, nrm = g.attributes.normal, idx = g.attributes.skinIndex;
@@ -134,18 +135,15 @@ export function bakePerson(look, pose, detail = 1) {
  */
 export function buildPeopleMesh(looks, detail = 1) {
   const geos = [], all = [], inverses = [], people = [];
-  DETAIL.k = detail;
-  try {
-    for (const lookIn of looks) {
-      const { mesh, bones, look, body } = buildPerson(lookIn), g = mesh.geometry, idx = g.attributes.skinIndex;
-      for (let i = 0; i < idx.count; i++) idx.setX(i, idx.getX(i) + all.length);       // this person's bones follow the others'
-      const root = new THREE.Group();
-      root.scale.setScalar(look.scale);
-      root.add(bones.hips);
-      all.push(...mesh.skeleton.bones); inverses.push(...mesh.skeleton.boneInverses);
-      geos.push(g); people.push({ root, bones, look, body });
-    }
-  } finally { DETAIL.k = 1; }
+  for (const lookIn of looks) {
+    const { mesh, bones, look, body } = buildPerson(lookIn, detail), g = mesh.geometry, idx = g.attributes.skinIndex;
+    for (let i = 0; i < idx.count; i++) idx.setX(i, idx.getX(i) + all.length);         // this person's bones follow the others'
+    const root = new THREE.Group();
+    root.scale.setScalar(look.scale);
+    root.add(bones.hips);
+    all.push(...mesh.skeleton.bones); inverses.push(...mesh.skeleton.boneInverses);
+    geos.push(g); people.push({ root, bones, look, body });
+  }
   const mesh = new THREE.SkinnedMesh(mergeGeometries(geos), sharedMat || (sharedMat = material()));
   for (const p of people) mesh.add(p.root);
   mesh.bind(new THREE.Skeleton(all, inverses), new THREE.Matrix4());   // (an explicit bind matrix keeps the rest-pose inverses)

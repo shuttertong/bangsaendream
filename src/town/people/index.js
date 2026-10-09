@@ -3,7 +3,18 @@
 import { ROSTER } from './roster.js';
 import { createNPC } from './npc.js';
 
-const TALK = { range: 2.8, facing: 0.2 };
+export const TALK = { range: 2.8, facing: 0.2, close: 1.2 };
+
+/**
+ * How well placed the player (x, z, yaw) is to talk to someone at (x, z): the metres between
+ * them, or Infinity when they are out of range or the player is not roughly facing them.
+ */
+export function reach(p, x, z, range = TALK.range) {
+  const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz);
+  if (d > range) return Infinity;
+  if (d > TALK.close && (dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw)) / d < TALK.facing) return Infinity;
+  return d;
+}
 
 export function createPeople(scene, map, places, collision, lift = () => 0) {
   const npcs = [];
@@ -17,13 +28,10 @@ export function createPeople(scene, map, places, collision, lift = () => 0) {
 
   /** NPC the player could talk to right now, or null. */
   function nearest(p) {
-    let best = null, bestD = TALK.range;
-    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    let best = null, bestD = Infinity;
     for (const n of npcs) {
-      const dx = n.state.x - p.x, dz = n.state.z - p.z, d = Math.hypot(dx, dz);
-      if (d > bestD) continue;
-      if (d > 1.2 && (dx * fx + dz * fz) / d < TALK.facing) continue;   // must roughly face them
-      best = n; bestD = d;
+      const d = reach(p, n.state.x, n.state.z);                        // in range, and roughly facing them
+      if (d < bestD) { best = n; bestD = d; }
     }
     return best;
   }

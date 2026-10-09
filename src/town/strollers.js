@@ -1,10 +1,14 @@
 // People strolling the walking street: up and down the market road, keeping to the left, stopping
 // now and then to look at a stall, stepping round the kid and each other. Some walk in pairs (a
-// grown-up with a child at their side). Nobody to talk to. They are all one skinned mesh
-// (people/body.js buildPeopleMesh): one draw call and one shadow call for the lot, and nothing
-// at all while the kid is far from the street.
+// grown-up with a child at their side). The kid can stop any of them for a line of small talk
+// (people/chatter.js): they turn to the kid, and their companion waits. They are all one skinned
+// mesh (people/body.js buildPeopleMesh): one draw call and one shadow call for the lot, and
+// nothing at all while the kid is far from the street.
 import * as THREE from 'three';
 import { buildPeopleMesh } from './people/body.js';
+import { reach } from './people/index.js';
+import { MOUTH } from './people/npc.js';
+import { chatFor } from './people/chatter.js';
 import { CROWD } from './crowd.js';
 import { rng } from '../core/rng.js';
 
@@ -20,16 +24,18 @@ export const STROLL = {
   apart: 0.5, gap: 0.6, overtake: 4,  // two walkers closer than `apart` step apart; they follow `gap` m behind a slower one, and overtake after this many seconds
   swing: 0.5, side: 0.9, turn: 6,     // leg swing (rad), sideways pace (m/s), turning rate
   habits: ['look', 'look', 'phone', 'point'],
+  talk: 2.5,                          // metres: how close the kid must be to chat
+  // (kind: how the chat names them — people/chatter.js WHO)
   looks: [
-    { scale: 1.3, hairStyle: 'short', hat: 'cap', bottom: 'shorts', belly: 0.4 },
-    { scale: 1.24, hairStyle: 'long', hat: 'none', bottom: 'skirt' },
-    { scale: 1.3, hairStyle: 'short', hat: 'none', bottom: 'pants', sleeves: 'long' },
-    { scale: 1.22, hairStyle: 'bun', hat: 'none', bottom: 'pants', belly: 0.3 },
-    { scale: 1.26, hairStyle: 'long', hat: 'straw', bottom: 'shorts' },
-    { scale: 1.32, hairStyle: 'short', hat: 'bucket', bottom: 'shorts', sleeves: 'none', belly: 0.5 },
-    { scale: 1.2, hairStyle: 'bun', hat: 'none', bottom: 'skirt', belly: 0.4, glasses: true },
+    { kind: 'uncle', scale: 1.3, hairStyle: 'short', hat: 'cap', bottom: 'shorts', belly: 0.4 },
+    { kind: 'sis', scale: 1.24, hairStyle: 'long', hat: 'none', bottom: 'skirt' },
+    { kind: 'bro', scale: 1.3, hairStyle: 'short', hat: 'none', bottom: 'pants', sleeves: 'long' },
+    { kind: 'aunt', scale: 1.22, hairStyle: 'bun', hat: 'none', bottom: 'pants', belly: 0.3 },
+    { kind: 'sis', scale: 1.26, hairStyle: 'long', hat: 'straw', bottom: 'shorts' },
+    { kind: 'uncle', scale: 1.32, hairStyle: 'short', hat: 'bucket', bottom: 'shorts', sleeves: 'none', belly: 0.5 },
+    { kind: 'aunt', scale: 1.2, hairStyle: 'bun', hat: 'none', bottom: 'skirt', belly: 0.4, glasses: true },
   ],
-  kids: [{ hairStyle: 'short', hat: 'cap', bottom: 'shorts' }, { hairStyle: 'long', hat: 'none', bottom: 'skirt' }, { hairStyle: 'short', hat: 'straw', bottom: 'shorts' }],
+  kids: [{ kind: 'boy', hairStyle: 'short', hat: 'cap', bottom: 'shorts' }, { kind: 'girl', hairStyle: 'long', hat: 'none', bottom: 'skirt' }, { kind: 'boy', hairStyle: 'short', hat: 'straw', bottom: 'shorts' }],
 };
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -66,7 +72,7 @@ function makePath(pts) {
 export function createStrollers(scene, map, lift, street) {
   const S = STROLL, r = rng(4747), pick = k => r.pick(CROWD.colors[k]);
   if (!street || street.pts.length < 4) return { update() {}, counts: { people: 0 } };
-  const path = makePath(street.pts), reach = Math.max(S.lane + 0.2, street.hw - S.edge);       // how far from the centre line they walk
+  const path = makePath(street.pts), outer = Math.max(S.lane + 0.2, street.hw - S.edge);       // how far from the centre line they walk
   const limit = street.hw - 0.3;                                                              // …and the furthest a sidestep may take them
   const dress = (base, adult) => ({ ...base, headScale: adult ? 0.86 : 1.2, print: adult ? 'none' : null,
     skin: pick('skin'), hair: pick('hair'), shirt: pick('shirt'), bottomColor: pick('bottom'), hatColor: pick('hat') });
@@ -77,8 +83,8 @@ export function createStrollers(scene, map, lift, street) {
   scene.add(mesh);
 
   const walkers = people.map((p, i) => {
-    const dir = r() < 0.5 ? 1 : -1, off = -dir * r.range(S.lane, reach), lead = i >= S.count ? pairOf[i - S.count] : -1;
-    return { p, i, lead, dir, off, want: off, s: r.range(S.ends, path.L - S.ends), pace: r.range(...S.speed), v: 0, phase: r() * 6, amp: 0, yaw: 0,
+    const dir = r() < 0.5 ? 1 : -1, off = -dir * r.range(S.lane, outer), lead = i >= S.count ? pairOf[i - S.count] : -1;
+    return { p, i, lead, dir, off, want: off, talking: false, mouth: 'closed', mx: MOUTH.closed[0], my: MOUTH.closed[1], child: null, s: r.range(S.ends, path.L - S.ends), pace: r.range(...S.speed), v: 0, phase: r() * 6, amp: 0, yaw: 0,
       wait: r.range(...S.stop.every), pause: 0, held: 0, trail: 0, face: 1, habit: r.pick(S.habits), stride: 0, x: 0, z: 0, headYaw: 0, blink: r.range(1, 4), first: true };
   });
   for (const w of walkers) {
@@ -86,6 +92,10 @@ export function createStrollers(scene, map, lift, street) {
     w.stride = (2 * Math.PI) / (4 * (B.thigh + B.shin) * sc * Math.sin(S.swing));           // phase per metre: the feet don't slide
     w.lead = w.lead >= 0 ? walkers[w.lead] : null;
     w.beside = 0.6;
+    if (w.lead) w.lead.child = w;
+    // what talk.js needs of someone to chat with
+    w.npc = { id: 'stroller', ambient: true, state: w, def: chatFor('stroller', w.p.look.kind),
+      setTalking(on) { w.talking = on; w.mouth = 'closed'; }, setMouth(shape) { w.mouth = shape; } };
     if (w.lead) { w.dir = w.lead.dir; w.s = w.lead.s - 0.25 * w.dir; w.off = w.lead.off + (w.lead.off < 0 ? 0.6 : -0.6); }   // a child starts beside their grown-up
   }
 
@@ -101,7 +111,7 @@ export function createStrollers(scene, map, lift, street) {
       if (gap < -0.3) pace = 0;
     } else if (w.pause > 0) {                                        // looking at a stall
       w.pause -= dt; pace = 0;
-      if (w.pause <= 0) { w.wait = r.range(...S.stop.every); if (r() < S.stop.turnBack) { w.dir = -w.dir; w.want = -w.dir * r.range(S.lane, reach); } }
+      if (w.pause <= 0) { w.wait = r.range(...S.stop.every); if (r() < S.stop.turnBack) { w.dir = -w.dir; w.want = -w.dir * r.range(S.lane, outer); } }
     } else {
       w.wait -= dt;
       if (w.wait <= 0) {
@@ -109,10 +119,11 @@ export function createStrollers(scene, map, lift, street) {
         if (taken) w.wait = 1.5;
         else { w.pause = r.range(...S.stop.for); w.face = w.off > 0 ? 1 : -1; w.habit = r.pick(S.habits); }
       }
-      if ((w.dir > 0 && w.s > path.L - S.ends) || (w.dir < 0 && w.s < S.ends)) { w.dir = -w.dir; w.want = -w.dir * r.range(S.lane, reach); }   // the end of the market: head back, on the other side
+      if ((w.dir > 0 && w.s > path.L - S.ends) || (w.dir < 0 && w.s < S.ends)) { w.dir = -w.dir; w.want = -w.dir * r.range(S.lane, outer); }   // the end of the market: head back, on the other side
     }
+    if (w.talking || w.child?.talking) pace = 0;                     // chatting with the kid (or waiting while their child does)
     // step round the kid, wait if they stand in the way
-    if (kid) {
+    if (kid && !w.talking) {
       const ahead = (kid.s - w.s) * w.dir, beside = kid.off - w.off;
       if (Math.abs(ahead) < S.kid.reach && Math.abs(beside) < S.kid.wide) {
         let side = beside > 0 ? -1 : 1;                                // pass on the side they are already on…
@@ -137,12 +148,13 @@ export function createStrollers(scene, map, lift, street) {
     if (w.trail > S.overtake + 3) w.trail = 0;                       // overtaking takes a few seconds; then back into lane
     w.v += (pace - w.v) * Math.min(1, dt * 3);
     w.s = THREE.MathUtils.clamp(w.s + w.dir * w.v * dt, 0.5, path.L - 0.5);
-    const want = THREE.MathUtils.clamp(w.want + shift, -limit, limit);
+    const want = w.talking ? w.off : THREE.MathUtils.clamp(w.want + shift, -limit, limit);
     w.off += THREE.MathUtils.clamp(want - w.off, -S.side * dt, S.side * dt);
     const q = path.at(w.s), x = q.x + q.rx * w.off, z = q.z + q.rz * w.off;
     const dx = x - w.x, dz = z - w.z, moved = w.first ? 0 : Math.hypot(dx, dz);
     moving = moved > dt * 0.12;
-    const heading = w.pause > 0 && !moving ? Math.atan2(q.rx * w.face, q.rz * w.face) : moving ? Math.atan2(dx, dz) : w.yaw;   // stopped: face the stalls on their side
+    const heading = w.talking ? Math.atan2(me.x - x, me.z - z)       // chatting: face the kid
+      : w.pause > 0 && !moving ? Math.atan2(q.rx * w.face, q.rz * w.face) : moving ? Math.atan2(dx, dz) : w.yaw;   // stopped: face the stalls on their side
     w.yaw = w.first ? Math.atan2(q.tx * w.dir, q.tz * w.dir) : turnTo(w.yaw, heading, dt * S.turn);
     w.x = x; w.z = z; w.first = false;
     w.p.root.position.set(x, Math.max(map.heightAt(x, z) + lift(x, z), map.sea), z);
@@ -151,7 +163,7 @@ export function createStrollers(scene, map, lift, street) {
     // walk cycle, driven by the distance covered; it eases into a standing pose at a stall
     w.phase += moved * w.stride;
     w.amp = lerp(w.amp, moving ? 1 : 0, Math.min(1, dt * 7));
-    const B = w.p.bones, a = w.amp, still = 1 - a, sn = Math.sin(w.phase), look = w.pause > 0 ? still : 0;
+    const B = w.p.bones, a = w.amp, still = 1 - a, sn = Math.sin(w.phase), look = w.pause > 0 && !w.talking ? still : 0;
     B.legL.rotation.x = sn * S.swing * a; B.legR.rotation.x = -sn * S.swing * a;
     B.shinL.rotation.x = Math.max(0, -sn) * 0.7 * a + 0.06; B.shinR.rotation.x = Math.max(0, sn) * 0.7 * a + 0.06;
     B.hips.position.y = B.hips.userData.rest.y - Math.abs(sn) * 0.016 * a;
@@ -167,18 +179,32 @@ export function createStrollers(scene, map, lift, street) {
     w.blink -= dt;
     if (w.blink < -0.12) w.blink = r.range(2, 5);
     B.eyes.scale.y = w.blink < 0 ? 0.12 : 1;
+    const [mx, my] = MOUTH[w.talking ? w.mouth : 'closed'] || MOUTH.closed, mk = Math.min(1, dt * 18);
+    w.mx += (mx - w.mx) * mk; w.my += (my - w.my) * mk;
+    B.mouth.scale.set(w.mx, w.my, 1);
   }
 
   const mid = path.at(path.L / 2), cx = mid.x, cz = mid.z, far = S.visible + path.L / 2;
+  const me = { x: cx, z: cz };                                        // where the kid is (for whoever is chatting with them)
   for (const w of walkers) step(w, 0, null);                         // stand everyone on the road before the first frame
   for (const w of walkers) w.first = false;
   return {
     mesh, walkers, path,
+    /** A walker the kid (x, z, yaw) could chat with right now: an NPC-like object for talk.js, or null. */
+    nearest(p) {
+      if (!mesh.visible) return null;
+      let best = null, bd = Infinity;
+      for (const w of walkers) { const d = reach(p, w.x, w.z, S.talk); if (d < bd) { bd = d; best = w; } }
+      if (!best) return null;
+      best.npc.reach = bd;
+      return best.npc;
+    },
     counts: { people: walkers.length, tris: (mesh.geometry.attributes.position.count / 3) | 0 },
     /** player: { x, z } (they step round the kid); view: what the camera looks at (the kid, or the drone's spot). */
     update(dt, player, view = player) {
       mesh.visible = Math.hypot(view.x - cx, view.z - cz) < far;
       if (!mesh.visible) return;
+      me.x = player.x; me.z = player.z;
       const k = path.locate(player.x, player.z);
       const kid = Math.abs(k.off) < street.hw + 1.5 ? { ...k, x: player.x, z: player.z, d: 0 } : null;
       for (const w of walkers) {

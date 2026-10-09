@@ -184,7 +184,7 @@ async function boot() {
     return true;
   };
   const binos = createBinoculars({ spots: viewpoint.scopes, camera, input, map, root: $('hud'), audio, player, toast: m => { hub.hud.toast(m); audio.play('coin'); } });   // look through the viewpoint's coin binoculars
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place }, scopes: binos });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place }, scopes: binos, ambient: [crowd, strollers] });
 
   hub.partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร from Supabase (none until the admin adds some)
   const culler = createChunkCuller([town, beach.group, crowd.group]);   // hide map chunks far behind the haze
@@ -251,6 +251,7 @@ async function boot() {
     sea.update(camera);
     nature.update(camera.position);
     strollers.update(dt, player.state, focus);
+    crowd.update(dt, player.state);
     culler.update(dt, camera.position, map.heightAt(camera.position.x, camera.position.z));
     fx.setTiltShift((free && cam.state.tilt && cam.state.pitch > 0.7) || drone.tiltShift, 0.5);
     input.endFrame();

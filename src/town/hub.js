@@ -22,7 +22,7 @@ import { createSeats } from './seats.js';
 const SAVE_POS_EVERY = 1.0;   // seconds
 const FARE = 10;             // ฿ per songthaew ride
 
-export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint, spots = {}, scopes = null }) {
+export function createHub({ scene, map, collision, seaDist, start, buildings, beach, player, camera, root, startGame, audio, lift, input, welcome, viewpoint, spots = {}, scopes = null, ambient = [] }) {
   const places = resolvePlaces({
     map, collision, seaDist, start, spots,
     grandma: buildings.grandma,
@@ -126,21 +126,23 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   const seats = createSeats({ list: beach.seats, player, collision, toast });
   let nearSeat = null, seatT = 0, nearScope = null, nearShop = null, partners = null, wardrobe = null;   // binocular viewer (binoculars.js) / partner shop (partners.js) in reach
 
-  let near = null, talkingTo = null;
+  let near = null, talkingTo = null, nearChat = null;                // nearChat: someone in the background crowd (ambient) to chat with
+  const chatNear = p => ambient.reduce((best, src) => { const n = src.nearest(p); return n && (!best || n.reach < best.reach) ? n : best; }, null);
   const act = () => {
     if (talk.active || travel.open) return;
     if (riding) hopOff();
     else if (seats.seated) seats.stand();
     else if (near) startTalk();
     else if (nearTruck) board(nearTruck);
+    else if (nearChat) startTalk(nearChat);
     else if (nearSeat && seats.sit(nearSeat)) audio?.play('thud');
     else if (nearScope) scopes.use(nearScope);
     else if (nearShop) partners.use(nearShop);
   };
-  const startTalk = () => {
-    if (!near || talk.active || travel.open) return;
-    talkingTo = near;
-    talk.open(near, P.get());
+  const startTalk = (who = near) => {
+    if (!who || talk.active || travel.open) return;
+    talkingTo = who;
+    talk.open(who, P.get());
     hud.hideDuringTalk(true);
     document.body.classList.add('talking');
   };
@@ -226,14 +228,15 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       const busy = talk.active || riding || seats.seated;
       near = busy ? null : people.nearest(p);
       nearTruck = near || busy ? null : trucks.nearest(p);
-      nearSeat = near || nearTruck || busy ? null : seats.nearest(p);
-      nearScope = near || nearTruck || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
-      nearShop = near || nearTruck || nearSeat || nearScope || busy || !partners || partners.active ? null : partners.nearest(p);
+      nearChat = near || nearTruck || busy || wardrobe?.open ? null : chatNear(p);
+      nearSeat = near || nearTruck || nearChat || busy ? null : seats.nearest(p);
+      nearScope = near || nearTruck || nearChat || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
+      nearShop = near || nearTruck || nearChat || nearSeat || nearScope || busy || !partners || partners.active ? null : partners.nearest(p);
       partners?.update(p);
       guide.update(dt);
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : seatKey,
-        near ? near.def.name : null, seatVars || null);
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : nearChat ? 'talk' : seatKey,
+        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;

@@ -3,11 +3,16 @@
 // (a body type in a pose, meshed coarsely and frozen with bakePerson), then copied to every
 // spot with their own clothes colours and merged into one mesh per map chunk: one draw call
 // per chunk, however many people stand there. A sway and breathing in the vertex shader keep
-// them from looking like statues.
+// them from looking like statues. The kid can talk to any of them (a line of small talk from
+// people/chatter.js): for the length of the chat the frozen figure is swapped for a live one of
+// the same build, pose and colours, which turns to the kid and moves its mouth.
 //   spots: [{ x, y, z, yaw, role: 'seller' | 'shopper' | 'guest', sit }]  (y = the ground they stand on)
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bakePerson, personMaterial } from './people/body.js';
+import { bakePerson, buildPerson, personMaterial } from './people/body.js';
+import { reach } from './people/index.js';
+import { MOUTH } from './people/npc.js';
+import { chatFor } from './people/chatter.js';
 import { patch, prelude, replaceInclude, U } from '../core/shaderPatch.js';
 import { rng } from '../core/rng.js';
 
@@ -23,6 +28,7 @@ export const CROWD = {
   detail: 0.33,               // mesh detail (1 = the cast's ~25k triangles; this is ~3k)
   chunk: 384, seat: 0.42, tall: 2.4, size: [0.95, 1.05],
   sway: { amp: 0.011, slow: 0.007, breathe: 0.004 },
+  talk: { range: 2.5, detail: 0.6, turn: 5, leave: 0.45 },   // reach for a chat; the live stand-in's mesh detail, how fast it turns to the kid, seconds to turn back
   colors: {
     skin: ['#d9a57c', '#c68f66', '#b8835c', '#e0b08a', '#a8764f', '#c99a74'],
     hair: ['#2a2320', '#2a2320', '#3a2a22', '#1e1a18', '#6a6660', '#4a3a30'],
@@ -33,16 +39,17 @@ export const CROWD = {
   },
   // body types (fictional, no likenesses) and the roles they suit; aprons and skirts stand, they don't sit
   builds: [
-    { who: ['seller'], look: { ...ADULT, scale: 1.24, hairStyle: 'bun', bottom: 'skirt', apron: MARK.apron, hat: 'none', belly: 0.45 } },
-    { who: ['seller'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', bottom: 'pants', apron: MARK.apron, hat: 'cap', belly: 0.4 } },
-    { who: ['seller', 'shopper', 'guest'], look: { ...ADULT, scale: 1.32, hairStyle: 'short', hat: 'cap', bottom: 'shorts', belly: 0.5 } },
-    { who: ['seller', 'shopper'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', hat: 'bucket', sleeves: 'none', bottom: 'pants', belly: 0.3 } },
-    { who: ['seller', 'shopper', 'guest'], look: { ...ADULT, scale: 1.22, hairStyle: 'long', hat: 'straw', bottom: 'shorts' } },
-    { who: ['shopper', 'guest'], look: { ...ADULT, scale: 1.25, hairStyle: 'long', hat: 'none', bottom: 'pants' } },
-    { who: ['shopper'], look: { ...ADULT, scale: 1.22, hairStyle: 'bun', hat: 'none', bottom: 'skirt' } },
-    { who: ['shopper', 'guest'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', hat: 'none', bottom: 'pants', sleeves: 'long' } },
-    { who: ['shopper', 'guest'], look: { scale: 1, headScale: 1.2, print: 'none', hairStyle: 'short', hat: 'cap', bottom: 'shorts' } },
-    { who: ['shopper'], look: { scale: 1.02, headScale: 1.2, print: 'none', hairStyle: 'long', hat: 'none', bottom: 'skirt' } },
+    // (kind: how the chat names them — people/chatter.js WHO)
+    { kind: 'aunt', who: ['seller'], look: { ...ADULT, scale: 1.24, hairStyle: 'bun', bottom: 'skirt', apron: MARK.apron, hat: 'none', belly: 0.45 } },
+    { kind: 'uncle', who: ['seller'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', bottom: 'pants', apron: MARK.apron, hat: 'cap', belly: 0.4 } },
+    { kind: 'uncle', who: ['seller', 'shopper', 'guest'], look: { ...ADULT, scale: 1.32, hairStyle: 'short', hat: 'cap', bottom: 'shorts', belly: 0.5 } },
+    { kind: 'uncle', who: ['seller', 'shopper'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', hat: 'bucket', sleeves: 'none', bottom: 'pants', belly: 0.3 } },
+    { kind: 'sis', who: ['seller', 'shopper', 'guest'], look: { ...ADULT, scale: 1.22, hairStyle: 'long', hat: 'straw', bottom: 'shorts' } },
+    { kind: 'sis', who: ['shopper', 'guest'], look: { ...ADULT, scale: 1.25, hairStyle: 'long', hat: 'none', bottom: 'pants' } },
+    { kind: 'aunt', who: ['shopper'], look: { ...ADULT, scale: 1.22, hairStyle: 'bun', hat: 'none', bottom: 'skirt' } },
+    { kind: 'bro', who: ['shopper', 'guest'], look: { ...ADULT, scale: 1.3, hairStyle: 'short', hat: 'none', bottom: 'pants', sleeves: 'long' } },
+    { kind: 'boy', who: ['shopper', 'guest'], look: { scale: 1, headScale: 1.2, print: 'none', hairStyle: 'short', hat: 'cap', bottom: 'shorts' } },
+    { kind: 'girl', who: ['shopper'], look: { scale: 1.02, headScale: 1.2, print: 'none', hairStyle: 'long', hat: 'none', bottom: 'skirt' } },
   ],
   poses: { seller: ['stand', 'offer', 'offer', 'wave'], shopper: ['browse', 'browse', 'point', 'phone', 'stand'], guest: ['stand'], sit: ['sit', 'sitEat', 'sitChat'] },
 };
@@ -101,7 +108,7 @@ export function buildCrowd(spots) {
   const canSit = b => b.look.bottom !== 'skirt' && !b.look.apron;
 
   // who stands where: a body type that suits the role, a pose, their colours
-  const chunks = new Map();
+  const chunks = new Map(), people = [];
   for (const s of spots) {
     const fits = C.builds.filter(b => b.who.includes(s.role) && (!s.sit || canSit(b))), build = r.pick(fits.length ? fits : C.builds.filter(canSit));
     const pose = r.pick(s.sit ? C.poses.sit : C.poses[s.role] || C.poses.guest), key = `${C.builds.indexOf(build)}|${pose}`;
@@ -109,7 +116,8 @@ export function buildCrowd(spots) {
     const tint = [null, ...SLOTS.map(k => r.pick(colors[k]))];
     const ck = `${Math.floor(s.x / C.chunk)},${Math.floor(s.z / C.chunk)}`;
     if (!chunks.has(ck)) chunks.set(ck, []);
-    chunks.get(ck).push({ s, v: baked.get(key), tint, size: r.range(...C.size), phase: r() });
+    const rec = { s, build, pose, v: baked.get(key), tint, size: r.range(...C.size), phase: r() };
+    chunks.get(ck).push(rec); people.push(rec);
   }
 
   const mat = patch(personMaterial(), swayPatch);
@@ -118,8 +126,9 @@ export function buildCrowd(spots) {
     const nv = list.reduce((a, p) => a + p.v.n, 0), ni = list.reduce((a, p) => a + p.v.index.length, 0);
     const pos = new Float32Array(nv * 3), nrm = new Int16Array(nv * 3), col = new Uint16Array(nv * 3), life = new Uint8Array(nv * 2), index = new Uint32Array(ni);
     let o = 0, io = 0;
-    for (const { s, v, tint, size, phase } of list) {
-      const c = Math.cos(s.yaw), sn = Math.sin(s.yaw);
+    for (const rec of list) {
+      const { s, v, tint, size, phase } = rec, c = Math.cos(s.yaw), sn = Math.sin(s.yaw);
+      rec.o = o;                                                     // where this person's vertices start in the chunk
       for (let i = 0; i < v.n; i++) {
         const k = (o + i) * 3, x = v.pos[i * 3] * size, y = v.pos[i * 3 + 1] * size, z = v.pos[i * 3 + 2] * size, nx = v.nrm[i * 3], nz = v.nrm[i * 3 + 2];
         pos[k] = s.x + x * c + z * sn; pos[k + 1] = s.y + y; pos[k + 2] = s.z - x * sn + z * c;
@@ -132,6 +141,7 @@ export function buildCrowd(spots) {
       o += v.n; io += v.index.length;
     }
     const g = new THREE.BufferGeometry();
+    for (const rec of list) rec.geo = g;
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3, true));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
@@ -144,5 +154,76 @@ export function buildCrowd(spots) {
     group.add(mesh);
     tris += ni / 3;
   }
-  return { group, counts: { people: spots.length, kinds: baked.size, chunks: chunks.size, tris } };
+
+  // ---------- talking to one of them: a live stand-in takes the frozen figure's place ----------
+  let live = null;
+  const hex = c => `#${c.getHexString()}`;
+  /** Take a person's vertices out of the merged mesh (sunk far below the ground) or put them back. */
+  function hide(rec, on) {
+    const a = rec.geo.attributes.position, from = rec.o * 3, n = rec.v.n * 3;
+    if (on) { rec.kept = a.array.slice(from, from + n); for (let i = from + 1; i < from + n; i += 3) a.array[i] -= 9000; }
+    else a.array.set(rec.kept, from);
+    a.addUpdateRange(from, n);
+    a.needsUpdate = true;
+  }
+  function sleep() {
+    if (!live) return;
+    group.remove(live.mesh);
+    live.mesh.geometry.dispose(); live.mesh.skeleton.dispose();
+    hide(live.rec, false);
+    live = null;
+  }
+  function wake(rec) {
+    sleep();
+    const t = rec.tint, look = { ...rec.build.look, shirt: hex(t[1]), bottomColor: hex(t[2]), hatColor: hex(t[3]), skin: hex(t[4]), hair: hex(t[5]), ...(rec.build.look.apron ? { apron: hex(t[6]) } : {}) };
+    const { mesh, bones } = buildPerson(look, C.talk.detail);
+    POSES[rec.pose](bones, look);
+    mesh.scale.multiplyScalar(rec.size);
+    mesh.position.set(rec.s.x, rec.s.y, rec.s.z);
+    mesh.rotation.y = rec.s.yaw;
+    group.add(mesh);
+    hide(rec, true);
+    live = { rec, mesh, bones, head: bones.head.rotation.clone(), spine: bones.spine.rotation.clone(), w: 0, leaving: 0, mouth: 'closed', mx: 1.5, my: 0.5, blink: 2 };
+  }
+  const npcOf = rec => rec.npc || (rec.npc = {
+    id: 'crowd', ambient: true, state: rec.s, def: chatFor(rec.s.role, rec.build.kind),
+    setTalking(on) { if (on) wake(rec); else if (live?.rec === rec) { live.leaving = C.talk.leave; live.mouth = 'closed'; } },
+    setMouth(shape) { if (live?.rec === rec) live.mouth = shape; },
+  });
+
+  return {
+    group, people,
+    counts: { people: spots.length, kinds: baked.size, chunks: chunks.size, tris },
+    /** Someone the kid (x, z, yaw) could chat with right now: an NPC-like object for talk.js, or null. */
+    nearest(p) {
+      let best = null, bd = Infinity;
+      for (const rec of people) {
+        if (Math.abs(rec.s.x - p.x) > C.talk.range || Math.abs(rec.s.z - p.z) > C.talk.range) continue;
+        const d = reach(p, rec.s.x, rec.s.z, C.talk.range);
+        if (d < bd) { bd = d; best = rec; }
+      }
+      if (!best) return null;
+      const npc = npcOf(best);
+      npc.reach = bd;
+      return npc;
+    },
+    /** The live stand-in turns to the kid (standing: the whole body; seated: over the shoulder), talks, then turns back. */
+    update(dt, player) {
+      if (!live) return;
+      const L = live, B = L.bones, s = L.rec.s;
+      if (L.leaving > 0 && (L.leaving -= dt) <= 0) { sleep(); return; }
+      L.w += ((L.leaving > 0 ? 0 : 1) - L.w) * Math.min(1, dt * C.talk.turn);
+      const to = Math.atan2(player.x - s.x, player.z - s.z) - s.yaw, rel = Math.atan2(Math.sin(to), Math.cos(to));   // where the kid is, from where they face
+      const body = s.sit ? 0 : rel * 0.8, twist = s.sit ? THREE.MathUtils.clamp(rel, -0.5, 0.5) : 0, turn = THREE.MathUtils.clamp(rel - body - twist, -1.1, 1.1);
+      L.mesh.rotation.y = s.yaw + body * L.w;
+      B.spine.rotation.set(L.spine.x * (1 - L.w * 0.7), L.spine.y + twist * L.w, L.spine.z);
+      B.head.rotation.set(L.head.x + (0.1 - L.head.x) * L.w, L.head.y + (turn - L.head.y) * L.w, 0);
+      const [mx, my] = MOUTH[L.mouth] || MOUTH.closed, k = Math.min(1, dt * 18);
+      L.mx += (mx - L.mx) * k; L.my += (my - L.my) * k;
+      B.mouth.scale.set(L.mx, L.my, 1);
+      L.blink -= dt;
+      if (L.blink < -0.12) L.blink = 2 + Math.random() * 3;
+      B.eyes.scale.y = L.blink < 0 ? 0.12 : 1;
+    },
+  };
 }
