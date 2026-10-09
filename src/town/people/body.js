@@ -126,3 +126,30 @@ export function bakePerson(look, pose, detail = 1) {
   g.deleteAttribute('skinIndex'); g.deleteAttribute('skinWeight');
   return g;
 }
+
+/**
+ * Several people in ONE skinned mesh (one draw call + one shadow call for all of them): for the
+ * people walking about in the background (strollers.js). Returns { mesh, people: [{ root, bones, look, body }] }:
+ * place a person with root.position / root.rotation.y, pose them through their bones.
+ */
+export function buildPeopleMesh(looks, detail = 1) {
+  const geos = [], all = [], inverses = [], people = [];
+  DETAIL.k = detail;
+  try {
+    for (const lookIn of looks) {
+      const { mesh, bones, look, body } = buildPerson(lookIn), g = mesh.geometry, idx = g.attributes.skinIndex;
+      for (let i = 0; i < idx.count; i++) idx.setX(i, idx.getX(i) + all.length);       // this person's bones follow the others'
+      const root = new THREE.Group();
+      root.scale.setScalar(look.scale);
+      root.add(bones.hips);
+      all.push(...mesh.skeleton.bones); inverses.push(...mesh.skeleton.boneInverses);
+      geos.push(g); people.push({ root, bones, look, body });
+    }
+  } finally { DETAIL.k = 1; }
+  const mesh = new THREE.SkinnedMesh(mergeGeometries(geos), sharedMat || (sharedMat = material()));
+  for (const p of people) mesh.add(p.root);
+  mesh.bind(new THREE.Skeleton(all, inverses), new THREE.Matrix4());   // (an explicit bind matrix keeps the rest-pose inverses)
+  mesh.castShadow = mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  return { mesh, people };
+}

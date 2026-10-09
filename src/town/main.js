@@ -48,6 +48,7 @@ import { createBobbingBoats } from './boats.js';
 import { buildBeach } from './beach.js';
 import { buildCollision } from './collision.js';
 import { buildCrowd } from './crowd.js';
+import { createStrollers } from './strollers.js';
 import { createPlayer } from './player.js';
 import { createThirdPersonCamera } from './camera.js';
 import { createHub } from './hub.js';
@@ -146,6 +147,7 @@ async function boot() {
   wearLook(profile.look);                                            // the kid (and mini-game kids) wear the chosen look
   const player = createPlayer(scene, map, collision, input, lift);
   player.place(START.x, START.z, START.yaw);
+  const strollers = createStrollers(scene, map, lift, walking.street);   // people walking the market road (one skinned mesh)
   const tpc = createThirdPersonCamera(camera, input, map, collision);
   tpc.setYaw(START.yaw + Math.PI);
   // ?view=beach|town|air → fixed free-camera shots for before/after screenshots
@@ -248,6 +250,7 @@ async function boot() {
     fx.setFocus(focus, camera.position.y - focus.y);
     sea.update(camera);
     nature.update(camera.position);
+    strollers.update(dt, player.state, focus);
     culler.update(dt, camera.position, map.heightAt(camera.position.x, camera.position.z));
     fx.setTiltShift((free && cam.state.tilt && cam.state.pitch > 0.7) || drone.tiltShift, 0.5);
     input.endFrame();
@@ -279,7 +282,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

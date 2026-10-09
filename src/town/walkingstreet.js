@@ -123,5 +123,5 @@ export function buildWalkingStreet(kit, map, layout) {
       prev = q;
     }
   }
-  return { solids, people, stalls: solids.length, lot: cell.length, place };
+  return { solids, people, stalls: solids.length, lot: cell.length, place, street: { pts: street.map(q => [q.x, q.z]), hw: street[0]?.hw || 0 } };   // street: the market road, for the people walking it (strollers.js)
 }
