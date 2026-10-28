@@ -21,6 +21,7 @@ export const GAMES = {
   go: { icon: '⚫', name: { th: 'หมากล้อม', en: 'Go' } },
   football: { icon: '⚽', name: { th: 'ฟุตบอลชายหาด', en: 'Beach football' } },
   volley: { icon: '🏐', name: { th: 'วอลเลย์บอลชายหาด', en: 'Beach volleyball' } },
+  takraw: { icon: '🥎', name: { th: 'ตะกร้อวง', en: 'Takraw circle' } },
 };
 
 // medals: the baht a single round must earn; `pay` is given once per tier per game
@@ -30,7 +31,7 @@ export const MEDALS = {
     { icon: '🥈', name: { th: 'เหรียญเงิน', en: 'Silver' }, pay: 40 },
     { icon: '🥇', name: { th: 'เหรียญทอง', en: 'Gold' }, pay: 80 },
   ],
-  at: { default: [80, 150, 220], stall: [80, 160, 230], jetski: [70, 140, 200], khaolam: [100, 170, 240], go: [50, 150, 190], football: [60, 150, 220], volley: [60, 150, 200] },
+  at: { default: [80, 150, 220], stall: [80, 160, 230], jetski: [70, 140, 200], khaolam: [100, 170, 240], go: [50, 150, 190], football: [60, 150, 220], volley: [60, 150, 200], takraw: [30, 60, 100] },
 };
 export const medalAt = game => MEDALS.at[game] || MEDALS.at.default;
 /** 0 (none) … 3 (gold) for a round that earned `baht`. */
@@ -70,7 +71,7 @@ export function dailyTasks(day) {
 export const BADGES = [
   { id: 'firstGame', icon: '🎮', name: { th: 'เกมแรก', en: 'First game' }, hint: { th: 'เล่นมินิเกม 1 รอบ', en: 'Play one round' }, pay: 20, check: (s, j) => j.stats.games >= 1 },
   { id: 'tenGames', icon: '🕹️', name: { th: 'ติดใจแล้ว', en: 'Hooked' }, hint: { th: 'เล่นมินิเกม 10 รอบ', en: 'Play 10 rounds' }, pay: 40, check: (s, j) => j.stats.games >= 10 },
-  { id: 'allGames', icon: '🗺️', name: { th: 'ลองครบทุกอย่าง', en: 'Tried it all' }, hint: { th: 'เล่นครบทั้ง 12 เกม', en: 'Play all 12 games' }, pay: 100, check: s => Object.keys(GAMES).every(g => s.best[g]) },
+  { id: 'allGames', icon: '🗺️', name: { th: 'ลองครบทุกอย่าง', en: 'Tried it all' }, hint: { th: 'เล่นครบทั้ง 13 เกม', en: 'Play all 13 games' }, pay: 100, check: s => Object.keys(GAMES).every(g => s.best[g]) },
   { id: 'firstMedal', icon: '🥉', name: { th: 'เหรียญแรก', en: 'First medal' }, hint: { th: 'ได้เหรียญจากเกมไหนก็ได้', en: 'Win any medal' }, pay: 20, check: (s, j) => j.stats.medals >= 1 },
   { id: 'gold', icon: '🥇', name: { th: 'ทองแรก', en: 'First gold' }, hint: { th: 'ได้เหรียญทอง 1 เหรียญ', en: 'Win a gold medal' }, pay: 50, check: (s, j) => j.stats.golds >= 1 },
   { id: 'golds', icon: '🏆', name: { th: 'นักกีฬาตัวจริง', en: 'Real athlete' }, hint: { th: 'ได้เหรียญทอง 5 เกม', en: 'Gold in 5 games' }, pay: 150, check: (s, j) => j.stats.golds >= 5 },

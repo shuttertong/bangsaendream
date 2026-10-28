@@ -63,5 +63,8 @@ export function buildKickabout({ scene, map, lift, seaDist, collision, at }) {
   const lines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(net, 3)),
     new THREE.LineBasicMaterial({ color: GOAL_COLORS.net, transparent: true, opacity: 0.6 }));
   scene.add(mesh, lines);
-  return { x: cx, z: cz, mesh, lines };
+  // the takraw circle (town/takraw.js): on the open sand past the other goal, nudged until it is free
+  let tx = cx - ax * (K.apart / 2 + 7.5), tz = cz - az * (K.apart / 2 + 7.5);
+  for (let r = 0; r < 6 && !(collision?.free(tx, tz, 3.2) ?? true); r += 1) { tx -= ax; tz -= az; }
+  return { x: cx, z: cz, mesh, lines, takraw: { x: tx, z: tz } };
 }

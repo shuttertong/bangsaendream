@@ -58,6 +58,7 @@ import { createCoop } from './coop.js';
 import { createFriends } from './friends.js';
 import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
+import { createTakraw } from './takraw.js';
 import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
@@ -226,10 +227,13 @@ async function boot() {
   const drone = createDrone({ camera, input, map, root: $('hud'), canvas: $('c'), player, tpc, audio });   // 🚁 overlook any area from above
   const coop = createCoop({ root: $('hud'), mp, hub, startGame, audio });   // co-op lobbies (banana boat with friends)
   const friends = createFriends({ root: $('hud'), mp, player, hub, drone, map, audio });   // 👫 add friends face to face + the friends map (G)
+  const takraw = createTakraw({ scene, root: $('hud'), hub, mp, player, audio, map, lift, collision, spot: kickabout?.takraw });   // 🥎 ตะกร้อวง: a keep-up circle anyone online can join
+  hub.takraw = takraw;
+  player.input = input;
 
   // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
   let bots = null;
-  if (params.has('bots')) import('./mpbots.js').then(m => { bots = m.createBots(+params.get('bots') || 3, { map, lift, collision, trucks: hub.trucks, player }); });
+  if (params.has('bots')) import('./mpbots.js').then(m => { bots = m.createBots(+params.get('bots') || 3, { map, lift, collision, trucks: hub.trucks, player, takraw }); });
 
   addSystem((dt, time) => {
     U.time.value = time;
@@ -237,6 +241,7 @@ async function boot() {
     mp.update(dt, !game && !free);
     coop.update(dt, !!game || loading);
     friends.update(dt, !game && !free);
+    takraw.update(dt, !game && !free && !hub.frozen);
     journal.update(dt, !game && !free && !hub.frozen);
     bots?.update(dt);
     if (game) { game.update(dt, time); input.endFrame(); return; }
@@ -245,7 +250,7 @@ async function boot() {
     else if (drone.active) { drone.update(dt); focus = drone.target; hub.update(dt); }
     else if (binos.active) { binos.update(dt); focus = binos.focus; hub.update(dt); }
     else {
-      if (!hub.seated) player.update(dt, tpc.state.yaw, hub.frozen);
+      if (!hub.seated && !takraw.playing) player.update(dt, tpc.state.yaw, hub.frozen);
       roadNotice(dt);
       tutorial.update(dt);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
@@ -294,7 +299,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

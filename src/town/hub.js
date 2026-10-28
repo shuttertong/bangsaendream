@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null, postcard = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -133,8 +133,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     if (talk.active || travel.open) return;
     if (riding) hopOff();
     else if (seats.seated) seats.stand();
+    else if (takraw?.playing) takraw.leave();
     else if (near) startTalk();
     else if (nearTruck) board(nearTruck);
+    else if (takraw?.near) takraw.join();
     else if (nearChat) startTalk(nearChat);
     else if (nearSeat && seats.sit(nearSeat)) audio?.play('thud');
     else if (nearScope) scopes.use(nearScope);
@@ -204,6 +206,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     set journal(j) { journal = j; }, get journal() { return journal; },
     /** main.js sets this: the postcard camera (postcard.js). */
     set postcard(p) { postcard = p; },
+    /** main.js sets this: the takraw circle (takraw.js); while playing, F leaves and the kid stays at its spot. */
+    set takraw(v) { takraw = v; },
+    /** The camera's yaw (for aiming with the stick while in the circle). */
+    get camYaw() { return camera.state?.yaw; },
     update(dt) {
       const p = player.state;
       trucks.update(dt, [{ x: p.x, z: p.z, ride: riding }, ...trucks.extra], camera.cam?.position);
@@ -233,7 +239,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       people.update(dt, p);
       talk.update(dt);
       if (talkingTo) player.faceTo(talkingTo.state.x, talkingTo.state.z, dt);
-      const busy = talk.active || riding || seats.seated;
+      const busy = talk.active || riding || seats.seated || !!takraw?.playing;
       near = busy ? null : people.nearest(p);
       nearTruck = near || busy ? null : trucks.nearest(p);
       nearChat = near || nearTruck || busy || wardrobe?.open ? null : chatNear(p);
@@ -243,7 +249,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       partners?.update(p);
       guide.update(dt);
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : near ? 'talk' : nearTruck ? 'board' : nearChat ? 'talk' : seatKey,
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : near ? 'talk' : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
         near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
