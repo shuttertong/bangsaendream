@@ -28,14 +28,14 @@ export const STROLL = {
   // (kind: how the chat names them — people/chatter.js WHO)
   looks: [
     { kind: 'uncle', scale: 1.3, hairStyle: 'short', hat: 'cap', bottom: 'shorts', belly: 0.4 },
-    { kind: 'sis', scale: 1.24, hairStyle: 'long', hat: 'none', bottom: 'skirt' },
-    { kind: 'bro', scale: 1.3, hairStyle: 'short', hat: 'none', bottom: 'pants', sleeves: 'long' },
+    { kind: 'sis', scale: 1.24, hairStyle: 'ponytail', hat: 'none', bottom: 'skirt', shirtStyle: 'stripes' },
+    { kind: 'bro', scale: 1.3, hairStyle: 'spiky', hat: 'none', bottom: 'pants', sleeves: 'long', shirtStyle: 'raglan', brow: 0.04 },
     { kind: 'aunt', scale: 1.22, hairStyle: 'bun', hat: 'none', bottom: 'pants', belly: 0.3 },
     { kind: 'sis', scale: 1.26, hairStyle: 'long', hat: 'straw', bottom: 'shorts' },
-    { kind: 'uncle', scale: 1.32, hairStyle: 'short', hat: 'bucket', bottom: 'shorts', sleeves: 'none', belly: 0.5 },
+    { kind: 'uncle', scale: 1.32, hairStyle: 'short', hat: 'bucket', bottom: 'shorts', sleeves: 'none', belly: 0.5, brow: 0.045, smile: 'grin' },
     { kind: 'aunt', scale: 1.2, hairStyle: 'bun', hat: 'none', bottom: 'skirt', belly: 0.4, glasses: true },
   ],
-  kids: [{ kind: 'boy', hairStyle: 'short', hat: 'cap', bottom: 'shorts' }, { kind: 'girl', hairStyle: 'long', hat: 'none', bottom: 'skirt' }, { kind: 'boy', hairStyle: 'short', hat: 'straw', bottom: 'shorts' }],
+  kids: [{ kind: 'boy', hairStyle: 'short', hat: 'cap', bottom: 'shorts', shirtStyle: 'stripesDark' }, { kind: 'girl', hairStyle: 'ponytail', hat: 'none', bottom: 'skirt', freckles: true }, { kind: 'boy', hairStyle: 'spiky', hat: 'none', bottom: 'shorts', smile: 'grin' }],
 };
 
 const lerp = (a, b, t) => a + (b - a) * t;

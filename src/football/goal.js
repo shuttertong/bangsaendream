@@ -3,7 +3,7 @@
 // Shared by the mini-game's pitch (scene.js) and the goals on the sand in town (town/kickabout.js).
 import * as THREE from 'three';
 
-export const GOAL_COLORS = { post: '#eef03a', net: '#f4f6f8' };
+export const GOAL_COLORS = { post: '#f1c53a', net: '#f4f6f8' };
 
 /** size: { half, h, depth } (metres). Returns { solid: [BufferGeometry, no colours], net: [x, y, z, …] line-segment points }. */
 export function goalFrame({ half, h, depth }, r = 0.055) {

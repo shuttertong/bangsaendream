@@ -15,7 +15,7 @@ export const ROSTER = [
     id: 'grandma', place: 'grandma',
     name: { th: 'ยาย', en: 'Grandma' },
     look: { ...ADULT, scale: 1.2, skin: '#c99a74', hair: '#d9d6d0', hairStyle: 'bun', shirt: '#b98fb8', shirtTrim: '#e9dfe8',
-      bottom: 'skirt', bottomColor: '#6a4a7a', hat: 'none', glasses: true, shoe: '#6a5040', belly: 0.4 },
+      bottom: 'skirt', bottomColor: '#6a4a7a', hat: 'none', glasses: true, shoe: '#6a5040', belly: 0.4, print: 'none', smile: 'small', eyeScale: 0.78 },
     script: s => {
       const has = pre => Object.keys(s.bag).find(k => k.startsWith(pre) && s.bag[k] > 0);
       if (!s.met.grandma) return [
@@ -60,7 +60,7 @@ export const ROSTER = [
   {
     id: 'tonkla', place: 'beach', game: 'football',
     name: { th: 'ต้นกล้า', en: 'Tonkla' },
-    look: { shirt: '#f0b43a', bottomColor: '#3a6a4a', hat: 'cap', hatColor: '#d8443a', hatBand: '#f4f1e8', skin: '#c68f66' },
+    look: { shirt: '#f0b43a', bottomColor: '#3a6a4a', hat: 'cap', hatColor: '#d8443a', hatBand: '#f4f1e8', skin: '#c68f66', shirtStyle: 'stripesDark', smile: 'grin', freckles: true },
     script: s => [...(s.met.tonkla ? [
       !s.flags.rodDaeng
         ? { say: { th: 'รู้ไหม มาบางแสนไม่ได้ขึ้นรถแดง แสดงว่ามาไม่ถึงนะ! รถแดงวิ่งอยู่บนถนนเลียบหาด เดินไปท้ายรถแล้วกระโดดขึ้นเลย', en: "You know what they say: if you come to Bang Saen and don't ride the red truck, you haven't really arrived! They run along the beach road; hop on at the back." } }
@@ -82,7 +82,7 @@ export const ROSTER = [
   {
     id: 'daeng', place: 'crabBeach', game: 'crab',
     name: { th: 'ลุงแดง', en: 'Uncle Daeng' },
-    look: { ...ADULT, skin: '#b8835c', shirt: '#e8e4d8', sleeves: 'none', bottom: 'shorts', bottomColor: '#5a4a3a', hat: 'bucket', hatColor: '#7a8a5a', belly: 0.6 },
+    look: { ...ADULT, skin: '#b8835c', shirt: '#e8e4d8', sleeves: 'none', bottom: 'shorts', bottomColor: '#5a4a3a', hat: 'bucket', hatColor: '#7a8a5a', belly: 0.6, smile: 'grin', brow: 0.045 },
     script: () => [
       { say: { th: 'ปูลมออกตอนโพล้เพล้ วิ่งเร็วมากนะ ต้องใช้ไฟฉายส่องให้ดี', en: 'Ghost crabs come out at dusk. They\'re fast; you need a good flashlight.' } },
       { ask: [
@@ -94,7 +94,7 @@ export const ROSTER = [
   {
     id: 'piak', place: 'laemThaen', game: 'squid',
     name: { th: 'ลุงเปี๊ยก', en: 'Uncle Piak' },
-    look: { ...ADULT, skin: '#a8764f', shirt: '#3f6f9a', sleeves: 'long', bottom: 'pants', bottomColor: '#3a3a3a', hat: 'cap', hatColor: '#e8e4d8', hatBand: '#3f6f9a' },
+    look: { ...ADULT, skin: '#a8764f', shirt: '#3f6f9a', sleeves: 'long', bottom: 'pants', bottomColor: '#3a3a3a', hat: 'cap', hatColor: '#e8e4d8', hatBand: '#3f6f9a', smile: 'small', brow: 0.042 },
     script: () => [
       { say: { th: 'คืนนี้คลื่นลมสงบ เหมาะกับการตกหมึกที่สุด', en: 'Calm sea tonight. Perfect for squid jigging.' } },
       { ask: [
@@ -106,7 +106,7 @@ export const ROSTER = [
   {
     id: 'chai', place: 'viewpoint', game: 'monkey',
     name: { th: 'ลุงชัย', en: 'Uncle Chai' },
-    look: { ...ADULT, skin: '#b8835c', shirt: '#6a8a5a', bottom: 'pants', bottomColor: '#6a5a4a', hat: 'none', hairStyle: 'short', hair: '#6a6660' },
+    look: { ...ADULT, skin: '#b8835c', shirt: '#6a8a5a', bottom: 'pants', bottomColor: '#6a5a4a', hat: 'none', hairStyle: 'short', hair: '#6a6660', brow: 0.04 },
     script: () => [
       { say: { th: 'ระวังลิงนะหลาน มันชอบแย่งขนมจากมือเลย', en: 'Watch out for the monkeys. They snatch snacks right out of your hand.' } },
       { ask: [
@@ -118,7 +118,7 @@ export const ROSTER = [
   {
     id: 'fon', place: 'rental', game: 'tube',
     name: { th: 'พี่ฝน', en: 'Fon' },
-    look: { ...ADULT, scale: 1.25, skin: '#c68f66', shirt: '#4fb3a8', hairStyle: 'long', hair: '#2a2320', bottom: 'shorts', bottomColor: '#e8e4d8', hat: 'none' },
+    look: { ...ADULT, scale: 1.25, skin: '#c68f66', shirt: '#4fb3a8', hairStyle: 'ponytail', hair: '#2a2320', bottom: 'shorts', bottomColor: '#e8e4d8', hat: 'none', shirtStyle: 'stripes', freckles: true },
     script: () => [
       { say: { th: 'เช่าห่วงยางไหมจ๊ะ? วันนี้คลื่นกำลังดีเลย', en: 'Rent an inner tube? The waves are just right today.' } },
       { ask: [
@@ -130,7 +130,7 @@ export const ROSTER = [
   {
     id: 'tom', place: 'speedboat', game: 'banana',
     name: { th: 'พี่ต้อม', en: 'Tom' },
-    look: { ...ADULT, skin: '#a8764f', shirt: '#2f6fc4', sleeves: 'none', bottom: 'shorts', bottomColor: '#f4f1e8', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#e8541e', vest: '#e8541e' },
+    look: { ...ADULT, skin: '#a8764f', shirt: '#2f6fc4', sleeves: 'none', bottom: 'shorts', bottomColor: '#f4f1e8', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#e8541e', vest: '#e8541e', smile: 'grin' },
     script: () => [
       { say: { th: 'มาเล่นเครื่องเล่นทางน้ำกันไหม? ใส่เสื้อชูชีพก่อนนะ!', en: 'Up for a ride on the water? Life vest on first!' } },
       { ask: [
@@ -145,7 +145,7 @@ export const ROSTER = [
   {
     id: 'kru', place: 'goHouse', game: 'go',
     name: { th: 'ครูหมาก', en: 'Teacher Mak' },
-    look: { ...ADULT, skin: '#c99a74', shirt: '#f4f1e8', sleeves: 'long', bottom: 'pants', bottomColor: '#3a3a3a', hat: 'none', hairStyle: 'short', hair: '#8a8680', glasses: true },
+    look: { ...ADULT, skin: '#c99a74', shirt: '#f4f1e8', sleeves: 'long', bottom: 'pants', bottomColor: '#3a3a3a', hat: 'none', hairStyle: 'short', hair: '#8a8680', glasses: true, smile: 'small', brow: 0.036 },
     script: () => [
       { say: { th: 'ยินดีต้อนรับสู่บ้านหมากล้อม! วางหมากล้อมพื้นที่ให้ได้มากกว่าอีกฝ่าย ล้อมหมากเขาได้ก็จับกินได้นะ', en: 'Welcome to the Go house! Surround more of the board than the other side. Surround their stones and you capture them.' } },
       { ask: [

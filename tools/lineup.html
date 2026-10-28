@@ -34,8 +34,9 @@ const ground = new THREE.Mesh(new THREE.CircleGeometry(40, 48).rotateX(-Math.PI 
 ground.receiveShadow = true; scene.add(ground);
 
 const looks = [{ id: 'kid', look: KID_LOOK }, ...ROSTER.map(r => ({ id: r.id, look: r.look })),
-  { id: 'visitor', look: { skin: '#e0b08a', shirt: '#9a5a8a', hairStyle: 'long', hat: 'none', bottomColor: '#3a3a3a' } },
-  { id: 'uncle', look: { scale: 1.3, headScale: 0.86, skin: '#a8764f', shirt: '#f4f1e8', sleeves: 'long', bottom: 'pants', bottomColor: '#4a4a4a', hat: 'none', glasses: true, hairStyle: 'short', hair: '#4a4440' } }];
+  { id: 'visitor', look: { skin: '#e0b08a', shirt: '#9a5a8a', hairStyle: 'long', hat: 'none', bottomColor: '#3a3a3a', shirtStyle: 'stripes' } },
+  { id: 'spiky', look: { skin: '#c68f66', shirt: '#3aa56a', hairStyle: 'spiky', hat: 'none', bottomColor: '#34507a', shirtStyle: 'raglan', smile: 'grin' } },
+  { id: 'uncle', look: { scale: 1.3, headScale: 0.86, skin: '#a8764f', shirt: '#f4f1e8', sleeves: 'long', bottom: 'pants', bottomColor: '#4a4a4a', hat: 'none', glasses: true, hairStyle: 'short', hair: '#4a4440', brow: 0.045, smile: 'small' } }];
 const people = looks.map(({ id, look }, i) => {
   const p = buildPerson(look); p.mesh.position.set((i - (looks.length - 1) / 2) * 0.9, 0, 0); p.mesh.rotation.y = yaw; scene.add(p.mesh);
   // relaxed arms (the rest pose is a T-ish hang): slight outward, elbows a little bent

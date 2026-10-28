@@ -16,11 +16,13 @@ export const BODY = {
 
 export const DEFAULT_LOOK = {
   scale: 1, headScale: 1.2, belly: 0,            // kids: a big-ish toon head (≈ 1/5 of their height); adults pass ≈ 0.86
-  skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | bald
+  skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | ponytail | spiky | bald
   shirt: '#7fc4e8', shirtTrim: '#f4f1e8', sleeves: 'short',  // short | long | none
   bottom: 'shorts', bottomColor: '#34507a',                   // shorts | pants | skirt
   shoe: '#8a5a3a', sock: '#f4f1e8', apron: null, vest: null, glasses: false,
-  print: null, printBg: null,                                // chest print colours (null = auto from the shirt; 'none' = plain)
+  print: null, printBg: null,                                // chest print colours (null = auto from the shirt; 'none' = plain; printBg adds a round badge)
+  shirtStyle: 'plain',                                       // plain | stripes | stripesDark | raglan (toon.js)
+  smile: 'smile', eyeScale: undefined, brow: 0.03, freckles: false,   // face: smile | grin | small; eye size (default by age); brow thickness
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
