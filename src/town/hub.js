@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -195,13 +195,15 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       journal?.event('game', { id, res });
     },
     /** True while the player shouldn't move (dialogue, menus). */
-    get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open; },
+    get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open || !!postcard?.open; },
     /** main.js sets this: ร้านพันธมิตร (partners.js) — created after the hub because it adds travel places. */
     set partners(p) { partners = p; },
     /** main.js sets this: the wardrobe panel (wardrobe.js) freezes the kid while it is open. */
     set wardrobe(w) { wardrobe = w; },
     /** main.js sets this: the summer journal (journal.js) — tasks, medals, badges. */
     set journal(j) { journal = j; }, get journal() { return journal; },
+    /** main.js sets this: the postcard camera (postcard.js). */
+    set postcard(p) { postcard = p; },
     update(dt) {
       const p = player.state;
       trucks.update(dt, [{ x: p.x, z: p.z, ride: riding }, ...trucks.extra], camera.cam?.position);

@@ -57,6 +57,7 @@ import { createMultiplayer } from './multiplayer.js';
 import { createCoop } from './coop.js';
 import { createFriends } from './friends.js';
 import { createJournal } from './journal.js';
+import { createPostcard } from './postcard.js';
 import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
@@ -210,6 +211,9 @@ async function boot() {
   hub.wardrobe = wardrobe;
   const journal = createJournal({ root: $('hud'), hub, player, audio });   // 📔 สมุดปิดเทอม: daily tasks, medals, badges (J)
   hub.journal = journal;
+  const postcard = createPostcard({ root: $('hud'), renderer, render: () => (game ? game.render(1 / 60) : fx.render(1 / 60)), hub, audio, journal });   // 📷 postcards to save or share
+  postcard.kid = player.state;
+  hub.postcard = postcard;
   const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
   const tutorial = createTutorial({ root: $('hud'), player, input });   // first-time controls card
   // 💌 requests & feedback for the developer (Supabase, insert-only); sends the nearest travel stop as context

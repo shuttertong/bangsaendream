@@ -510,3 +510,13 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 .jn-stats { margin: 10px 4px 0; font-size: 12px; color: #8a7a66; }
 #game-ui .g-best { font: 400 13px 'Sarabun', sans-serif; color: #8a7a66; margin: 2px 0 10px; } #game-ui .g-best .got { color: var(--accent); font-weight: 600; }
 #game-ui .g-medal { font: 500 15px 'Kanit', sans-serif; color: var(--accent); } #game-ui .g-medal small { color: #8a7a66; font: 400 12px 'Sarabun', sans-serif; }
+
+/* ---------- postcards (town/postcard.js) + the journal's collection book + the title's daily line ---------- */
+.pc-panel .panel { max-width: 620px; }
+.pc-img { display: block; width: 100%; border-radius: 10px; box-shadow: 0 6px 24px rgba(60, 40, 20, .18); margin: 4px 0 12px; }
+.pc-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pc-btns button { margin: 0; }
+.jn-bookrow { margin-bottom: 8px; } .jn-bookname { font: 500 13px 'Kanit', sans-serif; color: #6a5a46; margin: 2px 4px 4px; } .jn-bookname small { color: var(--accent); }
+#title .t-daily { font: 500 14px 'Kanit', sans-serif; color: var(--accent); margin: 8px 0 0; }
+.pc-btns button { flex: 1; width: auto; margin-top: 0; border: 0; background: #efe6d4; border-radius: 12px; padding: 10px; font: 500 16px 'Kanit', sans-serif; color: var(--ink); cursor: pointer; }
+.pc-btns .pc-save { background: var(--accent); color: #fff; }

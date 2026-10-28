@@ -16,7 +16,7 @@ const fresh = () => ({
   wardrobe: { owned: {}, worn: {}, gift: null },   // fantasy wardrobe: itemId → 1, slot → itemId, last daily-gift day
   // สมุดปิดเทอม (shared/goals.js, town/journal.js): today's tasks (id → count), streak, badges (id → day), medal tiers paid per game, numbers
   journal: { day: null, tasks: {}, streak: 0, lastFull: null, badges: {}, paid: {},
-    stats: { games: 0, earned: 0, chats: 0, rides: 0, m: 0, medals: 0, golds: 0, friends: 0, hatTrick: false, fireballs: 0, visits: {} } },
+    stats: { games: 0, earned: 0, chats: 0, rides: 0, m: 0, medals: 0, golds: 0, friends: 0, hatTrick: false, fireballs: 0, visits: {}, seen: {}, photos: 0 } },   // seen: `${game}_${species}` → biggest size caught
 });
 
 let data = fresh(), dirty = false, timer = 0;
@@ -61,7 +61,7 @@ export function setQuest(id, state) { data.quests[id] = state; changed('quests')
 export function setBest(game, result) { data.best[game] = result; changed('best'); }
 export function buyWardrobe(id, price) { if (data.baht < price || data.wardrobe.owned[id]) return false; data.baht -= price; data.wardrobe.owned[id] = 1; changed('wardrobe'); changed('baht'); return true; }
 export function wearWardrobe(slot, id) { if (id) data.wardrobe.worn[slot] = id; else delete data.wardrobe.worn[slot]; changed('wardrobe'); }
-export function takeGift(n) { data.wardrobe.gift = new Date().toISOString().slice(0, 10); data.baht += n; changed('baht'); }
+export function takeGift(n) { const d = new Date(); data.wardrobe.gift = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); data.baht += n; changed('baht'); }   // (local day, as wardrobe.js dayKey)
 /** Change the journal in place (fn(journal)) and tell listeners. */
 export function updateJournal(fn, notify = true) { fn(data.journal); if (notify) changed('journal'); else dirty = true; }
 /** Position changes a lot; mark dirty without notifying listeners. */

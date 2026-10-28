@@ -2,16 +2,21 @@
 import { t } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
 import { GAME_VERSION } from '../shared/config.js';
+import { dailyTasks } from '../shared/goals.js';
+import { dayKey } from '../shared/wardrobe.js';
 
 export function showTitle(root, { onStart }) {
   const el = document.createElement('div');
   el.id = 'title';
-  const returning = !!P.get().met.grandma;
+  const returning = !!P.get().met.grandma, j = P.get().journal;
+  const left = dailyTasks(dayKey()).filter(x => (j.day === dayKey() ? j.tasks[x.id] || 0 : 0) < x.n).length;   // (the journal has rolled the day already)
+  const daily = returning ? [j.streak ? t('titleStreak', { n: j.streak }) : '', left ? t('titleDaily', { n: left }) : t('titleDailyDone')].filter(Boolean).join(' · ') : '';
   el.innerHTML = `
     <div class="t-card">
       <h1>${t('title')}</h1>
       <p class="t-sub">${t('titleSub')}</p>
       <button class="t-go">${returning ? t('titleContinue') : t('titlePlay')}</button>
+      ${daily ? `<p class="t-daily">${daily}</p>` : ''}
       <p class="t-hint">🔊 ${t('titleHint')}</p>
       <p class="t-ver">v${GAME_VERSION}</p>
     </div>`;

@@ -3,6 +3,9 @@
 // badges for things done around town, and a title for the badge count. Data only; town/journal.js
 // tracks and shows them, shared/gameUI.js shows the medal targets on a game's intro and results.
 import { rng } from '../core/rng.js';
+import { SPECIES as CRABS } from '../crab/species.js';
+import { SPECIES as SQUID } from '../squid/species.js';
+import { FINDS } from '../tube/species.js';
 
 // icon + name per mini-game (ids as in games.js)
 export const GAMES = {
@@ -33,6 +36,14 @@ export const medalAt = game => MEDALS.at[game] || MEDALS.at.default;
 /** 0 (none) … 3 (gold) for a round that earned `baht`. */
 export const medalOf = (game, baht) => medalAt(game).filter(x => baht >= x).length;
 
+// the collection book: every species a game can bring back (the journal's `seen` fills it in)
+export const COLLECTIONS = {
+  crab: { icon: '🦀', name: { th: 'สมุดปูลม', en: 'Crab book' }, list: CRABS, cm: true },
+  squid: { icon: '🦑', name: { th: 'สมุดหมึก', en: 'Squid book' }, list: SQUID, cm: true },
+  tube: { icon: '🐚', name: { th: 'ของจากทะเล', en: 'Beach finds' }, list: FINDS, cm: false },
+};
+export const bookDone = (game, j) => COLLECTIONS[game].list.every(sp => j.stats.seen[`${game}_${sp.id}`]);
+
 export const DAILY = { bonus: 30, streakBonus: 10, streakCap: 5, visitWithin: 25 };   // ฿ for all three tasks, + per streak day (capped); metres that count as a visit
 export const PLACES_TO_VISIT = ['walking', 'navyPier', 'viewpoint', 'laemThaen', 'welcome', 'goHouse', 'speedboat', 'crabBeach'];
 
@@ -44,13 +55,14 @@ const TASK = {
   ride: () => ({ kind: 'ride', n: 1, reward: 20, icon: '🚐', text: { th: 'นั่งรถแดง 1 เที่ยว', en: 'Ride the red truck' } }),
   walk: m => ({ kind: 'walk', n: m, reward: 25, icon: '👟', text: { th: `เดินเล่น ${m} เมตร`, en: `Walk ${m} m` } }),
   visit: p => ({ kind: 'visit', place: p, n: 1, reward: 25, icon: '📍', text: null }),   // (the place's name is filled in by the journal)
+  photo: () => ({ kind: 'photo', n: 1, reward: 20, icon: '📷', text: { th: 'ถ่ายโปสการ์ด 1 ใบ', en: 'Take a postcard photo' } }),
 };
 /** The three tasks for a day (a yyyy-mm-dd key): the same on every device, different every day. */
 export function dailyTasks(day) {
   let h = 7; for (const c of day) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const r = rng(h), ids = Object.keys(GAMES);
   const list = [TASK.play(r.pick(ids)), r() < 0.5 ? TASK.earn(r.pick([120, 150, 180])) : TASK.medal(),
-    r.pick([TASK.chat(3), TASK.ride(), TASK.walk(r.pick([300, 500, 800])), TASK.visit(r.pick(PLACES_TO_VISIT))])];
+    r.pick([TASK.chat(3), TASK.ride(), TASK.walk(r.pick([300, 500, 800])), TASK.visit(r.pick(PLACES_TO_VISIT)), TASK.photo()])];
   return list.map((x, i) => ({ ...x, id: `${day}:${i}` }));
 }
 
@@ -73,6 +85,10 @@ export const BADGES = [
   { id: 'friend', icon: '🤝', name: { th: 'มีเพื่อนแล้ว', en: 'Made a friend' }, hint: { th: 'เป็นเพื่อนกับผู้เล่นอีกคน', en: 'Become friends with another player' }, pay: 40, check: (s, j) => j.stats.friends >= 1 },
   { id: 'streak3', icon: '🔥', name: { th: 'มาติดกัน 3 วัน', en: '3-day streak' }, hint: { th: 'ทำภารกิจครบ 3 วันติดกัน', en: 'Finish the tasks 3 days running' }, pay: 60, check: (s, j) => j.streak >= 3 },
   { id: 'streak7', icon: '🌟', name: { th: 'มาติดกัน 7 วัน', en: '7-day streak' }, hint: { th: 'ทำภารกิจครบ 7 วันติดกัน', en: 'Finish the tasks 7 days running' }, pay: 150, check: (s, j) => j.streak >= 7 },
+  { id: 'crabBook', icon: '🦀', name: { th: 'สมุดปูครบ', en: 'Crab book complete' }, hint: { th: 'จับปูลมให้ครบทุกชนิด', en: 'Catch every kind of crab' }, pay: 60, check: (s, j) => bookDone('crab', j) },
+  { id: 'squidBook', icon: '🦑', name: { th: 'สมุดหมึกครบ', en: 'Squid book complete' }, hint: { th: 'ตกหมึกให้ครบทุกชนิด', en: 'Catch every kind of squid' }, pay: 60, check: (s, j) => bookDone('squid', j) },
+  { id: 'tubeBook', icon: '🐚', name: { th: 'ของจากทะเลครบ', en: 'All the beach finds' }, hint: { th: 'เก็บของจากทะเลให้ครบทุกอย่าง', en: 'Find everything the waves bring' }, pay: 60, check: (s, j) => bookDone('tube', j) },
+  { id: 'photographer', icon: '📷', name: { th: 'ช่างภาพประจำหาด', en: 'Beach photographer' }, hint: { th: 'ถ่ายโปสการ์ด 5 ใบ', en: 'Take 5 postcard photos' }, pay: 40, check: (s, j) => j.stats.photos >= 5 },
   { id: 'hatTrick', icon: '⚽', name: { th: 'แฮตทริก', en: 'Hat-trick' }, hint: { th: 'ยิงเอง 3 ประตูในแมตช์เดียว', en: 'Score 3 goals yourself in one match' }, pay: 60, check: (s, j) => !!j.stats.hatTrick },
   { id: 'fireballs', icon: '🏐', name: { th: 'ราชาลูกตบไฟ', en: 'Fireball king' }, hint: { th: 'ตบไฟ 3 ลูกในเกมเดียว', en: 'Three fireball spikes in one game' }, pay: 60, check: (s, j) => j.stats.fireballs >= 3 },
 ];

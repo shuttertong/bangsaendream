@@ -68,7 +68,8 @@ export function featuredToday(date = new Date()) {
   return out;
 }
 export const priceToday = (item, featured = featuredToday()) => (featured.includes(item.id) ? Math.round(item.price * (1 - DAILY.discount) / 10) * 10 : item.price);
-export const dayKey = (date = new Date()) => date.toISOString().slice(0, 10);
+/** yyyy-mm-dd of the local day (the day turns at midnight where the player is, not at 07:00 as UTC would). */
+export const dayKey = (date = new Date()) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 /** worn {slot: id} → online indices {slot: 1-based index | 0}, and back. */
 export const fxOf = worn => Object.fromEntries(SLOTS.map(s => [s, worn?.[s] ? WARDROBE.indexOf(byId[worn[s]]) + 1 : 0]));

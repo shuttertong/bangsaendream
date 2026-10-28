@@ -6,7 +6,7 @@
 // has no active quest.
 import * as P from '../shared/progress.js';
 import { t, tr, onLang } from '../shared/i18n.js';
-import { GAMES, MEDALS, medalAt, medalOf, DAILY, PLACES_TO_VISIT, dailyTasks, BADGES, titleFor } from '../shared/goals.js';
+import { GAMES, MEDALS, medalAt, medalOf, DAILY, PLACES_TO_VISIT, dailyTasks, BADGES, titleFor, COLLECTIONS } from '../shared/goals.js';
 import { dayKey } from '../shared/wardrobe.js';
 import { HOSTS } from './quests.js';
 
@@ -27,7 +27,7 @@ export function createJournal({ root, hub, player, audio }) {
   const modal = document.createElement('div');
   modal.className = 'modal jn-panel';
   modal.innerHTML = `<div class="panel"><h2></h2><div class="jn-head"></div><h3 class="h-today"></h3><div class="list jn-tasks"></div><p class="jn-hint"></p>
-    <h3 class="h-medals"></h3><div class="jn-grid jn-medals"></div><h3 class="h-badges"></h3><div class="jn-grid jn-badges"></div><p class="jn-stats"></p><button class="close"></button></div>`;
+    <h3 class="h-medals"></h3><div class="jn-grid jn-medals"></div><h3 class="h-book"></h3><div class="jn-book"></div><h3 class="h-badges"></h3><div class="jn-grid jn-badges"></div><p class="jn-stats"></p><button class="close"></button></div>`;
   root.appendChild(modal);
   const $ = q => modal.querySelector(q);
   btn.addEventListener('pointerdown', stop(() => { audio?.play('click'); toggle(); }));
@@ -73,7 +73,7 @@ export function createJournal({ root, hub, player, audio }) {
   }
 
   // ---------- what happened ----------
-  /** kind: 'game' { id, res } | 'chat' { id } | 'ride' | 'visit' { place } | 'walk' { m } | 'friend' */
+  /** kind: 'game' { id, res } | 'chat' { id } | 'ride' | 'visit' { place } | 'walk' { m } | 'friend' | 'photo' */
   function event(kind, d = {}) {
     rollDay();
     const before = Object.keys(J().badges).length;
@@ -91,6 +91,7 @@ export function createJournal({ root, hub, player, audio }) {
           const T = MEDALS.tiers[tier - 1];
           setTimeout(() => toast(t('jnMedal', { icon: T.icon, tier: tr(T.name), game: tr(GAMES[id].name), n: pay }), 'fanfare'), 400);
         }
+        for (const c of res.catches || []) { const k = `${id}_${c.id}`; st.seen[k] = Math.max(st.seen[k] || 0, c.size || 1); }   // the collection book
         if (id === 'football' && (res.mine || 0) >= 3) st.hatTrick = true;
         if (id === 'volley') st.fireballs = Math.max(st.fireballs, res.supers || 0);
         progress(j, 'play', x => x.game === id);
@@ -101,6 +102,7 @@ export function createJournal({ root, hub, player, audio }) {
       else if (kind === 'visit') { st.visits[d.place] = 1; progress(j, 'visit', x => x.place === d.place); }
       else if (kind === 'walk') { st.m += d.m; progress(j, 'walk', null, d.m); }
       else if (kind === 'friend') st.friends++;
+      else if (kind === 'photo') { st.photos++; progress(j, 'photo'); }
     }, kind !== 'walk');
     badges(before);
     refreshBtn();
@@ -166,6 +168,10 @@ export function createJournal({ root, hub, player, audio }) {
       const sub = s.best[id] ? `฿${best}${tier < 3 ? ` · ${t('jnNext', { n: medalAt(id)[tier] - best, icon: MEDALS.tiers[tier].icon })}` : ''}` : t('jnNotPlayed');
       return `<div class="jn-tile ${cls}"><span class="ic">${tier ? MEDALS.tiers[tier - 1].icon : g.icon}</span><span class="nm">${tr(g.name)}</span><span class="sub">${sub}</span></div>`;
     }).join('');
+    const seen = j.stats.seen, books = Object.entries(COLLECTIONS);
+    $('.h-book').textContent = t('jnBook', { n: books.reduce((a, [g, b]) => a + b.list.filter(sp => seen[`${g}_${sp.id}`]).length, 0), of: books.reduce((a, [, b]) => a + b.list.length, 0) });
+    $('.jn-book').innerHTML = books.map(([g, b]) => `<div class="jn-bookrow"><div class="jn-bookname">${b.icon} ${tr(b.name)} <small>${b.list.filter(sp => seen[`${g}_${sp.id}`]).length}/${b.list.length}</small></div><div class="jn-grid">`
+      + b.list.map(sp => { const got = seen[`${g}_${sp.id}`]; return `<div class="jn-tile ${got ? '' : 'off'}"><span class="ic">${got ? sp.icon : '❔'}</span><span class="nm">${got ? tr(sp.name) : '???'}</span><span class="sub">${got ? (b.cm ? t('cm', { n: got }) : '✓') : `฿${sp.price}`}</span></div>`; }).join('') + '</div></div>').join('');
     $('.h-badges').textContent = t('jnBadges', { n: nb, of: BADGES.length });
     $('.jn-badges').innerHTML = BADGES.map(b => `<div class="jn-tile ${j.badges[b.id] ? '' : 'off'}"><span class="ic">${b.icon}</span><span class="nm">${tr(b.name)}</span><span class="sub">${tr(b.hint)}</span></div>`).join('');
     $('.jn-stats').textContent = t('jnStats', { games: j.stats.games, earned: j.stats.earned.toLocaleString(), km: (j.stats.m / 1000).toFixed(1), rides: j.stats.rides, chats: j.stats.chats });
