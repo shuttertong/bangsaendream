@@ -7,7 +7,7 @@ import { createSea } from '../world/water.js';
 import { createPostFX } from '../world/postfx.js';
 import { createInput } from '../core/input.js';
 import { createTouchControls } from '../core/touch.js';
-import { addSystem, startLoop, tick } from '../core/loop.js';
+import { addSystem, startLoop, tick, setFrameRate, frameInfo } from '../core/loop.js';
 import { U } from '../core/shaderPatch.js';
 import { createQuality } from '../core/quality.js';
 import { createAudio } from '../core/audio.js';
@@ -259,6 +259,7 @@ async function boot() {
     input.endFrame();
   });
 
+  if (params.has('fps')) setFrameRate(params.get('fps'));   // ?fps=0 lifts the 60 fps cap (120 Hz screens), ?fps=30 saves battery
   const dbg = DEBUG ? debugOverlay(renderer, camera) : null;
   startLoop(dt => {
     renderer.info.reset();
@@ -297,7 +298,8 @@ function debugOverlay(renderer, camera) {
     acc += dt; frames++;
     if (acc < 0.5) return;
     const i = renderer.info.render, p = camera.position;
-    el.textContent = `${(frames / acc).toFixed(0)} fps\ncalls ${i.calls}  tris ${(i.triangles / 1e6).toFixed(2)}M\n`
+    const hz = frameInfo.refresh ? ` (${frameInfo.refresh} Hz${frameInfo.every > 1 ? ` ÷${frameInfo.every}` : ''})` : '';
+    el.textContent = `${(frames / acc).toFixed(0)} fps${hz}\ncalls ${i.calls}  tris ${(i.triangles / 1e6).toFixed(2)}M\n`
       + `cam ${p.x.toFixed(0)}, ${p.y.toFixed(1)}, ${p.z.toFixed(0)}  res ×${ratio.toFixed(2)}`;
     acc = frames = 0;
   };
