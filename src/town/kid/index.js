@@ -1,6 +1,8 @@
 // Kid animation: gait phase driven by distance actually travelled (no running in place),
-// 2-joint IK legs that plant the feet on the terrain, arm swing, lean into acceleration
-// and turns, a spring on the hat, jump pose and idle breathing.
+// 2-joint IK legs that plant the feet on the terrain, hip sway and a toe-off in the step, arm
+// swing, lean into acceleration and turns, a spring on the hat; a jump that stretches on the way
+// up, spreads the arms on the way down and squashes on landing; idle breathing, a weight shift
+// and a look around now and then.
 import * as THREE from 'three';
 import { buildKid } from './model.js';
 
@@ -11,6 +13,10 @@ const TUNE = {
   armWalk: 0.35, armRun: 0.95,
   leanRun: 0.2, leanAccel: 0.035, leanTurn: 0.05,
   hatK: 90, hatDamp: 9, hatPush: 0.012,
+  sway: 0.07, pelvis: 0.07, toe: 0.5,            // hip roll per step (rad), pelvis yaw, toe-down of the swinging foot
+  bobWalk: 0.02, bobRun: 0.05,                   // hip bob per step (m)
+  stretch: 0.07, squash: 0.09, landTime: 0.24, landDip: 0.1,   // squash & stretch of the whole body (jump up / land), landing crouch (s, m)
+  look: { every: [3, 7], hold: [1.2, 2.2], yaw: 0.5 },       // idle: a glance to one side every few seconds
 };
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -22,7 +28,9 @@ export function createKid(scene, look) {
     phase: 0, speed: 0, lean: 0, side: 0, t: 0,
     hatOff: new THREE.Vector3(), hatVel: new THREE.Vector3(),
     headPrev: new THREE.Vector3(), headPrev2: new THREE.Vector3(), first: true, blinkIn: 2, blink: 0,
+    wasGrounded: true, airT: 0, land: 0, stretch: 1, look: { yaw: 0, want: 0, hold: 0, next: 4 },
   };
+  const baseScale = mesh.scale.x;
   const tmp = new THREE.Vector3(), acc = new THREE.Vector3();
 
   /** Two-bone IK in the leg's sagittal plane: foot target (y down, z forward) in hip space. */
@@ -47,7 +55,23 @@ export function createKid(scene, look) {
     mesh.rotation.y = m.yaw;
     s.speed = lerp(s.speed, m.speed, 1 - Math.exp(-dt * 10));
     const run = smooth(TUNE.runFrom, TUNE.runTo, s.speed);
-    const move = smooth(0.05, 0.5, s.speed);
+    const move = smooth(0.05, 0.5, s.speed), idle = 1 - move;
+    // touching down after a jump: a short crouch; in the air: how long, and rising or falling
+    if (m.grounded && !s.wasGrounded) s.land = TUNE.landTime;
+    s.wasGrounded = m.grounded;
+    s.airT = m.grounded ? 0 : s.airT + dt;
+    s.land = Math.max(0, s.land - dt);
+    const landK = s.land > 0 ? (s.land / TUNE.landTime) ** 2 : 0, air = m.grounded ? 0 : 1, rise = air * smooth(-1, 1, (m.vy || 0) / 2);
+    // squash & stretch of the whole body: taller as it leaves the ground, flatter as it lands
+    const want = air ? 1 + TUNE.stretch * smooth(0, 0.12, s.airT) * rise : 1 - TUNE.squash * landK;
+    s.stretch = lerp(s.stretch, want, 1 - Math.exp(-dt * 25));
+    mesh.scale.set(baseScale / Math.sqrt(s.stretch), baseScale * s.stretch, baseScale / Math.sqrt(s.stretch));
+    // idle: a glance to one side now and then
+    const L = s.look, LK = TUNE.look;
+    L.next -= dt;
+    if (L.next <= 0) { L.want = (Math.random() < 0.5 ? -1 : 1) * LK.yaw * (0.6 + Math.random() * 0.4); L.hold = lerp(...LK.hold, Math.random()); L.next = L.hold + lerp(...LK.every, Math.random()); }
+    if (L.hold > 0) L.hold -= dt; else L.want = 0;
+    L.yaw = lerp(L.yaw, L.want * idle, 1 - Math.exp(-dt * 4));
     const step = lerp(TUNE.stepWalk, TUNE.stepRun, run);
     s.phase = (s.phase + m.dist / (2 * step)) % 1;
 
@@ -61,49 +85,53 @@ export function createKid(scene, look) {
     const targets = [];
     for (const [sgn, off] of [[1, 0], [-1, 0.5]]) {                    // L, R
       const c = (s.phase + off) % 1;
-      let z, up;
+      let z, up, swing = 0;
       if (c < 0.5) { z = lerp(step / 2, -step / 2, c * 2); up = 0; }     // stance: foot planted
-      else { const k = (c - 0.5) * 2; z = lerp(-step / 2, step / 2, k * k * (3 - 2 * k)); up = Math.sin(k * Math.PI) * lift; }
+      else { const k = (c - 0.5) * 2; z = lerp(-step / 2, step / 2, k * k * (3 - 2 * k)); swing = Math.sin(k * Math.PI); up = swing * lift; }
       z *= move; up *= move;
       const lx = sgn * KID.hipW;
       // ground under this foot, relative to the body's ground height
       const wx = m.x + lx * cy + z * sy, wz = m.z - lx * sy + z * cy;
       const g = m.grounded ? m.groundAt(wx, wz) - m.y : 0;
-      targets.push({ z, y: g + up + KID.ankle });
+      targets.push({ z, y: g + up + KID.ankle, toe: swing * move * TUNE.toe });
     }
-    // hips: bob with the gait, drop so the lower foot can still reach the ground
-    const bob = Math.abs(Math.sin(s.phase * Math.PI * 2)) * lerp(0.012, 0.04, run) * move;
-    let hipY = legLen * lerp(0.985, 0.94, run) - bob + Math.sin(s.t * 2.2) * 0.004 * (1 - move);
+    // hips: bob with the gait, drop so the lower foot can still reach the ground, dip on landing
+    const cyc = Math.sin(s.phase * Math.PI * 2);
+    const bob = Math.abs(cyc) * lerp(TUNE.bobWalk, TUNE.bobRun, run) * move;
+    let hipY = legLen * lerp(0.985, 0.94, run) - bob + Math.sin(s.t * 2.2) * 0.004 * idle - TUNE.landDip * landK;
     hipY = Math.min(hipY, Math.min(...targets.map(t => t.y)) + legLen * 0.985);
     if (!m.grounded) hipY = legLen * 0.96;
     B.hips.position.y = hipY;
-    B.hips.rotation.set(s.lean * 0.4, 0, s.side);
-    B.spine.rotation.set(s.lean * 0.6, Math.sin(s.phase * Math.PI * 2) * 0.12 * move, 0);
-    B.head.rotation.set(-s.lean * 0.7 + Math.sin(s.t * 1.3) * 0.02 * (1 - move), 0, -s.side * 0.5);
-    B.spine.scale.setScalar(1 + Math.sin(s.t * 2.2) * 0.006 * (1 - move));   // breathing
+    // the walk sways the hips and the shoulders answer; idle shifts the weight slowly
+    const sway = cyc * TUNE.sway * move + Math.sin(s.t * 0.8) * 0.02 * idle;
+    B.hips.rotation.set(s.lean * 0.4, -cyc * TUNE.pelvis * move, s.side + sway);
+    B.spine.rotation.set(s.lean * 0.6 + landK * 0.35, cyc * 0.12 * move, -sway * 0.7);
+    B.head.rotation.set(-s.lean * 0.7 + Math.sin(s.t * 1.3) * 0.02 * idle - landK * 0.3 - 0.15 * rise + 0.1 * (air - rise), L.yaw, -s.side * 0.5 + sway * 0.3 - L.yaw * 0.2);
+    B.spine.scale.setScalar(1 + Math.sin(s.t * 2.2) * 0.006 * idle);   // breathing
     s.blinkIn -= dt;                                                     // blink every few seconds
     if (s.blinkIn <= 0) { s.blink = 0.12; s.blinkIn = 2 + Math.random() * 3; }
     s.blink = Math.max(0, s.blink - dt);
     B.eyes.scale.y = s.blink > 0 ? 0.12 : 1;
 
     if (m.grounded) {
-      const [L, R] = targets;
-      legIK(B.legL, B.shinL, B.footL, L.y - hipY, L.z, B.hips.rotation.x);
-      legIK(B.legR, B.shinR, B.footR, R.y - hipY, R.z, B.hips.rotation.x);
+      const [tl, tr] = targets;
+      legIK(B.legL, B.shinL, B.footL, tl.y - hipY, tl.z, B.hips.rotation.x);
+      legIK(B.legR, B.shinR, B.footR, tr.y - hipY, tr.z, B.hips.rotation.x);
+      B.footL.rotation.x += tl.toe; B.footR.rotation.x += tr.toe;      // the swinging foot points its toes down
     } else {                                                            // jump: knees tucked
       const tuck = THREE.MathUtils.clamp(0.5 + m.vy * 0.08, 0.2, 0.9);
       B.legL.rotation.x = -tuck; B.shinL.rotation.x = tuck * 1.6; B.footL.rotation.x = -tuck * 0.6;
       B.legR.rotation.x = -tuck * 0.6; B.shinR.rotation.x = tuck * 1.2; B.footR.rotation.x = -tuck * 0.4;
     }
 
-    // arms swing opposite to the legs; elbows bend more when running
+    // arms swing opposite to the legs, a little out from the body, elbows bent more when running;
+    // in the air they go up on the way up and out to the sides on the way down; on landing they spread
     const swing = lerp(TUNE.armWalk, TUNE.armRun, run) * move;
-    const ph = Math.sin(s.phase * Math.PI * 2);
-    const air = m.grounded ? 0 : 1;
-    B.armL.rotation.set(-ph * swing - air * 1.2, 0, 0.12 + air * 0.4);
-    B.armR.rotation.set(ph * swing - air * 1.2, 0, -0.12 - air * 0.4);
-    B.foreL.rotation.x = -(0.2 + run * 1.1 + Math.max(0, -ph) * 0.3 * move);
-    B.foreR.rotation.x = -(0.2 + run * 1.1 + Math.max(0, ph) * 0.3 * move);
+    const ph = cyc, out = 0.14 + run * 0.12 + air * (1.0 - 0.5 * rise) + landK * 0.7, lift2 = air * (0.6 + 1.8 * rise);
+    B.armL.rotation.set(-ph * swing - lift2, 0, out);
+    B.armR.rotation.set(ph * swing - lift2, 0, -out);
+    B.foreL.rotation.x = -(0.35 - 0.15 * move + run * 1.1 + Math.max(0, -ph) * 0.3 * move + air * 0.2);
+    B.foreR.rotation.x = -(0.35 - 0.15 * move + run * 1.1 + Math.max(0, ph) * 0.3 * move + air * 0.2);
 
     // hat on a spring, pushed by the head's acceleration
     mesh.updateMatrixWorld(true);

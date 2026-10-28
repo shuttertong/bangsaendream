@@ -49,9 +49,9 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
   function update(dt, camYaw, frozen = false) {
     const { f, r, mag } = frozen ? { f: 0, r: 0, mag: 0 } : input.axis();   // keys or on-screen joystick
     const len = Math.hypot(f, r);
-    // Shift runs; on the joystick, pushing past `runStick` runs and less walks slower
-    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
-    const top = shift || mag > MOVE.runStick ? MOVE.run : MOVE.walk * Math.max(0.45, mag / MOVE.runStick);
+    // Shift runs; on the joystick, pushing past `runStick` runs and less walks slower (keys alone walk)
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight'), stick = Math.hypot(input.stick.x, input.stick.y) > 0.12;
+    const top = shift || (stick && mag > MOVE.runStick) ? MOVE.run : stick ? MOVE.walk * Math.max(0.45, mag / MOVE.runStick) : MOVE.walk;
     // forward = away from camera
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
     const wx = len ? (fx * f + rx * r) / len * top : 0, wz = len ? (fz * f + rz * r) / len * top : 0;
