@@ -21,7 +21,7 @@ export function cleanHello(m) {
   const look = m?.look || {};
   if (!int(m?.n1, 0, 64) || !int(m?.n2, 0, 100) || !L.look.every(k => int(look[k], 0, 32))) return null;
   const fxIn = m.fx || {}, fx = Object.fromEntries(L.fx.map(k => [k, int(fxIn[k], 0, L.fxMax + 1) ? fxIn[k] : 0]));
-  return { n1: m.n1, n2: m.n2, look: Object.fromEntries(L.look.map(k => [k, look[k]])), fx };
+  return { n1: m.n1, n2: m.n2, look: Object.fromEntries(L.look.map(k => [k, look[k]])), fx, tl: int(m.tl, 0, 9) ? m.tl : 0 };   // tl: journal title index
 }
 
 export function cleanState(m) {

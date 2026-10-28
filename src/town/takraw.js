@@ -12,6 +12,7 @@ import { paintedMaterial } from '../world/materials.js';
 import { paint } from '../shared/beachset.js';
 import { t, tr } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
+import { payNow } from '../shared/events.js';
 
 export const TK = {
   radius: 2.6, joinRange: 4.6, spots: 8,            // the circle (m), how close the F prompt shows, most players
@@ -148,7 +149,7 @@ export function createTakraw({ scene, root, hub, mp, player, audio, map, lift, c
     rest();
     if (mine) send({ e: 'drop', n: streak });
     if (s.playing && streak >= TK.pay.min) {
-      const baht = Math.min(TK.pay.cap, Math.round(streak * TK.pay.perTouch * (members.size >= 3 ? 1 + TK.pay.together : 1)));
+      const baht = Math.min(TK.pay.cap, Math.round(streak * TK.pay.perTouch * (members.size >= 3 ? 1 + TK.pay.together : 1) * payNow()));
       hub.finishGame('takraw', { game: 'takraw', baht, catches: [], biggest: { size: streak }, streak });   // (biggest keeps the longest streak as the record)
       toast(t('tkDrop', { n: streak }), streak >= 10 ? 'catch' : 'fail');
     } else if (s.playing) audio?.play('fail');

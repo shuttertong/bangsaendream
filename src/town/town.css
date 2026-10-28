@@ -524,3 +524,17 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 /* ---------- ตะกร้อวง chip (town/takraw.js) ---------- */
 #ui .tk-chip { display: none; margin: 6px auto 0; background: var(--panel); border-radius: 12px; padding: 6px 14px; font: 400 13px 'Sarabun', sans-serif; color: var(--ink); text-align: center; pointer-events: none; }
 #ui .tk-chip.on { display: block; } #ui .tk-chip b { font: 600 14px 'Kanit', sans-serif; } #ui .tk-chip small { color: #8a7a66; }
+
+/* ---------- title card: online / friends / event; name-tag titles; the leaderboard ---------- */
+#title .t-online { font: 400 13px 'Sarabun', sans-serif; color: #8a7a66; margin: 8px 0 0; }
+#title .t-event { font: 500 13px 'Kanit', sans-serif; color: #a35a1c; background: #fde9cf; border-radius: 10px; padding: 6px 10px; margin: 8px 0 0; }
+#title .t-friend[hidden] { display: none; }
+#title .t-friend { margin: 8px auto 0; display: block; border: 0; background: #3a9a6a; color: #fff; border-radius: 999px; padding: 8px 16px; font: 500 14px 'Kanit', sans-serif; cursor: pointer; }
+.mp-tag small { display: block; font: 400 10px 'Sarabun', sans-serif; color: #a35a1c; line-height: 1.1; }
+.lb-panel .panel { max-width: 440px; text-align: left; }
+.lb-panel h3 { font: 600 15px 'Kanit', sans-serif; margin: 12px 4px 6px; color: #6a5a46; }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid var(--line); margin-bottom: 4px; font: 400 14px 'Sarabun', sans-serif; }
+.lb-row.me { background: #fff3e6; border-color: var(--accent); }
+.lb-rank { width: 22px; text-align: center; font: 600 13px 'Kanit', sans-serif; color: #8a7a66; } .lb-name { flex: 1; } .lb-val { font: 600 14px 'Kanit', sans-serif; color: var(--accent); }
+.lb-note { color: #8a7a66; margin: 6px 4px; font-size: 13px; }
+.jn-tile.jn-click { cursor: pointer; } .jn-tile .lb-hint { color: var(--accent); font-size: 10px; }

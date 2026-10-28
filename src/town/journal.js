@@ -9,6 +9,7 @@ import { t, tr, onLang } from '../shared/i18n.js';
 import { GAMES, MEDALS, medalAt, medalOf, DAILY, PLACES_TO_VISIT, dailyTasks, BADGES, titleFor, COLLECTIONS } from '../shared/goals.js';
 import { dayKey } from '../shared/wardrobe.js';
 import { HOSTS } from './quests.js';
+import { payNow } from '../shared/events.js';
 
 const UI = { key: 'KeyJ', tick: 0.5, walkStep: 10, jump: 8 };   // seconds between checks; metres of walking counted at a time; a longer move in one frame is a teleport
 
@@ -30,7 +31,9 @@ export function createJournal({ root, hub, player, audio }) {
     <h3 class="h-medals"></h3><div class="jn-grid jn-medals"></div><h3 class="h-book"></h3><div class="jn-book"></div><h3 class="h-badges"></h3><div class="jn-grid jn-badges"></div><p class="jn-stats"></p><button class="close"></button></div>`;
   root.appendChild(modal);
   const $ = q => modal.querySelector(q);
+  let onBoard = null;
   btn.addEventListener('pointerdown', stop(() => { audio?.play('click'); toggle(); }));
+  $('.jn-medals').addEventListener('pointerdown', e => { const tile = e.target.closest('[data-game]'); if (tile && onBoard) { e.stopPropagation(); onBoard(tile.dataset.game); } });
   $('.close').addEventListener('pointerdown', stop(() => toggle(false)));
   modal.addEventListener('pointerdown', e => { if (e.target === modal) toggle(false); });
   addEventListener('keydown', e => {
@@ -59,8 +62,9 @@ export function createJournal({ root, hub, player, audio }) {
       if (x.kind !== kind || isDone(j, x) || (fits && !fits(x))) continue;
       j.tasks[x.id] = Math.min(x.n, count(j, x) + n);
       if (!isDone(j, x)) continue;
-      P.addBaht(x.reward);
-      toast(t('jnTaskDone', { text: taskText(x), n: x.reward }));
+      const reward = x.reward * payNow();
+      P.addBaht(reward);
+      toast(t('jnTaskDone', { text: taskText(x), n: reward }));
       if (allDone(j)) {                                                // the day is done: bonus, and the streak grows
         j.streak = j.lastFull === yesterday() ? j.streak + 1 : 1;
         j.lastFull = today();
@@ -109,13 +113,14 @@ export function createJournal({ root, hub, player, audio }) {
     if (open) draw();
   }
   /** Any badge earned since? Pay it, say so, and a new title if the count reaches one. */
+  let onTitle = null;
   function badges(before) {
     const s = P.get(), j = J(), won = BADGES.filter(b => !j.badges[b.id] && b.check(s, j));
     if (!won.length) return;
     P.updateJournal(j => { for (const b of won) { j.badges[b.id] = today(); P.addBaht(b.pay); } });
     won.forEach((b, i) => setTimeout(() => toast(t('jnBadge', { name: tr(b.name), n: b.pay }), 'fanfare'), 900 + i * 1200));
     const n = Object.keys(J().badges).length;
-    if (titleFor(n) !== titleFor(before)) setTimeout(() => toast(t('jnNewTitle', { name: tr(titleFor(n)) }), 'catch'), 900 + won.length * 1200);
+    if (titleFor(n) !== titleFor(before)) { setTimeout(() => toast(t('jnNewTitle', { name: tr(titleFor(n)) }), 'catch'), 900 + won.length * 1200); onTitle?.(); }
     refreshBtn();
     if (open) draw();
   }
@@ -166,7 +171,7 @@ export function createJournal({ root, hub, player, audio }) {
     $('.jn-medals').innerHTML = Object.entries(GAMES).map(([id, g]) => {
       const best = s.best[id]?.baht || 0, tier = medalOf(id, best), cls = s.best[id] ? ['', 'bronze', 'silver', 'gold'][tier] : 'off';
       const sub = s.best[id] ? `฿${best}${tier < 3 ? ` · ${t('jnNext', { n: medalAt(id)[tier] - best, icon: MEDALS.tiers[tier].icon })}` : ''}` : t('jnNotPlayed');
-      return `<div class="jn-tile ${cls}"><span class="ic">${tier ? MEDALS.tiers[tier - 1].icon : g.icon}</span><span class="nm">${tr(g.name)}</span><span class="sub">${sub}</span></div>`;
+      return `<div class="jn-tile ${cls} jn-click" data-game="${id}"><span class="ic">${tier ? MEDALS.tiers[tier - 1].icon : g.icon}</span><span class="nm">${tr(g.name)}</span><span class="sub">${sub}</span><span class="sub lb-hint">🏆 ${t('lbOpen')}</span></div>`;
     }).join('');
     const seen = j.stats.seen, books = Object.entries(COLLECTIONS);
     $('.h-book').textContent = t('jnBook', { n: books.reduce((a, [g, b]) => a + b.list.filter(sp => seen[`${g}_${sp.id}`]).length, 0), of: books.reduce((a, [, b]) => a + b.list.length, 0) });
@@ -181,5 +186,7 @@ export function createJournal({ root, hub, player, audio }) {
   rollDay();
   refreshBtn();
 
-  return { event, update, goalText, goalPeople, next, get open() { return open; }, get tasks() { return todays(); } };
+  return { event, update, goalText, goalPeople, next, get open() { return open; }, get tasks() { return todays(); },
+    /** main.js: the title changed (re-hello, so other players' tags show it). */ set onTitle(fn) { onTitle = fn; },
+    /** main.js: open a game's leaderboard from a medal tile. */ set onBoard(fn) { onBoard = fn; } };
 }

@@ -195,5 +195,7 @@ export function createFriends({ root, mp, player, hub, drone, map, audio }) {
   onLang(draw);
   draw();
 
-  return { update, toggle, press, get open() { return open; }, debug: { uids, asked, got, get cand() { return cand; } } };
+  /** Friends online right now, with where they are (for the title card's "go to a friend"). */
+  const online = () => F.list().map(f => ({ f, r: remoteOf(f) })).filter(x => x.r?.last).map(({ f, r }) => ({ key: F.keyOf(f.u), name: nameOf(f.n1, f.n2), x: r.last.x, z: r.last.z }));
+  return { update, toggle, press, online, get open() { return open; }, debug: { uids, asked, got, get cand() { return cand; } } };
 }

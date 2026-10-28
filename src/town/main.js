@@ -11,7 +11,7 @@ import { addSystem, startLoop, tick, setFrameRate, frameInfo } from '../core/loo
 import { U } from '../core/shaderPatch.js';
 import { createQuality } from '../core/quality.js';
 import { createAudio } from '../core/audio.js';
-import { t } from '../shared/i18n.js';
+import { t, tr } from '../shared/i18n.js';
 import { loadMap } from './data.js';
 import { buildTerrain } from './terrain.js';
 import { createFreeCam } from './freecam.js';
@@ -59,6 +59,11 @@ import { createFriends } from './friends.js';
 import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
+import { createLeaderboard } from './leaderboard.js';
+import * as scores from '../shared/scores.js';
+import * as F from '../shared/friends.js';
+import { nameOf } from '../shared/avatar.js';
+import { activeEvent } from '../shared/events.js';
 import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
@@ -230,6 +235,13 @@ async function boot() {
   const takraw = createTakraw({ scene, root: $('hud'), hub, mp, player, audio, map, lift, collision, spot: kickabout?.takraw });   // 🥎 ตะกร้อวง: a keep-up circle anyone online can join
   hub.takraw = takraw;
   player.input = input;
+  // 🏆 the online leaderboard: bests go up after a round; a medal tile in the journal opens a game's board
+  scores.configure({ uid: F.keyOf(F.myUid()), name: () => nameOf(profile.n1, profile.n2) });
+  hub.scores = { post: (id, best) => scores.postBest(id, { baht: best?.baht || 0, streak: best?.biggest || 0 }) };
+  const board = createLeaderboard({ root: $('hud'), audio });
+  journal.onBoard = id => board.show(id);
+  journal.onTitle = () => mp.rehello();
+  if (activeEvent()) setTimeout(() => hub.hud.toast(`${activeEvent().icon} ${tr(activeEvent().name)} · ${tr(activeEvent().line)}`), 4000);
 
   // ?bots=N: fake players (own relay connections) that roam and ride the red trucks — for testing
   let bots = null;
@@ -282,7 +294,19 @@ async function boot() {
   });
   $('loading').textContent = '';
   if (params.has('notitle')) tutorial.start();
-  else if (!params.has('view')) showTitle($('hud'), { onStart: () => { audio.unlock(); tutorial.start(); } });
+  else if (!params.has('view')) showTitle($('hud'), {
+    status: () => ({ online: mp.online ? mp.remotes.size : -1, friends: friends.online() }),   // who is on the beach, which friends
+    onStart: goTo => {
+      audio.unlock(); tutorial.start();
+      if (goTo) {                                                        // straight to a friend: a free spot beside them
+        let x = goTo.x + 1.4, z = goTo.z;
+        for (let r = 1.4; r < 8 && !collision.free(x, z, 0.3); r += 0.7) { x = goTo.x + Math.cos(r * 2.4) * r; z = goTo.z + Math.sin(r * 2.4) * r; }
+        const yaw = Math.atan2(goTo.x - x, goTo.z - z);
+        player.place(x, z, yaw); tpc.setYaw(yaw + Math.PI); tpc.snap(); P.setPos(x, z, yaw);
+        hub.hud.toast(t('titleWentTo', { name: goTo.name }));
+      }
+    },
+  });
 
   // bench(n): median GPU+CPU ms per full frame, measured synchronously (not limited by rAF throttling)
   const bench = (n = 20, warm = 30) => {

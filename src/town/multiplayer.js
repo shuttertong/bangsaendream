@@ -9,6 +9,7 @@ import { connect } from '../core/net.js';
 import { createKid } from './kid/index.js';
 import { seatPose, SEAT_HIP } from './player.js';
 import { lookOf, nameOf, wearLook, saveProfile, reroll } from '../shared/avatar.js';
+import { TITLES } from '../shared/goals.js';
 import { fxOf, wornOf } from '../shared/wardrobe.js';
 import * as P from '../shared/progress.js';
 import { PHRASES, EMOTES } from '../shared/phrases.js';
@@ -24,7 +25,8 @@ const MP = {
 };
 
 export function createMultiplayer({ scene, root, camera, player, hub, map, lift, collision, audio, profile, busy, auras = null }) {
-  const hello = () => ({ t: 'hello', ...profile, fx: fxOf(P.get().wardrobe?.worn) });   // name + look + wardrobe (all indices)
+  const titleIdx = () => { const n = Object.keys(P.get().journal?.badges || {}).length; return TITLES.filter(([k]) => n >= k).length - 1; };
+  const hello = () => ({ t: 'hello', ...profile, fx: fxOf(P.get().wardrobe?.worn), tl: titleIdx() });   // name + look + wardrobe + journal title (all indices)
   const remotes = new Map(), coFns = new Set();
   let myId = null, hostId = null, sendT = 0, keepT = 0, truckT = 0, last = '';
   const trucks = hub.trucks, slotOf = id => id % trucks.seats;
@@ -83,7 +85,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     panel.classList.toggle('on', on);
   }
   const refreshCount = () => { btn.querySelector('i').textContent = remotes.size ? remotes.size + 1 : ''; };
-  onLang(() => { for (const r of remotes.values()) r.tag.firstChild.textContent = nameOf(r.n1, r.n2); if (panel.classList.contains('on')) drawPanel(); });
+  onLang(() => { for (const r of remotes.values()) { r.tag.firstChild.textContent = nameOf(r.n1, r.n2); r.tag.children[1].textContent = r.tl > 0 && TITLES[r.tl] ? `👑 ${tr(TITLES[r.tl][1])}` : ''; } if (panel.classList.contains('on')) drawPanel(); });
 
   function bubbleFor(owner, text) {
     owner.bubble.textContent = text;
@@ -113,8 +115,9 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     if (aura) auras?.set(`p${p.id}`, aura, v => (remotes.get(p.id)?.kid.mesh.visible ? v.copy(remotes.get(p.id).kid.mesh.position).setY(remotes.get(p.id).kid.mesh.position.y + 0.9) : null)); else auras?.remove(`p${p.id}`);
     const tag = document.createElement('div');
     tag.className = 'mp-tag';
-    tag.innerHTML = `<span></span><i></i>`;
+    tag.innerHTML = `<span></span><small></small><i></i>`;
     tag.firstChild.textContent = nameOf(p.n1, p.n2);
+    tag.children[1].textContent = p.tl > 0 && TITLES[p.tl] ? `👑 ${tr(TITLES[p.tl][1])}` : '';
     const bubble = document.createElement('div');
     bubble.className = 'mp-bubble';
     layer.append(tag, bubble);

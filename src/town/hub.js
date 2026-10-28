@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -195,6 +195,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       const prev = P.get().best[id];
       P.setBest(id, { baht: Math.max(prev?.baht || 0, res.baht), biggest: Math.max(prev?.biggest || 0, res.biggest?.size || 0), plays: (prev?.plays || 0) + 1 });
       journal?.event('game', { id, res });
+      scores?.post(id, P.get().best[id]);
     },
     /** True while the player shouldn't move (dialogue, menus). */
     get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open || !!postcard?.open; },
@@ -208,6 +209,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     set postcard(p) { postcard = p; },
     /** main.js sets this: the takraw circle (takraw.js); while playing, F leaves and the kid stays at its spot. */
     set takraw(v) { takraw = v; },
+    /** main.js sets this: { post(game, best) } → the online leaderboard (shared/scores.js). */
+    set scores(v) { scores = v; },
     /** The camera's yaw (for aiming with the stick while in the circle). */
     get camYaw() { return camera.state?.yaw; },
     update(dt) {
