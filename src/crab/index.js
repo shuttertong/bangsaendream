@@ -57,7 +57,7 @@ export function start(ctx) {
   holes.receiveShadow = true;
   scene.add(holes);
 
-  const ui = createGameUI(ctx.root, { title: t('crabTitle'), how: t('crabHow'), keys: t('crabKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'crab', title: t('crabTitle'), how: t('crabHow'), keys: t('crabKeys'), audio: ctx.audio });
   ctx.touch?.setAction('dash');
   ctx.audio?.ambience({ surf: 0.7, breeze: 0.4, crickets: 0.2 });
 

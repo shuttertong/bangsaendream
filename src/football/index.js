@@ -48,7 +48,7 @@ export function start(ctx) {
   addEventListener('resize', resize);
   resize();
 
-  const ui = createGameUI(ctx.root, { title: t('fbTitle'), how: t('fbHow'), keys: t('fbKeys'), audio });
+  const ui = createGameUI(ctx.root, { game: 'football', title: t('fbTitle'), how: t('fbHow'), keys: t('fbKeys'), audio });
   ctx.touch?.setAction('kick');
   audio?.ambience({ surf: 0.9, breeze: 0.6 });
 
@@ -70,7 +70,7 @@ export function start(ctx) {
   ui.onStart = () => { st.phase = 'play'; };
   ui.onQuit = () => finish(true);
   ui.onBack = () => ctx.onExit(result());
-  const result = () => ({ game: 'football', baht: payout(s, !st.quit).baht, catches: [], score: [...s.score] });
+  const result = () => ({ game: 'football', baht: payout(s, !st.quit).baht, catches: [], score: [...s.score], mine: s.mine });
   function finish(quit = false) {
     if (st.phase === 'end') return;
     st.phase = 'end'; st.quit = quit;

@@ -64,7 +64,7 @@ export function start(ctx) {
   scene.add(rig);
 
   const finds = createFinds(scene, mat, r);
-  const ui = createGameUI(ctx.root, { title: t('tubeTitle'), how: t('tubeHow'), keys: t('tubeKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'tube', title: t('tubeTitle'), how: t('tubeHow'), keys: t('tubeKeys'), audio: ctx.audio });
   const stam = document.createElement('div'); stam.className = 'g-stamina'; stam.innerHTML = '<i></i>';
   document.getElementById('game-ui').append(stam);
   document.body.classList.toggle('touch-on', !!document.querySelector('#touch.on'));

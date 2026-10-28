@@ -140,6 +140,7 @@ export function createFriends({ root, mp, player, hub, drone, map, audio }) {
     if (!r || !u || !fresh(asked, id) || !fresh(got, id)) return false;
     asked.delete(id); got.delete(id);
     const isNew = F.add(u, { n1: r.n1, n2: r.n2, look: r.look });
+    if (isNew) hub.journal?.event('friend');
     if (isNew) { hub.hud?.toast(t('frNow', { name: nameOf(r.n1, r.n2) })); audio?.play('coin'); mp.emote('heart'); }
     draw();
     return true;

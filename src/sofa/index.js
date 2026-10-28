@@ -46,7 +46,7 @@ export function start(ctx) {
   const seats = [-0.36, 0.36, -0.95, 0.95].map(x => ({ pos: new THREE.Vector3(x, 0.32, 0.55 - Math.abs(x) * 0.25), yaw: Math.PI }));
   const crew = createRiders(scene, body, seats);
 
-  const ui = createGameUI(ctx.root, { title: t('sofaTitle'), how: t('sofaHow'), keys: t('sofaKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'sofa', title: t('sofaTitle'), how: t('sofaHow'), keys: t('sofaKeys'), audio: ctx.audio });
   const ring = document.createElement('div'); ring.className = 's-ring'; ring.innerHTML = '<i></i><b></b>';
   document.getElementById('game-ui').append(ring);
   ctx.touch?.setAction('dash');

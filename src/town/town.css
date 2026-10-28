@@ -485,3 +485,28 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 #game-ui .go-btns button { flex: 1; border: 1.5px solid #e2c89a; background: #fff; border-radius: 12px; padding: 10px 6px; font: 600 15px Kanit, sans-serif; color: var(--ink); }
 #game-ui .go-btns .go-place { flex: 1.6; background: var(--accent); border-color: var(--accent); color: #fff; }
 #game-ui .go-btns button:disabled { opacity: .4; }
+
+/* ---------- สมุดปิดเทอม: the journal (town/journal.js) ---------- */
+#ui .b-journal { position: relative; }
+#ui .b-journal i { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font: 600 11px/18px 'Kanit', sans-serif; font-style: normal; display: none; }
+#ui .b-journal i.on { display: block; }
+.jn-panel .panel { max-width: 540px; text-align: left; }
+.jn-panel h2 { margin-bottom: 4px; }
+.jn-panel h3 { font: 600 15px 'Kanit', sans-serif; margin: 14px 4px 6px; color: #6a5a46; }
+.jn-head { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 4px 6px; font: 500 14px 'Kanit', sans-serif; color: var(--accent); }
+.jn-task { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 8px 12px; }
+.jn-task .ic { font-size: 22px; width: 28px; text-align: center; }
+.jn-task .nm { flex: 1; font: 400 14px 'Sarabun', sans-serif; }
+.jn-task .bar { height: 6px; border-radius: 3px; background: #efe9dd; margin-top: 5px; overflow: hidden; }
+.jn-task .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+.jn-task .rw { font: 600 14px 'Kanit', sans-serif; color: var(--accent); white-space: nowrap; }
+.jn-task.done { background: #f1f7ee; border-color: #cfe3c8; } .jn-task.done .rw { color: #3a8a4a; }
+.jn-hint { margin: 6px 4px 0; font-size: 12px; color: #8a7a66; }
+.jn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.jn-tile { display: grid; justify-items: center; gap: 1px; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 8px 4px 6px; text-align: center; font: 400 11px 'Sarabun', sans-serif; color: var(--ink); }
+.jn-tile .ic { font-size: 24px; line-height: 1.1; } .jn-tile .nm { font: 500 12px 'Kanit', sans-serif; } .jn-tile .sub { color: #8a7a66; }
+.jn-tile.off { background: #f6f1e6; } .jn-tile.off .ic { filter: grayscale(1); opacity: .45; } .jn-tile.off .nm { color: #a09484; }
+.jn-tile.gold { border-color: #e6c25a; background: #fff9e6; } .jn-tile.silver { border-color: #c9ccd2; } .jn-tile.bronze { border-color: #d9a977; }
+.jn-stats { margin: 10px 4px 0; font-size: 12px; color: #8a7a66; }
+#game-ui .g-best { font: 400 13px 'Sarabun', sans-serif; color: #8a7a66; margin: 2px 0 10px; } #game-ui .g-best .got { color: var(--accent); font-weight: 600; }
+#game-ui .g-medal { font: 500 15px 'Kanit', sans-serif; color: var(--accent); } #game-ui .g-medal small { color: #8a7a66; font: 400 12px 'Sarabun', sans-serif; }

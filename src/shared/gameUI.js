@@ -2,6 +2,8 @@
 // pop-up messages, quit button and the results screen. Generic enough for the other
 // mini-games to reuse (texts come from i18n / species tables).
 import { t, tr } from './i18n.js';
+import * as P from './progress.js';
+import { MEDALS, medalAt, medalOf } from './goals.js';
 
 /**
  * Summarise catches for results(): catches [{ id, size, price }] + species table →
@@ -19,7 +21,8 @@ export function summarize(catches, species) {
   return { rows: Object.values(by), total, biggest };
 }
 
-export function createGameUI(root, { title, how, keys, audio }) {
+/** game: the mini-game's id (games.js) — shows its medal targets and the player's best on the intro, and the medal on the results. */
+export function createGameUI(root, { title, how, keys, audio, game = null }) {
   const el = document.createElement('div');
   el.id = 'game-ui';
   el.innerHTML = `
@@ -31,7 +34,7 @@ export function createGameUI(root, { title, how, keys, audio }) {
     </div>
     <div class="g-pops"></div>
     <div class="g-card g-intro">
-      <h2></h2><p class="g-how"></p><p class="g-keys"></p><button class="g-go"></button>
+      <h2></h2><p class="g-how"></p><p class="g-keys"></p><p class="g-best"></p><button class="g-go"></button>
     </div>
     <div class="g-card g-results" hidden>
       <h2></h2><div class="g-list"></div><div class="g-sum"></div><button class="g-back"></button>
@@ -43,6 +46,11 @@ export function createGameUI(root, { title, how, keys, audio }) {
   $('.g-keys').textContent = keys;
   $('.g-go').textContent = t('start');
   $('.g-quit').textContent = t('quit');
+  if (game) {                                                            // what a round is worth, and the best so far
+    const best = P.get().best[game]?.baht || 0, tier = medalOf(game, best);
+    $('.g-best').innerHTML = medalAt(game).map((b, i) => `<span class="${tier > i ? 'got' : ''}">${MEDALS.tiers[i].icon} ฿${b}</span>`).join(' · ')
+      + (best ? `<br>${t('bestSoFar', { n: best })}${tier ? ` ${MEDALS.tiers[tier - 1].icon}` : ''}` : '');
+  } else $('.g-best').hidden = true;
 
   const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(); };
   let onStart = null, onQuit = null, onBack = null;
@@ -92,6 +100,10 @@ export function createGameUI(root, { title, how, keys, audio }) {
       }
       // a "new record" needs something earned: a first round that ends on ฿0 is not one
       r.querySelector('.g-sum').innerHTML = `${t('total')} <b>฿${total}</b>${record && total > 0 ? ` <span class="rec">${t('newRecord')}</span>` : ''}`;
+      if (game) {                                                        // the medal this round reached, or how far the next one is
+        const tier = medalOf(game, total), at = medalAt(game);
+        r.querySelector('.g-sum').innerHTML += `<br><span class="g-medal">${tier ? `${MEDALS.tiers[tier - 1].icon} ${tr(MEDALS.tiers[tier - 1].name)}!` : ''}${tier < 3 ? ` <small>${t('toNextMedal', { n: at[tier] - total, icon: MEDALS.tiers[tier].icon })}</small>` : ''}</span>`;
+      }
       r.querySelector('.g-back').textContent = t('back');
     },
     dispose() { el.remove(); },

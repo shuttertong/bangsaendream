@@ -58,7 +58,7 @@ export function start(ctx) {
   const squids = createSquids(scene, mat, r);
 
   // UI: shared round card + depth gauge + tension meter
-  const ui = createGameUI(ctx.root, { title: t('squidTitle'), how: t('squidHow'), keys: t('squidKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'squid', title: t('squidTitle'), how: t('squidHow'), keys: t('squidKeys'), audio: ctx.audio });
   const gauge = document.createElement('div'); gauge.className = 'g-depth'; gauge.innerHTML = '<i></i><b></b>';
   const tens = document.createElement('div'); tens.className = 'g-tension'; tens.hidden = true;
   tens.innerHTML = `<div class="zone" style="left:${ROUND.zone[0] * 100}%;width:${(ROUND.zone[1] - ROUND.zone[0]) * 100}%"></div><div class="fill"></div><span></span>`;

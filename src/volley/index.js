@@ -49,7 +49,7 @@ export function start(ctx) {
   addEventListener('resize', resize);
   resize();
 
-  const ui = createGameUI(ctx.root, { title: t('vbTitle'), how: t('vbHow'), keys: t('vbKeys'), audio });
+  const ui = createGameUI(ctx.root, { game: 'volley', title: t('vbTitle'), how: t('vbHow'), keys: t('vbKeys'), audio });
   ctx.touch?.setAction('dash');
   audio?.ambience({ surf: 0.9, breeze: 0.6 });
 
@@ -87,7 +87,7 @@ export function start(ctx) {
 
   ui.onStart = () => { st.phase = 'play'; if (s.server.human) ui.pop(t('vbServe')); };
   ui.onQuit = () => finish(true);
-  ui.onBack = () => ctx.onExit({ game: 'volley', baht: payout(s, !st.quit).baht, catches: [], score: [...s.score] });
+  ui.onBack = () => ctx.onExit({ game: 'volley', baht: payout(s, !st.quit).baht, catches: [], score: [...s.score], supers: s.supers });
   function finish(quit = false) {
     if (st.phase === 'end') return;
     st.phase = 'end'; st.quit = quit;

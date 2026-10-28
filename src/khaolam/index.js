@@ -45,7 +45,7 @@ export function start(ctx) {
     slots: SLOTS, lane: LANE, from: 8, order: () => makeOrder(r),
     patience: el => THREE.MathUtils.lerp(ROUND.patience[0], ROUND.patience[1], Math.min(1, el / ROUND.time)),
   });
-  const ui = createGameUI(ctx.root, { title: t('khaolamTitle'), how: t('khaolamHow'), keys: t('khaolamKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'khaolam', title: t('khaolamTitle'), how: t('khaolamHow'), keys: t('khaolamKeys'), audio: ctx.audio });
   const root = document.getElementById('game-ui');
   ctx.audio?.ambience({ breeze: 0.4, cicadas: 0.6, engine: 0.15 });
 

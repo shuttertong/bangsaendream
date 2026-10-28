@@ -53,7 +53,7 @@ export function start(ctx) {
   const looks = humans.map(id => { const inf = co.info(id); return inf ? lookOf(inf.look) : null; });
   const crew = createRiders(scene, tilt, seats, { straddle: true, looks });
 
-  const ui = createGameUI(ctx.root, { title: t('bananaTitle'), how: t(co ? 'bananaHowCoop' : 'bananaHow'), keys: t('bananaKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'banana', title: t('bananaTitle'), how: t(co ? 'bananaHowCoop' : 'bananaHow'), keys: t('bananaKeys'), audio: ctx.audio });
   const arrow = document.createElement('div'); arrow.className = 'b-arrow';
   const meter = document.createElement('div'); meter.className = 'b-tilt'; meter.innerHTML = '<i></i><b></b>';
   const team = document.createElement('div'); team.className = 'b-team'; team.hidden = !co;

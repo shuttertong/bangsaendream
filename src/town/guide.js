@@ -17,7 +17,8 @@ export const GUIDE = {
   turn: 4,                                      // how fast the camera turns to the goal when asked (1/s)
 };
 
-export function createGuide({ scene, root, tpc, player, people, input, quest, toast }) {
+/** who(): roster ids the goal sends the player to (default: the active quest's; the hub adds the journal's task host). */
+export function createGuide({ scene, root, tpc, player, people, input, quest, toast, who = () => questPeople(quest()) }) {
   const G = GUIDE;
   const geo = mergeGeometries([
     new THREE.ConeGeometry(0.27, 0.44, 4).rotateX(Math.PI).translate(0, 0.22, 0),      // tip down, at the origin
@@ -43,7 +44,7 @@ export function createGuide({ scene, root, tpc, player, people, input, quest, to
 
   /** The nearest person the active goal sends us to (or null). */
   function find() {
-    const ids = questPeople(quest()), p = player.state;
+    const ids = who(), p = player.state;
     let best = null, bd = Infinity;
     for (const n of people.npcs) {
       if (!ids.includes(n.id)) continue;

@@ -43,7 +43,7 @@ export function start(ctx) {
   const b = createBoard(GO.size);
   const s = { phase: 'intro', sel: -1, time: GO.turnTime, aiIn: 0, clock: 0, winner: 0, baht: 0, result: null, silent: 0 };
 
-  const ui = createGameUI(ctx.root, { title: t('goTitle'), how: t('goHow'), keys: t('goKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'go', title: t('goTitle'), how: t('goHow'), keys: t('goKeys'), audio: ctx.audio });
   const root = document.getElementById('game-ui');
   const panel = document.createElement('div');
   panel.className = 's-panel go-panel';

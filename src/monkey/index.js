@@ -39,7 +39,7 @@ export function start(ctx) {
   const snacks = createSnacks(scene, mat);
   const monkeys = createMonkeys(scene, mat, snacks, r);
 
-  const ui = createGameUI(ctx.root, { title: t('monkeyTitle'), how: t('monkeyHow'), keys: t('monkeyKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'monkey', title: t('monkeyTitle'), how: t('monkeyHow'), keys: t('monkeyKeys'), audio: ctx.audio });
   ctx.touch?.setAction('dash');
   ctx.audio?.ambience({ cicadas: 1, breeze: 0.8 });
 

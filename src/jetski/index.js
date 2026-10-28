@@ -46,7 +46,7 @@ export function start(ctx) {
   const crew = createRiders(scene, body, [{ pos: new THREE.Vector3(0, 0.5, -0.3), yaw: 0 }], { straddle: true });
   const kid = crew.riders[0];
 
-  const ui = createGameUI(ctx.root, { title: t('jetskiTitle'), how: t('jetskiHow'), keys: t('jetskiKeys'), audio: ctx.audio });
+  const ui = createGameUI(ctx.root, { game: 'jetski', title: t('jetskiTitle'), how: t('jetskiHow'), keys: t('jetskiKeys'), audio: ctx.audio });
   const guide = document.createElement('div'); guide.className = 'j-guide'; guide.innerHTML = '<i>⬆</i><b></b>';
   const meter = document.createElement('div'); meter.className = 'g-stamina'; meter.innerHTML = '<i></i>';
   document.getElementById('game-ui').append(guide, meter);

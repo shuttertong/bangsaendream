@@ -8,7 +8,7 @@ import { createPeople } from './people/index.js';
 import { createTalk } from './people/talk.js';
 import { createHUD } from './hud.js';
 import { createTravel } from './travel.js';
-import { updateQuests, questText, walkOnly } from './quests.js';
+import { updateQuests, questText, walkOnly, questPeople } from './quests.js';
 import { createGuide } from './guide.js';
 import { Kit } from './assets/kit.js';
 import { somTamCart, khaoLamStand } from './assets/stall.js';
@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null;
+  let hud = null, coopHandler = null, journal = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -107,6 +107,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     else toast(t('freeRide'), 'coin');
     if (!s.flags.rodDaeng) { P.setFlag('rodDaeng'); setTimeout(() => toast(t('firstRide'), 'catch'), 900); }
     audio?.play('thud');
+    journal?.event('ride');
   }
   function hopOff() {
     if (!riding) return;
@@ -143,6 +144,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     if (!who || talk.active || travel.open) return;
     talkingTo = who;
     talk.open(who, P.get());
+    journal?.event('chat', { id: who.id });
     hud.hideDuringTalk(true);
     document.body.classList.add('talking');
   };
@@ -150,8 +152,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
 
   hud = createHUD(root, { audio, onTravel: () => { audio?.play('click'); if (riding) { trucks.setHold(riding, false); riding = null; alighting = 0; } seats.leave(); travel.openTravel(); }, onBag: () => { audio?.play('click'); travel.openBag(); }, onTalk: act, onGoal: () => guide?.point() });
   let quest = updateQuests(toast);
-  guide = createGuide({ scene, root, tpc: camera, player, people, input, quest: () => quest, toast });   // marker + arrow to the active goal
-  hud.setGoal(() => questText(quest));
+  guide = createGuide({ scene, root, tpc: camera, player, people, input, quest: () => quest, toast,
+    who: () => (quest ? questPeople(quest) : journal?.goalPeople() || []) });   // marker + arrow to the active goal (or today's task's host)
+  hud.setGoal(() => questText(quest) || journal?.goalText() || '');   // the story's goal; once it is done, today's next task
   P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
   addEventListener('keydown', e => { if (e.code === 'KeyF' && !talk.active) act(); });
 
@@ -189,13 +192,16 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       for (const c of res.catches || []) P.addItem(`${id}_${c.id}`);
       const prev = P.get().best[id];
       P.setBest(id, { baht: Math.max(prev?.baht || 0, res.baht), biggest: Math.max(prev?.biggest || 0, res.biggest?.size || 0), plays: (prev?.plays || 0) + 1 });
+      journal?.event('game', { id, res });
     },
     /** True while the player shouldn't move (dialogue, menus). */
-    get frozen() { return talk.active || travel.open || !!wardrobe?.open; },
+    get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open; },
     /** main.js sets this: ร้านพันธมิตร (partners.js) — created after the hub because it adds travel places. */
     set partners(p) { partners = p; },
     /** main.js sets this: the wardrobe panel (wardrobe.js) freezes the kid while it is open. */
     set wardrobe(w) { wardrobe = w; },
+    /** main.js sets this: the summer journal (journal.js) — tasks, medals, badges. */
+    set journal(j) { journal = j; }, get journal() { return journal; },
     update(dt) {
       const p = player.state;
       trucks.update(dt, [{ x: p.x, z: p.z, ride: riding }, ...trucks.extra], camera.cam?.position);

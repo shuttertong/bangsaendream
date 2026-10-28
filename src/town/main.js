@@ -56,6 +56,7 @@ import { createHub } from './hub.js';
 import { createMultiplayer } from './multiplayer.js';
 import { createCoop } from './coop.js';
 import { createFriends } from './friends.js';
+import { createJournal } from './journal.js';
 import { buildGoHouse } from './gohouse.js';
 import { loadProfile, wearLook } from '../shared/avatar.js';
 import { showTitle } from './title.js';
@@ -207,6 +208,8 @@ async function boot() {
   const mp = createMultiplayer({ scene, root: $('hud'), camera, player, hub, map, lift, collision, audio, profile, busy: () => (game ? gameId : null), auras });
   const wardrobe = createWardrobe({ root: $('hud'), player, tpc, hub, auras, audio, onWorn: () => mp.rehello() });   // 👗 fantasy wardrobe (K)
   hub.wardrobe = wardrobe;
+  const journal = createJournal({ root: $('hud'), hub, player, audio });   // 📔 สมุดปิดเทอม: daily tasks, medals, badges (J)
+  hub.journal = journal;
   const roadNotice = createRoadblockNotice(roadblocks.spots, player, msg => hub.hud.toast(msg));
   const tutorial = createTutorial({ root: $('hud'), player, input });   // first-time controls card
   // 💌 requests & feedback for the developer (Supabase, insert-only); sends the nearest travel stop as context
@@ -230,6 +233,7 @@ async function boot() {
     mp.update(dt, !game && !free);
     coop.update(dt, !!game || loading);
     friends.update(dt, !game && !free);
+    journal.update(dt, !game && !free && !hub.frozen);
     bots?.update(dt);
     if (game) { game.update(dt, time); input.endFrame(); return; }
     let focus;
@@ -286,7 +290,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
