@@ -12,7 +12,9 @@ const STATUS = { pending: 'รออนุมัติ', approved: 'แสดง
 const KIND = { cafe: 'คาเฟ่', restaurant: 'ร้านอาหาร', shop: 'ร้านค้า', rental: 'ร้านเช่า', hotel: 'ที่พัก', other: 'อื่น ๆ' };
 const ZONE = { beach: 'ถนนเลียบหาด', walking: 'ถนนคนเดิน', laemthaen: 'แหลมแท่น', ksm: 'เขาสามมุข', village: 'หมู่บ้านชาวประมง' };
 const PKG = PARTNERS.prices;
-let placements = [], partners = [], editing = null, picker = null;
+let placements = [], partners = [], requests = [], editing = null, picker = null;
+const TIER = { kiosk: 'ซุ้ม', sign: 'ป้ายบนตึก', building: 'ทั้งตึก', game: 'ตึก + มินิเกม' };
+const RSTATUS = { new: 'ใหม่', contacted: 'ติดต่อแล้ว', done: 'เสร็จแล้ว', dropped: 'ตัดทิ้ง' };
 const toast = (m, bad) => { const d = $('#toast'); d.textContent = m; d.className = bad ? 'bad on' : 'on'; setTimeout(() => d.classList.remove('on'), 2600); };
 const fail = e => toast(e.message === 'login' ? 'หมดเวลา เข้าสู่ระบบใหม่' : 'ผิดพลาด: ' + e.message, true);
 
@@ -41,6 +43,8 @@ async function load() {
     [partners, placements] = await Promise.all([rest('partners?select=*&order=name'), rest('placements?select=*,partners(name,phone,line_id)&order=created_at.desc')]);
     renderList(); renderQueue(); fillPartnerSelect();
     $('#n-pending').textContent = placements.filter(p => p.status === 'pending').length || '';
+    try { requests = await rest('sponsor_requests?select=*&order=created_at.desc'); } catch { requests = []; }   // (before sponsors.sql has run)
+    renderRequests();
   } catch (e) { if (e.message === 'login') showLogin(); else fail(e); }
 }
 function renderList() {
@@ -83,6 +87,30 @@ $('#queue').addEventListener('click', e => {
   if (b.dataset.act === 'edit') edit(p); else setStatus(p, b.dataset.act, card.querySelector('input').value || null);
 });
 
+// ---------- sponsor requests from the game ----------
+function renderRequests() {
+  $('#n-requests').textContent = requests.filter(r => r.status === 'new').length || '';
+  $('#requests').innerHTML = requests.map(r => `
+    <div class="card" data-id="${r.id}">
+      <div class="hd"><b>${esc(r.shop_name)}</b> <small>${TIER[r.tier] || r.tier} · ${esc(r.building || '')} · ${new Date(r.created_at).toLocaleDateString('th-TH')}</small><span class="sp"></span><span class="pill ${r.status === 'new' ? 'pending' : r.status === 'done' ? 'approved' : 'paused'}">${RSTATUS[r.status] || r.status}</span></div>
+      <div class="kv"><span>ติดต่อ</span><span>${esc(r.contact)}</span><span>ตึก (x, z)</span><span>${r.x}, ${r.z}</span><span>ข้อความ</span><span>${esc(r.message || '-')}</span></div>
+      <div class="acts">${r.status === 'new' ? '<button data-act="contacted">ติดต่อแล้ว</button>' : ''}<button data-act="create" class="ok">สร้างร้านจากคำขอ</button>${r.status !== 'done' ? '<button data-act="done">เสร็จแล้ว</button>' : ''}${r.status !== 'dropped' ? '<button data-act="dropped">ตัดทิ้ง</button>' : ''}</div>
+    </div>`).join('') || '<p class="empty">ยังไม่มีคำขอ</p>';
+}
+$('#requests').addEventListener('click', async e => {
+  const b = e.target.closest('button'), card = e.target.closest('.card'); if (!b || !card) return;
+  const r = requests.find(x => x.id === card.dataset.id);
+  if (b.dataset.act === 'create') {
+    edit(null);
+    $('#p-name').value = r.shop_name; $('#p-partner_name').value = r.shop_name; $('#p-partner_phone').value = r.contact;
+    $('#p-x').value = r.x; $('#p-z').value = r.z; $('#p-bx').value = r.x; $('#p-bz').value = r.z; $('#p-tier').value = r.tier;
+    $('#p-package').value = r.tier === 'game' ? 'game' : 'shop';
+    syncPicker();
+    return;
+  }
+  try { await rest(`sponsor_requests?id=eq.${r.id}`, { method: 'PATCH', body: { status: b.dataset.act }, prefer: 'return=minimal' }); r.status = b.dataset.act; renderRequests(); } catch (err) { fail(err); }
+});
+
 // ---------- add / edit ----------
 function fillPartnerSelect() { $('#p-partner').innerHTML = '<option value="">+ ร้านใหม่ (กรอกชื่อด้านล่าง)</option>' + partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join(''); }
 $('#add').addEventListener('click', () => edit(null));
@@ -90,7 +118,7 @@ function edit(p) {
   editing = p;
   const f = $('#f-edit'); f.reset();
   $('#edit-title').textContent = p ? `แก้ไข: ${p.name}` : 'เพิ่มร้านพันธมิตร';
-  if (p) for (const k of ['name', 'name_en', 'kind', 'zone', 'x', 'z', 'yaw', 'color', 'hours', 'line1', 'line2', 'line3', 'package', 'coupon_text', 'coupon_cap_day', 'starts_on', 'ends_on']) { const el = $(`#p-${k}`); if (el && p[k] != null) el.value = p[k]; }
+  if (p) for (const k of ['name', 'name_en', 'kind', 'zone', 'x', 'z', 'yaw', 'color', 'hours', 'line1', 'line2', 'line3', 'package', 'coupon_text', 'coupon_cap_day', 'starts_on', 'ends_on', 'tier', 'bx', 'bz', 'game']) { const el = $(`#p-${k}`); if (el && p[k] != null) el.value = p[k]; }
   $('#p-partner').value = p?.partner_id || ''; $('#p-coupon').checked = !!p?.coupon_enabled; $('#p-logo-now').src = p?.logo_url || ''; $('#p-logo-now').hidden = !p?.logo_url;
   $('#p-color').value = p?.color || '#d8743a'; $('#p-yaw').value = p?.yaw ?? 0;
   show('edit');
@@ -103,7 +131,7 @@ $('#f-edit').addEventListener('submit', async e => {
   try {
     let partner_id = $('#p-partner').value;
     if (!partner_id) { const nm = v('partner_name') || v('name'); const [row] = await rest('partners', { method: 'POST', body: { name: nm, phone: v('partner_phone'), line_id: v('partner_line'), owner_email: v('partner_email') } }); partner_id = row.id; }
-    const body = { partner_id, name: v('name'), name_en: v('name_en'), kind: v('kind'), zone: v('zone'), x: +v('x'), z: +v('z'), yaw: +v('yaw') || 0, color: v('color'), hours: v('hours'), line1: v('line1'), line2: v('line2'), line3: v('line3'), package: v('package'), coupon_enabled: $('#p-coupon').checked, coupon_text: v('coupon_text'), coupon_cap_day: +v('coupon_cap_day') || 20, starts_on: v('starts_on'), ends_on: v('ends_on'), updated_at: new Date().toISOString() };
+    const body = { partner_id, name: v('name'), name_en: v('name_en'), kind: v('kind'), zone: v('zone'), x: +v('x'), z: +v('z'), yaw: +v('yaw') || 0, color: v('color'), hours: v('hours'), line1: v('line1'), line2: v('line2'), line3: v('line3'), package: v('package'), coupon_enabled: $('#p-coupon').checked, coupon_text: v('coupon_text'), coupon_cap_day: +v('coupon_cap_day') || 20, starts_on: v('starts_on'), ends_on: v('ends_on'), updated_at: new Date().toISOString() , tier: v('tier') || 'kiosk', bx: v('bx') ? +v('bx') : null, bz: v('bz') ? +v('bz') : null, game: v('tier') === 'game' ? v('game') : null };
     let row;
     if (editing) [row] = await rest(`placements?id=eq.${editing.id}`, { method: 'PATCH', body });
     else [row] = await rest('placements', { method: 'POST', body: { ...body, status: 'pending' } });
@@ -157,6 +185,7 @@ $('#stats').addEventListener('click', async e => {
 // ---------- start ----------
 $('#prices').innerHTML = Object.entries(PKG).map(([k, v]) => `<span class="pill">${v.th} ฿${v.price.toLocaleString()}${k === 'coupon' ? '/ใบ' : k === 'event' ? '/ครั้ง' : '/เดือน'}</span>`).join(' ');
 const demoMode = new URLSearchParams(location.search).has('demo');          // preview the pages without a login
-if (demoMode) { $('#login').hidden = true; $('#app').hidden = false; $('#who').textContent = 'ตัวอย่าง (ไม่ได้เข้าสู่ระบบ)'; renderList(); renderQueue(); fillPartnerSelect(); }
+if (demoMode) requests = [{ id: 'demo-r', created_at: new Date().toISOString(), x: 300, z: 1010, building: 'ตึกแถว 3 คูหา · ถนนเลียบหาด', tier: 'building', shop_name: 'ร้านตัวอย่าง', contact: '08x-xxx-xxxx', message: 'อยากได้ตึกตรงหน้าหาด', status: 'new' }];
+if (demoMode) { $('#login').hidden = true; $('#app').hidden = false; $('#who').textContent = 'ตัวอย่าง (ไม่ได้เข้าสู่ระบบ)'; renderList(); renderRequests(); renderQueue(); fillPartnerSelect(); }
 else if (signedIn()) showApp(); else showLogin();
 show('list');

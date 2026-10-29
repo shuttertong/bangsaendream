@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สนับสนุนเกม — ปิดเทอมที่บางแสน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --paper: #fbf6ea; --ink: #4a3a2a; --accent: #d46a2a; --soft: #8a7a66; --line: #e6dcc8; }
+  * { box-sizing: border-box; } body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 'Sarabun', system-ui, sans-serif; }
+  h1, h2, h3, .btn, b { font-family: 'Kanit', sans-serif; } a { color: var(--accent); }
+  header { background: linear-gradient(#2f78c8, #8dc2ea); color: #fff; text-align: center; padding: 40px 16px 34px; } header h1 { margin: 0 0 6px; font-size: clamp(30px, 6vw, 48px); } header p { margin: 0; color: #eef5fb; }
+  main { max-width: 760px; margin: 0 auto; padding: 10px 16px 50px; } section { margin-top: 30px; } h2 { color: var(--accent); margin: 0 0 8px; }
+  .box { background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+  .pp { text-align: center; } .pp b { display: block; font-size: 30px; letter-spacing: 1px; margin: 6px 0; } .pp img { width: 220px; border-radius: 12px; margin-top: 8px; }
+  .btn { display: inline-block; border: 0; border-radius: 999px; padding: 10px 22px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; cursor: pointer; margin: 4px 6px 4px 0; }
+  .tiers { display: grid; gap: 10px; } .tier { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; } .tier .ic { font-size: 30px; grid-row: span 2; } .tier .pr { color: var(--accent); font-weight: 600; } .tier small { grid-column: 2 / span 2; color: var(--soft); }
+  ol li { margin: 4px 0; } .note { color: var(--soft); font-size: 14px; } footer { text-align: center; color: var(--soft); font-size: 13px; padding: 20px; }
+</style>
+</head>
+<body>
+<header><h1>❤️ สนับสนุนเกม</h1><p>ปิดเทอมที่บางแสน · เล่นฟรีสำหรับทุกคน ด้วยแรงสนับสนุนจากคนที่ชอบ</p></header>
+<main>
+  <section>
+    <h2>บริจาค</h2>
+    <div class="box">
+      <p>เกมนี้ทำโดยคนไม่กี่คน ค่าใช้จ่ายหลักคือเซิร์ฟเวอร์ออนไลน์ (ให้ทุกคนเล่นด้วยกันได้) และเวลาทำเกม ช่วยกันคนละนิดได้ที่นี่</p>
+      <div id="donate"></div>
+    </div>
+  </section>
+  <section>
+    <h2>เปิดร้านของคุณในเกม</h2>
+    <div class="box">
+      <p>ร้านค้าในบางแสนเลือก<b>ตึกจริงบนแผนที่</b>แล้วให้ตึกนั้นเป็นร้านของคุณในเกม ผู้เล่นทุกคนเห็น เดินเข้าไปรับคูปองไปใช้ที่ร้านจริงได้</p>
+      <div class="tiers" id="tiers"></div>
+      <h3>วิธีสมัคร</h3>
+      <ol>
+        <li>เปิดเกมแล้วกดปุ่ม ⓘ มุมขวาบน เลือก <b>🏬 สนับสนุนด้วยตึกในเกม</b></li>
+        <li>เดินไปหน้าตึกที่ต้องการ (ตึกแถวริมถนนเลียบหาด ถนนคนเดิน หรืออาคารจริงจากแผนที่) แล้วกด <b>F</b></li>
+        <li>เลือกรูปแบบ กรอกชื่อร้านกับช่องทางติดต่อ แล้วส่ง — เราจะติดต่อกลับเพื่อยืนยัน ส่งโลโก้ และนัดชำระเงิน (ไม่มีการชำระเงินในเกม)</li>
+      </ol>
+      <p class="note">ป้ายและโลโก้ต้องเป็นของร้านจริงที่เจ้าของยืนยัน ไม่รับร้านเหล้า บุหรี่ การพนัน หรือสิ่งที่ไม่เหมาะกับเด็ก</p>
+      <a class="btn" href="play.html">▶ เข้าเกมไปเลือกตึก</a>
+    </div>
+  </section>
+</main>
+<footer>ปิดเทอมที่บางแสน · <a href="index.html">กลับหน้าแรก</a> · <span id="ver"></span></footer>
+<script type="module">
+  import { SUPPORT, SPONSOR, GAME_VERSION } from './src/shared/config.js';
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const d = document.getElementById('donate');
+  const pp = SUPPORT.promptpay ? `<div class="pp"><div>พร้อมเพย์</div><b>${esc(SUPPORT.promptpay)}</b><button class="btn" id="copy">คัดลอกหมายเลข</button><br><img src="${esc(SUPPORT.qr)}" alt="" onerror="this.hidden=true"></div>` : '';
+  const links = SUPPORT.links.map(l => `<a class="btn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}</a>`).join('');
+  d.innerHTML = pp + links + (!pp && !links ? '<p class="note">ช่องทางบริจาคกำลังเปิดเร็ว ๆ นี้</p>' : '') + '<p class="note">ขอบคุณทุกการสนับสนุน ชื่อผู้สนับสนุนจะอยู่ในหน้าเครดิตของเกม</p>';
+  document.getElementById('copy')?.addEventListener('click', () => navigator.clipboard?.writeText(SUPPORT.promptpay));
+  document.getElementById('tiers').innerHTML = Object.values(SPONSOR.tiers).map(v => `<div class="tier"><span class="ic">${v.icon}</span><b>${esc(v.th)}</b><span class="pr">฿${v.price.toLocaleString()}/เดือน</span><small>${esc(v.what.th)}</small></div>`).join('');
+  document.getElementById('ver').textContent = `v${GAME_VERSION}`;
+</script>
+</body>
+</html>

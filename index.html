@@ -111,6 +111,13 @@ try { if (localStorage.getItem('bangsaen.skipLanding') === '1' && !/[?&]stay=1/.
 </section>
 
 <section>
+  <div class="parents" style="background:#fde9cf">
+    <h2 data-t="supH">สนับสนุนเกม</h2>
+    <p class="lead" data-t="supP">เล่นฟรีสำหรับทุกคน ด้วยแรงสนับสนุนจากคนที่ชอบ: บริจาคได้ หรือถ้าคุณมีร้านในบางแสน เลือกตึกจริงบนแผนที่แล้วให้เป็นร้านของคุณในเกม</p>
+    <a class="btn" href="support.html" style="font-size:18px;padding:12px 26px;animation:none" data-t="supBtn">❤️ สนับสนุนเกม / เปิดร้านในเกม</a>
+  </div>
+</section>
+<section>
   <div class="parents">
     <h2 data-t="parH">สำหรับคุณพ่อคุณแม่</h2>
     <ul id="parents"></ul>
@@ -133,6 +140,7 @@ try { if (localStorage.getItem('bangsaen.skipLanding') === '1' && !/[?&]stay=1/.
       shot1: 'หาดบางแสนตอนบ่าย', shot2: 'ถนนคนเดินกับของกินเต็มสองข้างทาง', shot3: 'วอลเลย์บอลชายหาดกับเพื่อน',
       gamesH: 'มีอะไรให้เล่นบ้าง', gamesP: '13 มินิเกมจากชีวิตริมทะเลจริง ๆ ทุกเกมจบในไม่กี่นาที เล่นได้ตั้งแต่วันแรก ได้เงินค่าขนมไปแต่งตัวแฟนซี',
       togH: 'เล่นกับเพื่อน และกับทุกคน', togP: 'ทุกคนที่เข้าเกมอยู่ในหาดเดียวกัน เห็นกัน คุยกันด้วยประโยคสำเร็จรูป ชวนกันเล่น',
+      supH: 'สนับสนุนเกม', supP: 'เล่นฟรีสำหรับทุกคน ด้วยแรงสนับสนุนจากคนที่ชอบ: บริจาคได้ หรือถ้าคุณมีร้านในบางแสน เลือกตึกจริงบนแผนที่แล้วให้เป็นร้านของคุณในเกม', supBtn: '❤️ สนับสนุนเกม / เปิดร้านในเกม',
       parH: 'สำหรับคุณพ่อคุณแม่', foot: 'แผนที่ © OpenStreetMap contributors · ความสูง Mapzen Terrarium · โค้ดเปิดบน',
       games: [['🦀', 'จับปูลม', 'ส่องไฟฉายไล่จับปูตอนโพล้เพล้'], ['🦑', 'ตกหมึก', 'ตกหมึกกลางทะเลตอนกลางคืน'], ['🐒', 'ลิงเขาสามมุข', 'เฝ้าขนมให้พ้นมือลิง'], ['🛟', 'ลอยห่วงยาง', 'ลอยคอเก็บเปลือกหอยในคลื่น'], ['🥗', 'ร้านส้มตำ', 'ช่วยป้านวลขายให้ทันลูกค้า'], ['🍌', 'บานาน่าโบ๊ท', 'เอนตัวอย่าให้คว่ำ ชวนเพื่อนได้'], ['🛋️', 'โซฟาโบ๊ท', 'กดให้ตรงจังหวะตอนกระเด้ง'], ['🌊', 'เจ็ทสกี', 'ซิ่งผ่านประตูทุ่นให้ครบ'], ['🎋', 'ข้าวหลาม', 'ทุบกะเทาะข้าวหลามช่วยยาย'], ['⚫', 'หมากล้อม', 'เล่นกับครู หรือเปิดกระดานรอเพื่อน'], ['⚽', 'ฟุตบอลชายหาด', 'สามต่อสามบนหาดทราย'], ['🏐', 'วอลเลย์บอลชายหาด', 'ตบไฟใส่เด็กหาดวอนนภา'], ['🥎', 'ตะกร้อวง', 'เดาะตะกร้อกับทุกคนในวง']],
       together: [['🌐', 'โลกเดียวกัน', 'ทุกคนออนไลน์อยู่ในหาดเดียวกัน ไม่ต้องสร้างห้อง'], ['🚐', 'รถแดง', 'โบกขึ้นรถแดงคันเดียวกับเพื่อน'], ['🤝', 'เพิ่มเพื่อน', 'เจอกันตัวต่อตัวแล้วจับมือ ไม่ต้องมีบัญชี'], ['🥎', 'ตะกร้อวง', 'เดินเข้าวงแล้วเดาะด้วยกันได้ทันที กี่คนก็ได้'], ['🏆', 'กระดานคะแนน', 'แข่งสถิติกับเพื่อนและทุกคน'], ['📔', 'สมุดปิดเทอม', 'ภารกิจประจำวัน เหรียญ ตราสะสม สมุดสะสมสัตว์ทะเล'], ['📷', 'โปสการ์ด', 'ถ่ายรูปในเกมส่งให้เพื่อน'], ['👗', 'ตู้เสื้อผ้าแฟนซี', 'ใช้เงินค่าขนมในเกมแต่งตัว ไม่มีซื้อด้วยเงินจริง']],
@@ -146,6 +154,7 @@ try { if (localStorage.getItem('bangsaen.skipLanding') === '1' && !/[?&]stay=1/.
       shot1: 'Bang Saen beach in the afternoon', shot2: 'The walking street, food on both sides', shot3: 'Beach volleyball with a friend',
       gamesH: 'What is there to play?', gamesP: '13 mini-games from real seaside life. Each is over in minutes, all open from day one, and they pay pocket money for fantasy dress-up.',
       togH: 'Play with friends, and with everyone', togP: 'Everyone online shares one beach: you see each other, chat with preset phrases, and play together.',
+      supH: 'Support the game', supP: 'Free for everyone thanks to people who like it: donate, or if you run a shop in Bang Saen, pick a real building on the map and make it your shop in the game', supBtn: '❤️ Support / open your shop in the game',
       parH: 'For parents', foot: 'Map © OpenStreetMap contributors · heights Mapzen Terrarium · open source on',
       games: [['🦀', 'Ghost crabs', 'Catch crabs by flashlight at dusk'], ['🦑', 'Squid jigging', 'Night fishing from a boat'], ['🐒', 'Monkeys', 'Guard the snacks on Khao Sam Muk'], ['🛟', 'Inner tube', 'Float and collect shells in the waves'], ['🥗', 'Som tam stall', "Keep up with Aunt Nuan's customers"], ['🍌', 'Banana boat', 'Lean to stay upright, with friends too'], ['🛋️', 'Sofa boat', 'Press in time as it bounces'], ['🌊', 'Jet ski', 'Ride through every buoy gate'], ['🎋', 'Khao lam', "Pound the bamboo for Grandma"], ['⚫', 'Go', 'Play the teacher or open a table'], ['⚽', 'Beach football', 'Three a side on the sand'], ['🏐', 'Beach volleyball', 'Fireball spikes against the next beach'], ['🥎', 'Takraw circle', 'Keep it up with everyone in the circle']],
       together: [['🌐', 'One world', 'Everyone online is on the same beach, no rooms'], ['🚐', 'Red truck', 'Ride the same truck as your friends'], ['🤝', 'Friends', 'Meet face to face and shake hands, no accounts'], ['🥎', 'Takraw circle', 'Walk in and play straight away, any number'], ['🏆', 'Leaderboard', 'Chase records with friends and everyone'], ['📔', 'Summer journal', 'Daily tasks, medals, badges, a collection book'], ['📷', 'Postcards', 'Snap a picture in the game to send to friends'], ['👗', 'Fantasy wardrobe', 'Spend in-game pocket money on outfits; no real money']],

@@ -538,3 +538,18 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 .lb-rank { width: 22px; text-align: center; font: 600 13px 'Kanit', sans-serif; color: #8a7a66; } .lb-name { flex: 1; } .lb-val { font: 600 14px 'Kanit', sans-serif; color: var(--accent); }
 .lb-note { color: #8a7a66; margin: 6px 4px; font-size: 13px; }
 .jn-tile.jn-click { cursor: pointer; } .jn-tile .lb-hint { color: var(--accent); font-size: 10px; }
+
+/* ---------- sponsor a building / donate (town/sponsor.js); the ⓘ panel's support buttons ---------- */
+.c-support { display: flex; gap: 8px; margin-bottom: 10px; } .c-support button { flex: 1; border: 0; border-radius: 12px; padding: 10px 8px; font: 500 14px 'Kanit', sans-serif; cursor: pointer; }
+.c-support .c-donate { background: #e2553f; color: #fff; } .c-support .c-pick { background: #fde9cf; color: #a35a1c; }
+.sp-panel .panel { max-width: 520px; text-align: left; }
+.sp-lead { margin: 4px 4px 10px; } .sp-lead small { color: #8a7a66; } .sp-note { font-size: 13px; color: #8a7a66; margin: 10px 4px 0; }
+.sp-tiers { display: grid; gap: 8px; }
+.sp-tier { display: grid; grid-template-columns: auto auto 1fr auto; grid-template-areas: "r i n p" "r i w w"; gap: 2px 10px; align-items: center; border: 2px solid var(--line); border-radius: 14px; padding: 8px 12px; background: #fff; cursor: pointer; }
+.sp-tier input { grid-area: r; } .sp-tier .ic { grid-area: i; font-size: 26px; } .sp-tier b { grid-area: n; font: 600 15px 'Kanit', sans-serif; } .sp-tier .pr { grid-area: p; font: 600 15px 'Kanit', sans-serif; color: var(--accent); } .sp-tier small { grid-area: w; color: #8a7a66; font-size: 12px; }
+.sp-tier:has(input:checked) { border-color: var(--accent); background: #fff3e6; }
+.sp-form { display: grid; gap: 8px; margin-top: 12px; } .sp-form input, .sp-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: 400 15px 'Sarabun', sans-serif; color: var(--ink); background: #fff; }
+.sp-send, .sp-pick { border: 0; border-radius: 12px; padding: 11px; font: 600 16px 'Kanit', sans-serif; background: var(--accent); color: #fff; cursor: pointer; } .sp-send:disabled { opacity: .6; } .sp-pick { width: 100%; margin-top: 10px; background: #fde9cf; color: #a35a1c; }
+.sp-pp { display: grid; gap: 6px; justify-items: center; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 12px; margin: 8px 0; } .sp-ppid { font: 700 22px 'Kanit', sans-serif; letter-spacing: 1px; } .sp-copy { border: 0; border-radius: 999px; padding: 6px 14px; background: #efe6d4; font: 500 13px 'Kanit', sans-serif; cursor: pointer; } .sp-qr { width: 180px; border-radius: 10px; }
+.sp-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; } .sp-link { border-radius: 999px; padding: 8px 14px; background: var(--accent); color: #fff; text-decoration: none; font: 500 14px 'Kanit', sans-serif; }
+#game-ui .g-sponsor { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -4px 0 8px; font: 500 13px 'Kanit', sans-serif; color: var(--c); } #game-ui .g-sponsor img { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; }

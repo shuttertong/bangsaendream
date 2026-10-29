@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null, sponsor = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -134,6 +134,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     if (riding) hopOff();
     else if (seats.seated) seats.stand();
     else if (takraw?.playing) takraw.leave();
+    else if (sponsor?.picking && sponsor.near) sponsor.ask();
     else if (near) startTalk();
     else if (nearTruck) board(nearTruck);
     else if (takraw?.near) takraw.join();
@@ -198,7 +199,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       scores?.post(id, P.get().best[id]);
     },
     /** True while the player shouldn't move (dialogue, menus). */
-    get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open || !!postcard?.open; },
+    get frozen() { return talk.active || travel.open || !!wardrobe?.open || !!journal?.open || !!postcard?.open || !!sponsor?.open; },
     /** main.js sets this: ร้านพันธมิตร (partners.js) — created after the hub because it adds travel places. */
     set partners(p) { partners = p; },
     /** main.js sets this: the wardrobe panel (wardrobe.js) freezes the kid while it is open. */
@@ -211,6 +212,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     set takraw(v) { takraw = v; },
     /** main.js sets this: { post(game, best) } → the online leaderboard (shared/scores.js). */
     set scores(v) { scores = v; },
+    /** main.js sets this: sponsor.js (pick a building to sponsor; donate). */
+    set sponsor(v) { sponsor = v; },
     /** The camera's yaw (for aiming with the stick while in the circle). */
     get camYaw() { return camera.state?.yaw; },
     update(dt) {
@@ -252,8 +255,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       partners?.update(p);
       guide.update(dt);
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : near ? 'talk' : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
-        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, seatVars || null);
+      sponsor?.update(p, !busy);
+      const [spKey, spVars] = sponsor?.picking && sponsor.near ? sponsor.prompt() : [null, null];
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : spKey ? spKey : near ? 'talk' : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
+        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, spKey ? spVars : seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;

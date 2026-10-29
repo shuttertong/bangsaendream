@@ -4,6 +4,7 @@
 import { t, tr } from './i18n.js';
 import * as P from './progress.js';
 import { MEDALS, medalAt, medalOf } from './goals.js';
+import { sponsorOf } from './sponsors.js';
 
 /**
  * Summarise catches for results(): catches [{ id, size, price }] + species table →
@@ -46,6 +47,8 @@ export function createGameUI(root, { title, how, keys, audio, game = null }) {
   $('.g-keys').textContent = keys;
   $('.g-go').textContent = t('start');
   $('.g-quit').textContent = t('quit');
+  const sp = game && sponsorOf(game);
+  if (sp) $('.g-intro h2').insertAdjacentHTML('afterend', `<p class="g-sponsor" style="--c:${sp.color || '#d8743a'}">${sp.logo_url ? `<img src="${sp.logo_url}" alt="">` : ''}${t('sponsoredBy', { name: tr({ th: sp.name, en: sp.name_en || sp.name }) })}</p>`);
   if (game) {                                                            // what a round is worth, and the best so far
     const best = P.get().best[game]?.baht || 0, tier = medalOf(game, best);
     $('.g-best').innerHTML = medalAt(game).map((b, i) => `<span class="${tier > i ? 'got' : ''}">${MEDALS.tiers[i].icon} ฿${b}</span>`).join(' · ')

@@ -59,6 +59,7 @@ import { createFriends } from './friends.js';
 import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
+import { createSponsor } from './sponsor.js';
 import { createLeaderboard } from './leaderboard.js';
 import * as scores from '../shared/scores.js';
 import * as F from '../shared/friends.js';
@@ -196,7 +197,12 @@ async function boot() {
   const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place }, scopes: binos, ambient: [crowd, strollers] });
 
   const kickabout = buildKickabout({ scene, map, lift, seaDist: layout.seaDist, collision, at: hub.places.beach });   // goals on the sand in front of Tonkla (ฟุตบอลชายหาด)
-  hub.partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร from Supabase (none until the admin adds some)
+  const sponsor = createSponsor({ scene, map, hub, root: $('hud'), audio, rows: counts.rows, osm: map.buildings, lift });   // 🏬 sponsor a building / ❤️ donate
+  hub.sponsor = sponsor;
+  hub.hud.support = { donate: () => sponsor.openDonate(), pick: () => sponsor.startPicking() };
+  const partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร
+  hub.partners = partners;
+  partners.onLoaded = list => sponsor.dress(list);                                        // building sponsors are dressed once the list is in from Supabase (none until the admin adds some)
   const culler = createChunkCuller([town, beach.group, crowd.group]);   // hide map chunks far behind the haze
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
@@ -323,7 +329,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

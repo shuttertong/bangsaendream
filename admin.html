@@ -75,6 +75,7 @@ th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: le
 <nav>
   <button data-tab="list" class="on">ร้านทั้งหมด</button>
   <button data-tab="queue">รออนุมัติ <i id="n-pending"></i></button>
+  <button data-tab="requests">คำขอสนับสนุน <i id="n-requests"></i></button>
   <button data-tab="edit">เพิ่มร้าน</button>
   <button data-tab="redeem">ยืนยันคูปอง</button>
   <button data-tab="stats">สถิติ · บิล</button>
@@ -87,6 +88,7 @@ th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: le
   </section>
 
   <section data-tab="queue" hidden><h2>รออนุมัติ</h2><div id="queue"></div></section>
+  <section data-tab="requests" hidden><h2>คำขอสนับสนุนจากในเกม</h2><p class="empty">ผู้เล่นเลือกตึกในเกมแล้วส่งคำขอมาที่นี่ ติดต่อกลับ ยืนยันการโอน แล้วกด "สร้างร้านจากคำขอ" (ต้องรัน supabase/sponsors.sql ก่อน)</p><div id="requests"></div></section>
 
   <section data-tab="edit" hidden>
     <h2 id="edit-title">เพิ่มร้านพันธมิตร</h2>
@@ -104,6 +106,10 @@ th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: le
       <label class="wide">ตำแหน่ง: คลิกบนแผนที่ตรงที่ร้านอยู่จริง<canvas id="map"></canvas></label>
       <label>x (เมตร)<input id="p-x" type="number" step="0.1" readonly></label>
       <label>z (เมตร)<input id="p-z" type="number" step="0.1" readonly></label>
+      <label>รูปแบบ<select id="p-tier"><option value="kiosk">ซุ้มขายของ (หมุด)</option><option value="sign">ป้ายบนตึก</option><option value="building">ทั้งตึก</option><option value="game">ตึก + สปอนเซอร์มินิเกม</option></select></label>
+      <label>ตึกที่เลือก x<input id="p-bx" type="number" step="0.1" placeholder="จากคำขอ"></label>
+      <label>ตึกที่เลือก z<input id="p-bz" type="number" step="0.1" placeholder="จากคำขอ"></label>
+      <label>มินิเกมที่สปอนเซอร์ (แบบ ตึก + เกม)<select id="p-game"><option value="">-</option><option value="crab">จับปูลม</option><option value="squid">ตกหมึก</option><option value="monkey">ลิงเขาสามมุข</option><option value="tube">ลอยห่วงยาง</option><option value="stall">ร้านส้มตำ</option><option value="banana">บานาน่าโบ๊ท</option><option value="sofa">โซฟาโบ๊ท</option><option value="jetski">เจ็ทสกี</option><option value="khaolam">ข้าวหลาม</option><option value="go">หมากล้อม</option><option value="football">ฟุตบอลชายหาด</option><option value="volley">วอลเลย์บอลชายหาด</option><option value="takraw">ตะกร้อวง</option></select></label>
       <label>โซน<select id="p-zone"><option value="beach">ถนนเลียบหาด</option><option value="walking">ถนนคนเดิน</option><option value="laemthaen">แหลมแท่น</option><option value="ksm">เขาสามมุข</option><option value="village">หมู่บ้านชาวประมง</option></select></label>
       <label>หันหน้า (เรเดียน, ลองปรับแล้วดูเส้นบนแผนที่)<input id="p-yaw" type="number" step="0.1" value="0"></label>
       <label>โลโก้ (PNG/JPG ≤ 1 MB, ร้านยืนยันว่าเป็นเจ้าของ)<input id="p-logo" type="file" accept="image/png,image/jpeg,image/webp"></label>

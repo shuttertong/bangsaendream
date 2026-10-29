@@ -16,7 +16,8 @@ const col = h => new THREE.Color(h);
 
 export function createPartners({ scene, map, collision, hub, root, audio }) {
   const C = PARTNERS, list = [], visited = new Set();
-  let kit = null, signs = null, logos = new Map();
+  let kit = null, signs = null, logos = new Map(), loaded = false, onLoaded = null;
+  const kiosk = p => !p.tier || p.tier === 'kiosk';                     // building placements (sponsor.js) get no booth
   const pid = (() => { try { let v = localStorage.getItem(PID_KEY); if (!v) { v = Math.random().toString(36).slice(2, 12); localStorage.setItem(PID_KEY, v); } return v; } catch { return 'anon' + Math.floor(Math.random() * 1e6); } })();
   const headers = { apikey: C.key, 'Content-Type': 'application/json' };
 
@@ -81,36 +82,44 @@ export function createPartners({ scene, map, collision, hub, root, audio }) {
     ctx.fillText(t('partnerTag') + (p.hours ? ' · ' + p.hours : ''), tx, y0 + rowH * 0.64);
   }
   function build() {
-    if (!list.length) return;
+    loaded = true; onLoaded?.(list);
+    const booths = list.filter(kiosk);
+    if (!booths.length) { for (const p of list) if (!kiosk(p)) pin(p); return; }
     kit = new Kit();
-    const boards = list.map(p => booth(kit, p));
+    const boards = booths.map(p => booth(kit, p));
     scene.add(kit.build());
     // one canvas for every sign: a row each
     const W = 1024, rowH = 256, canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = rowH * list.length;
+    canvas.width = W; canvas.height = rowH * booths.length;
     const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     const geos = boards.map((m, i) => {
       const g = new THREE.PlaneGeometry(2.5, 0.62).applyMatrix4(m), uv = g.attributes.uv;
-      for (let k = 0; k < uv.count; k++) uv.setY(k, 1 - (i + 1 - uv.getY(k)) / list.length);   // row i, top to bottom
+      for (let k = 0; k < uv.count; k++) uv.setY(k, 1 - (i + 1 - uv.getY(k)) / booths.length);   // row i, top to bottom
       return g;
     });
     signs = new THREE.Mesh(mergeGeometries(geos), new THREE.MeshLambertMaterial({ map: tex }));
     signs.receiveShadow = true; scene.add(signs);
-    const redraw = () => { const ctx = canvas.getContext('2d'); list.forEach((p, i) => drawSign(ctx, W, rowH, i, p)); tex.needsUpdate = true; };
+    const redraw = () => { const ctx = canvas.getContext('2d'); booths.forEach((p, i) => drawSign(ctx, W, rowH, i, p)); tex.needsUpdate = true; };
     redraw(); document.fonts?.ready.then(redraw); onLang(redraw);
-    for (const p of list) if (p.logo_url) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { logos.set(p.id, im); redraw(); }; im.src = p.logo_url; }
-    // travel pins, in front of the counter
-    for (const p of list) {
-      const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
-      hub.places[`partner:${p.id}`] = { id: `partner:${p.id}`, name: { th: p.name, en: p.name_en || p.name }, icon: 'partner', x: p.x + fx * 2.4, z: p.z + fz * 2.4, yaw: p.yaw + Math.PI };
-    }
+    for (const p of booths) if (p.logo_url) { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { logos.set(p.id, im); redraw(); }; im.src = p.logo_url; }
+    for (const p of list) pin(p);
+  }
+  // travel pins, in front of the counter (sponsor.js moves a building's pin in front of its sign)
+  function pin(p) {
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    hub.places[`partner:${p.id}`] = { id: `partner:${p.id}`, name: { th: p.name, en: p.name_en || p.name }, icon: 'partner', x: p.x + fx * 2.4, z: p.z + fz * 2.4, yaw: p.yaw + Math.PI };
   }
 
   // ---------- data ----------
   // ?partners=demo: one fictional demo shop (no database), for previews and tests
   const demo = new URLSearchParams(location.search).get('partners') === 'demo';
+  // ?partners=demo also dresses two buildings near the start (sponsor.js tiers), on real frontage rows (bx/bz are matched to the nearest row)
+  const DEMO_SPONSORS = [
+    { id: 'demo-sign', name: 'ร้านตัวอย่าง ป้าย', name_en: 'Demo Sign Shop', kind: 'shop', zone: 'beach', x: 0, z: 0, yaw: 0, color: '#2f6fc4', logo_url: null, hours: '09:00–20:00', package: 'shop', coupon_enabled: false, tier: 'sign', bx: null, bz: null },
+    { id: 'demo-building', name: 'คาเฟ่ตัวอย่าง ทั้งตึก', name_en: 'Demo Whole-Building Cafe', kind: 'cafe', zone: 'beach', x: 0, z: 0, yaw: 0, color: '#d8743a', logo_url: null, hours: '08:00–18:00', package: 'game', coupon_enabled: true, coupon_text: 'ลด ฿10', tier: 'game', game: 'stall', bx: null, bz: null },
+  ];
   const DEMO = [{ id: 'demo', name: 'คาเฟ่ตัวอย่าง', name_en: 'Demo Cafe', kind: 'cafe', zone: 'beach', x: 318, z: 1000, yaw: -2.3, color: '#2a8f9a', logo_url: null, hours: '08:00–18:00', package: 'shop', coupon_enabled: true, coupon_text: 'ลด ฿10 (ตัวอย่าง)' }];
-  (demo ? Promise.resolve(DEMO) : fetch(`${C.rest}/public_placements?select=*`, { headers }).then(r => (r.ok ? r.json() : []))).then(rows => {
+  (demo ? Promise.resolve([...DEMO, ...DEMO_SPONSORS]) : fetch(`${C.rest}/public_placements?select=*`, { headers }).then(r => (r.ok ? r.json() : []))).then(rows => {
     for (const r of rows) list.push({ ...r, x: +r.x, z: +r.z, yaw: +r.yaw });
     build();
   }).catch(() => { /* offline or not set up yet: the hub simply has no partner shops */ });
@@ -145,6 +154,8 @@ export function createPartners({ scene, map, collision, hub, root, audio }) {
   }
   return {
     list, nearest: near, use, update,
+    /** sponsor.js: called with the placements once they are loaded (right away if they already are). */
+    set onLoaded(fn) { onLoaded = fn; if (loaded) fn(list); },
     prompt: s => [s.coupon_enabled ? 'partnerCoupon' : 'partnerLook', { shop: s.name }],
     get active() { return modal.classList.contains('on'); },
     openMine() { const l = saved().filter(o => new Date(o.expires_at) > new Date()); if (l.length) showCoupon(l[0], false); else hub.hud?.toast(t('couponNone')); },

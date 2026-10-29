@@ -34,7 +34,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
   root.appendChild(el);
   const $ = s => el.querySelector(s);
   const baht = $('.baht'), goal = $('.goal'), prompt = $('.prompt'), toasts = $('.toasts');
-  let goalFn = () => '', promptKey = null, promptName = null, promptVars = null;
+  let goalFn = () => '', promptKey = null, promptName = null, promptVars = null, support = null;
 
   const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(); };
   $('.b-travel').addEventListener('pointerdown', stop(onTravel));
@@ -49,8 +49,11 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
   function drawCredits() {
     credits.querySelector('h2').textContent = t('infoTitle');
     credits.querySelector('.close').textContent = t('close');
-    credits.querySelector('.c-body').innerHTML = `<h3>${t('howTitle')}</h3>${howToLines().map(l => `<p>${l}</p>`).join('')}`
+    credits.querySelector('.c-body').innerHTML = (support ? `<div class="c-support"><button class="c-donate">${t('cSupport')}</button><button class="c-pick">${t('cPick')}</button></div>` : '')
+      + `<h3>${t('howTitle')}</h3>${howToLines().map(l => `<p>${l}</p>`).join('')}`
       + CREDITS.map(c => `<h3>${tr(c.head)}</h3>${c.lines.map(l => `<p>${tr(l)}</p>`).join('')}`).join('');
+    credits.querySelector('.c-donate')?.addEventListener('pointerdown', stop(() => { credits.classList.remove('on'); support.donate(); }));
+    credits.querySelector('.c-pick')?.addEventListener('pointerdown', stop(() => { credits.classList.remove('on'); support.pick(); }));
   }
 
   function refresh() {
@@ -92,5 +95,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
       setTimeout(() => d.remove(), 2800);
     },
     hideDuringTalk(on) { el.classList.toggle('talking', on); },
+    /** sponsor.js: { donate(), pick() } → two buttons at the top of the ⓘ panel. */
+    set support(v) { support = v; },
   };
 }

@@ -25,6 +25,23 @@ export const REALTIME = {
   rates: { sendHz: 4, keepAlive: 3, truckHz: 3, delay: 0.35 },   // vs. Wi-Fi: 10 / 2 / 10 / 0.15
 };
 
+// สนับสนุนเกม — donations (support.html, the landing page, the in-game ⓘ panel). Fill in your own details.
+export const SUPPORT = {
+  promptpay: '',                             // the PromptPay id to show (phone, citizen id or e-wallet id); empty = the PromptPay block is hidden
+  qr: 'assets/support/promptpay.png',        // a picture of the PromptPay QR, if you put one there (optional; hidden when missing)
+  links: [],                                 // e.g. { name: 'Ko-fi', url: 'https://ko-fi.com/…' }, { name: 'GitHub Sponsors', url: '…' }
+};
+// สนับสนุนด้วยตึกในเกม — a real shop sponsors a building on the map (town/sponsor.js, supabase/sponsors.sql, admin.html). Prices in THB per month.
+export const SPONSOR = {
+  tiers: {
+    sign: { icon: '🪧', th: 'ป้ายร้าน', en: 'Shop sign', price: 500, what: { th: 'ป้ายชื่อร้านพร้อมโลโก้บนหน้าตึกที่เลือก และหมุดในเมนูเดินทาง', en: 'Your name and logo on the front of the building you picked, plus a pin in the travel menu' } },
+    building: { icon: '🏬', th: 'ทั้งตึก', en: 'Whole building', price: 1500, what: { th: 'ตึกทั้งหลังเป็นสีร้าน มีกันสาด ป้ายข้าง ป้ายบนดาดฟ้า เวลาเปิด และคูปองให้ผู้เล่นเอาไปใช้ที่ร้านจริง', en: 'The whole building in your colour: awning, side banners, a rooftop board, opening hours, and coupons players redeem at the real shop' } },
+    game: { icon: '🎮', th: 'ตึก + สปอนเซอร์มินิเกม', en: 'Building + a sponsored mini-game', price: 2500, what: { th: 'ทุกอย่างในแบบทั้งตึก และชื่อ-โลโก้ร้านบนหน้าเริ่มของมินิเกมที่เลือก 1 เกม (ผู้เล่นเห็นทุกครั้งที่เล่น)', en: 'Everything in the whole-building tier, plus your name and logo on the start card of one mini-game, seen every round' } },
+  },
+  range: 9,                                  // metres from a building front at which the "sponsor this building" prompt shows (pick mode only)
+  cooldown: 60,                              // seconds between requests from one browser
+};
+
 // ร้านพันธมิตร — real shops on the map (supabase/partners.sql, admin.html, town/partners.js). Prices in THB.
 export const PARTNERS = {
   rest: 'https://rlkmjujiidvtjmvfrrfw.supabase.co/rest/v1',
