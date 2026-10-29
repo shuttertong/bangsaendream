@@ -96,7 +96,8 @@ Each mini-game has a `species.js` / `items.js` data table (name TH/EN, size rang
 /
 ├── CLAUDE.md
 ├── CREDITS.md               # every sound, font and data source
-├── index.html               # importmap, canvas, HUD root → src/town/main.js
+├── index.html               # the landing page (kids + parents): screenshots, the games, a big play button → play.html
+├── play.html                # the game: importmap, canvas, HUD root → src/town/main.js
 ├── tools/
 │   ├── bake_map.py          # OSM + DEM → json/bin
 │   └── bangsaen-map.html    # standalone map viewer + exporter
@@ -368,6 +369,7 @@ Roblox-style adaptations (2026-10-28, the user asked for an analysis of why Robl
 - **Events** (`shared/events.js`, local time): the weekend market — Saturday and Sunday from 16:00 — doubles daily-task rewards and takraw pay (`payNow()`), shows on the title card and as a toast at start. Add events to `EVENTS` (`when(date)`).
 - **Leaderboard**: `supabase/scores.sql` (the user runs it in the dashboard; table `game_scores` keyed by the per-device friend id + game, public select, open insert/update with sanity checks — accepted for a kids' game with nothing at stake), `shared/scores.js` (`postBest` after `hub.finishGame` when the session's best improved, upsert with `Prefer: resolution=merge-duplicates`; `fetchTop`, `fetchPlayers`; every call fails quietly, 6 s timeout), `town/leaderboard.js` (a medal tile in the journal opens the game's board: top 10 of everyone, then friends + the player's own local best). Until the table exists the board shows "ยังไม่เปิด". Checked with a stubbed fetch: both sections render, the own row is highlighted, and a round POSTs `{ uid, game, name, baht, streak }` to `game_scores?on_conflict=uid,game`.
 - Not built (next on the list): player-placed sandcastles that others see for a day, and "join whoever is already playing" for the banana-boat and Go lobbies.
+Landing page (2026-10-29, the user: "a landing page before the game that kids will like"): `index.html` is now a self-contained landing page (its own CSS/JS, Google Fonts, `GAME_VERSION` from config.js) and the game moved to `play.html` — every game URL (`?debug=1`, `?game=`, `?view=`, `?bots=`, `?reset=1`, `?online=`) now lives on `play.html`. The hero is CSS/SVG (sun, drifting clouds, rolling waves, sand, bobbing beach emoji), a big "▶ เล่นเลย!" (a returning save shows "เล่นต่อ" with baht, badges and the streak), a TH/EN toggle sharing `bangsaen.lang` with the game, and "ครั้งหน้าเข้าเกมเลย" (localStorage `bangsaen.skipLanding` = '1' → `index.html` redirects to `play.html` keeping the query; `index.html?stay=1` shows the page regardless). Then three in-game screenshots (`assets/landing/*.jpg`, ~800×600, taken from the Browser pane with the HUD hidden), the 13 games as cards, the "together" features, a parents' box (free, no account, preset chat, fictional characters, OSM, the 💌 button) and a footer. The live URL unchanged: the root shows the landing.
 Performance check: `__game.bench()` in the console (with `?debug=1`) advances the game and times full frames synchronously.
 Use it instead of the FPS counter when the browser tab is not focused, because the browser then throttles `requestAnimationFrame`.
 
@@ -391,12 +393,12 @@ Use it instead of the FPS counter when the browser tab is not focused, because t
 ## 9. Quick Start for a New Session
 
 ```bash
-python3 tools/serve.py 8000      # no-cache dev server + local Wi-Fi multiplayer relay (/mp); open http://localhost:8000
+python3 tools/serve.py 8000      # no-cache dev server + local Wi-Fi multiplayer relay (/mp); open http://localhost:8000 (landing) or /play.html (game)
 # phone / iPad on the same Wi-Fi: http://<this Mac's IP>:8000 (ipconfig getifaddr en0)
 #   touch: left thumb = floating joystick (push to the rim to run), right side drag = camera,
 #   pinch = zoom, round button = jump. Desktop: WASD / arrows, Shift run, Space jump, drag, wheel, Q/E
-# debug overlay:        http://localhost:8000/?debug=1
-# jump to a mini-game:  http://localhost:8000/?game=crab
+# debug overlay:        http://localhost:8000/play.html?debug=1
+# jump to a mini-game:  http://localhost:8000/play.html?game=crab
 ```
 
 When the map area changes: `python3 tools/bake_map.py --lat 13.2950 --lon 100.9100 --half 2400 --step 8 --inland 100` (raw downloads are cached in `tools/.cache/`; add `--refresh` to download again)

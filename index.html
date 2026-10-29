@@ -2,30 +2,184 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<title>ปิดเทอมที่บางแสน</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ปิดเทอมที่บางแสน — เกมเที่ยวทะเลบนแผนที่หาดบางแสนจริง ๆ</title>
+<meta name="description" content="เกม 3D เที่ยวหาดบางแสน: จับปูลม ตกหมึก เล่นวอลเลย์บอลชายหาด นั่งรถแดง เล่นกับเพื่อนออนไลน์ ฟรี ไม่ต้องสมัคร เล่นได้บนมือถือ">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23cfe6f2'/><circle cx='44' cy='20' r='9' fill='%23f4c43c'/><path d='M0 40q8-6 16 0t16 0 16 0 16 0v24H0z' fill='%234fb3a8'/><path d='M0 50q8-6 16 0t16 0 16 0 16 0v14H0z' fill='%23e8d8a8'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="src/town/town.css">
-<script type="importmap">
-{"imports":{
-  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-}}
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<script>
+// regulars who ticked "go straight to the game" skip this page (index.html?stay=1 shows it anyway)
+try { if (localStorage.getItem('bangsaen.skipLanding') === '1' && !/[?&]stay=1/.test(location.search)) location.replace('play.html' + location.search); } catch {}
 </script>
+<style>
+  :root { --sky: #2f78c8; --sky2: #cfe6f2; --sea: #4fb3a8; --sea2: #2a8f9a; --sand: #eee2c6; --paper: #fbf6ea; --ink: #4a3a2a; --accent: #d46a2a; --soft: #8a7a66; --line: #e6dcc8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 'Sarabun', system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
+  h1, h2, h3, .btn, .lang, .card b { font-family: 'Kanit', 'Sarabun', sans-serif; }
+  a { color: inherit; }
+  /* ---------- hero: sky, sun, clouds, sea, sand ---------- */
+  .hero { position: relative; overflow: hidden; min-height: 86vh; display: grid; place-items: center; text-align: center; padding: 24px 16px 150px; background: linear-gradient(#2f78c8 0%, #8dc2ea 45%, #cfe6f2 100%); color: #fff; }
+  .sun { position: absolute; right: 6%; top: 5%; width: 110px; height: 110px; border-radius: 50%; background: #f4c43c; box-shadow: 0 0 60px 20px rgba(244, 196, 60, .45); animation: glow 5s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 90px 34px rgba(244, 196, 60, .55); } }
+  .cloud { position: absolute; top: 14%; width: 140px; height: 44px; background: #fff; border-radius: 40px; opacity: .75; animation: drift linear infinite; }
+  .cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+  .cloud::before { width: 60px; height: 60px; left: 22px; top: -30px; } .cloud::after { width: 44px; height: 44px; left: 66px; top: -20px; }
+  .c1 { left: -160px; animation-duration: 48s; } .c2 { left: -160px; top: 26%; transform: scale(.7); animation-duration: 70s; animation-delay: -30s; } .c3 { left: -160px; top: 6%; transform: scale(.55); animation-duration: 60s; animation-delay: -12s; }
+  @keyframes drift { to { transform: translateX(calc(100vw + 220px)) scale(var(--s, 1)); } }
+  .c2 { --s: .7 } .c3 { --s: .55 }
+  .waves { position: absolute; left: 0; right: 0; bottom: 56px; height: 120px; }
+  .waves svg { position: absolute; left: 0; bottom: 0; width: 200%; height: 100%; animation: roll 9s linear infinite; }
+  .waves svg.back { opacity: .55; animation-duration: 14s; animation-direction: reverse; bottom: 22px; }
+  @keyframes roll { to { transform: translateX(-50%); } }
+  .sand { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: var(--sand); border-radius: 50% 50% 0 0 / 30px 30px 0 0; }
+  .beach-things { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: space-evenly; font-size: 34px; pointer-events: none; }
+  .beach-things span { animation: bob 3s ease-in-out infinite; } .beach-things span:nth-child(2n) { animation-delay: -1.2s; } .beach-things span:nth-child(3n) { animation-delay: -2s; }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(-6deg); } }
+  .hero-in { position: relative; z-index: 2; max-width: 720px; }
+  .hero h1 { font-size: clamp(40px, 9vw, 76px); line-height: 1.05; margin: 0 0 8px; text-shadow: 0 3px 0 rgba(0, 0, 0, .12), 0 2px 14px rgba(20, 40, 70, .5); }
+  .hero .sub { font-size: clamp(17px, 2.6vw, 22px); margin: 0 0 22px; color: #f3f8fc; text-shadow: 0 1px 8px rgba(20, 40, 70, .55); }
+  .btn { display: inline-block; border: 0; border-radius: 999px; padding: 16px 38px; font-size: clamp(22px, 3.4vw, 28px); font-weight: 700; color: #fff; background: var(--accent); text-decoration: none; box-shadow: 0 8px 0 #a94e1a, 0 14px 28px rgba(0, 0, 0, .18); cursor: pointer; transition: transform .12s; animation: wiggle 2.6s ease-in-out infinite; }
+  .btn:hover, .btn:focus-visible { transform: translateY(-3px) scale(1.03); } .btn:active { transform: translateY(4px); box-shadow: 0 3px 0 #a94e1a; }
+  @keyframes wiggle { 0%, 88%, 100% { rotate: 0deg; } 92% { rotate: -2deg; } 96% { rotate: 2deg; } }
+  .back { margin: 14px 0 0; font-size: 15px; color: #f3f8fc; }
+  .back b { color: #ffe08a; }
+  .skip { margin-top: 18px; font-size: 14px; color: #e8f1f8; } .skip input { transform: scale(1.2); margin-right: 6px; }
+  .lang { position: absolute; top: 14px; right: 14px; z-index: 3; border: 0; background: rgba(255, 255, 255, .9); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  /* ---------- sections ---------- */
+  section { max-width: 1040px; margin: 0 auto; padding: 44px 16px 10px; }
+  h2 { font-size: clamp(26px, 4vw, 34px); margin: 0 0 6px; color: var(--accent); }
+  .lead { margin: 0 0 20px; color: var(--soft); }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .shots figure { margin: 0; background: #fff; border-radius: 18px; padding: 10px; box-shadow: 0 8px 24px rgba(60, 40, 20, .1); transform: rotate(-1.2deg); } .shots figure:nth-child(2) { transform: rotate(1deg); } .shots figure:nth-child(3) { transform: rotate(-.6deg); }
+  .shots img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: var(--sky2); }
+  .shots figcaption { font: 600 15px 'Kanit', sans-serif; padding: 8px 4px 2px; text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .card { background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 14px 12px; text-align: center; transition: transform .15s, border-color .15s; }
+  .card:hover { transform: translateY(-4px) rotate(-1deg); border-color: var(--accent); }
+  .card .ic { font-size: 40px; line-height: 1.1; display: block; margin-bottom: 4px; } .card b { display: block; font-size: 16px; } .card small { color: var(--soft); font-size: 13px; }
+  .wide { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); } .wide .card { text-align: left; display: flex; gap: 12px; align-items: flex-start; } .wide .card .ic { font-size: 34px; margin: 0; }
+  .parents { background: #fff3e6; border-radius: 22px; padding: 22px 20px; }
+  .parents ul { margin: 8px 0 0; padding-left: 22px; } .parents li { margin: 4px 0; }
+  .cta { text-align: center; padding: 30px 16px 50px; }
+  footer { text-align: center; color: var(--soft); font-size: 13px; padding: 10px 16px 40px; } footer a { color: var(--soft); }
+  @media (max-width: 520px) { .hero { min-height: 78vh; padding-bottom: 130px; } .beach-things { font-size: 26px; } .sun { width: 80px; height: 80px; } }
+  @media (prefers-reduced-motion: reduce) { .cloud, .waves svg, .btn, .beach-things span, .sun { animation: none; } }
+</style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="hud">
-  <div id="loading"></div>
-  <div id="debug" hidden></div>
-  <div id="credit"></div>
-</div>
-<script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});   // static hosts only: re-check files with the server on every load (sw.js)</script>
-<script type="module" src="src/town/main.js"></script>
+<header class="hero">
+  <button class="lang" id="lang" aria-label="language">EN</button>
+  <div class="sun"></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  <div class="hero-in">
+    <h1 data-t="title">ปิดเทอมที่บางแสน</h1>
+    <p class="sub" data-t="sub">เกม 3D เที่ยวทะเลบนแผนที่หาดบางแสนจริง ๆ · เล่นฟรี ไม่ต้องสมัคร · มือถือก็เล่นได้</p>
+    <a class="btn" id="play" href="play.html" data-t="play">▶ เล่นเลย!</a>
+    <p class="back" id="back" hidden></p>
+    <label class="skip"><input type="checkbox" id="skip"><span data-t="skip">ครั้งหน้าเข้าเกมเลย ไม่ต้องผ่านหน้านี้</span></label>
+  </div>
+  <div class="waves">
+    <svg class="back" viewBox="0 0 1600 120" preserveAspectRatio="none"><path d="M0 60 Q100 20 200 60 T400 60 T600 60 T800 60 T1000 60 T1200 60 T1400 60 T1600 60 V120 H0z" fill="#2a8f9a"/></svg>
+    <svg viewBox="0 0 1600 120" preserveAspectRatio="none"><path d="M0 70 Q100 30 200 70 T400 70 T600 70 T800 70 T1000 70 T1200 70 T1400 70 T1600 70 V120 H0z" fill="#4fb3a8"/></svg>
+  </div>
+  <div class="sand"></div>
+  <div class="beach-things" aria-hidden="true"><span>🦀</span><span>🐚</span><span>🏐</span><span>🥥</span><span>🐒</span><span>🛟</span><span>⭐</span></div>
+</header>
+
+<section>
+  <h2 data-t="shotsH">ไปเที่ยวบางแสนกัน!</h2>
+  <p class="lead" data-t="shotsP">หาด ถนนคนเดิน เขาสามมุข แหลมแท่น สะพานราชนาวี ทุกที่อยู่บนแผนที่จริง เดินได้ นั่งรถแดงได้ คุยกับคนทั้งหาดได้</p>
+  <div class="shots">
+    <figure><img src="assets/landing/beach.jpg" alt="" loading="lazy"><figcaption data-t="shot1">หาดบางแสนตอนบ่าย</figcaption></figure>
+    <figure><img src="assets/landing/market.jpg" alt="" loading="lazy"><figcaption data-t="shot2">ถนนคนเดินกับของกินเต็มสองข้างทาง</figcaption></figure>
+    <figure><img src="assets/landing/volley.jpg" alt="" loading="lazy"><figcaption data-t="shot3">วอลเลย์บอลชายหาดกับเพื่อน</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2 data-t="gamesH">มีอะไรให้เล่นบ้าง</h2>
+  <p class="lead" data-t="gamesP">13 มินิเกมจากชีวิตริมทะเลจริง ๆ ทุกเกมจบในไม่กี่นาที เล่นได้ตั้งแต่วันแรก ได้เงินค่าขนมไปแต่งตัวแฟนซี</p>
+  <div class="grid" id="games"></div>
+</section>
+
+<section>
+  <h2 data-t="togH">เล่นกับเพื่อน และกับทุกคน</h2>
+  <p class="lead" data-t="togP">ทุกคนที่เข้าเกมอยู่ในหาดเดียวกัน เห็นกัน คุยกันด้วยประโยคสำเร็จรูป ชวนกันเล่น</p>
+  <div class="grid wide" id="together"></div>
+</section>
+
+<section>
+  <div class="parents">
+    <h2 data-t="parH">สำหรับคุณพ่อคุณแม่</h2>
+    <ul id="parents"></ul>
+  </div>
+</section>
+
+<div class="cta"><a class="btn" href="play.html" data-t="play2">▶ เริ่มปิดเทอมกันเลย!</a></div>
+<footer>
+  <span data-t="foot">แผนที่ © OpenStreetMap contributors · ความสูง Mapzen Terrarium · โค้ดเปิดบน</span> <a href="https://github.com/shuttertong/bangsaendream">GitHub</a> · <span id="ver"></span>
+</footer>
+
+<script type="module">
+  import { GAME_VERSION } from './src/shared/config.js';
+  const T = {
+    th: {
+      title: 'ปิดเทอมที่บางแสน', sub: 'เกม 3D เที่ยวทะเลบนแผนที่หาดบางแสนจริง ๆ · เล่นฟรี ไม่ต้องสมัคร · มือถือก็เล่นได้',
+      play: '▶ เล่นเลย!', cont: '▶ เล่นต่อ', play2: '▶ เริ่มปิดเทอมกันเลย!', skip: 'ครั้งหน้าเข้าเกมเลย ไม่ต้องผ่านหน้านี้',
+      back: 'ยินดีต้อนรับกลับ! มี <b>฿{baht}</b> · ตรา <b>{badges}</b> อัน{streak}', streak: ' · 🔥 มาติดกัน <b>{n}</b> วัน',
+      shotsH: 'ไปเที่ยวบางแสนกัน!', shotsP: 'หาด ถนนคนเดิน เขาสามมุข แหลมแท่น สะพานราชนาวี ทุกที่อยู่บนแผนที่จริง เดินได้ นั่งรถแดงได้ คุยกับคนทั้งหาดได้',
+      shot1: 'หาดบางแสนตอนบ่าย', shot2: 'ถนนคนเดินกับของกินเต็มสองข้างทาง', shot3: 'วอลเลย์บอลชายหาดกับเพื่อน',
+      gamesH: 'มีอะไรให้เล่นบ้าง', gamesP: '13 มินิเกมจากชีวิตริมทะเลจริง ๆ ทุกเกมจบในไม่กี่นาที เล่นได้ตั้งแต่วันแรก ได้เงินค่าขนมไปแต่งตัวแฟนซี',
+      togH: 'เล่นกับเพื่อน และกับทุกคน', togP: 'ทุกคนที่เข้าเกมอยู่ในหาดเดียวกัน เห็นกัน คุยกันด้วยประโยคสำเร็จรูป ชวนกันเล่น',
+      parH: 'สำหรับคุณพ่อคุณแม่', foot: 'แผนที่ © OpenStreetMap contributors · ความสูง Mapzen Terrarium · โค้ดเปิดบน',
+      games: [['🦀', 'จับปูลม', 'ส่องไฟฉายไล่จับปูตอนโพล้เพล้'], ['🦑', 'ตกหมึก', 'ตกหมึกกลางทะเลตอนกลางคืน'], ['🐒', 'ลิงเขาสามมุข', 'เฝ้าขนมให้พ้นมือลิง'], ['🛟', 'ลอยห่วงยาง', 'ลอยคอเก็บเปลือกหอยในคลื่น'], ['🥗', 'ร้านส้มตำ', 'ช่วยป้านวลขายให้ทันลูกค้า'], ['🍌', 'บานาน่าโบ๊ท', 'เอนตัวอย่าให้คว่ำ ชวนเพื่อนได้'], ['🛋️', 'โซฟาโบ๊ท', 'กดให้ตรงจังหวะตอนกระเด้ง'], ['🌊', 'เจ็ทสกี', 'ซิ่งผ่านประตูทุ่นให้ครบ'], ['🎋', 'ข้าวหลาม', 'ทุบกะเทาะข้าวหลามช่วยยาย'], ['⚫', 'หมากล้อม', 'เล่นกับครู หรือเปิดกระดานรอเพื่อน'], ['⚽', 'ฟุตบอลชายหาด', 'สามต่อสามบนหาดทราย'], ['🏐', 'วอลเลย์บอลชายหาด', 'ตบไฟใส่เด็กหาดวอนนภา'], ['🥎', 'ตะกร้อวง', 'เดาะตะกร้อกับทุกคนในวง']],
+      together: [['🌐', 'โลกเดียวกัน', 'ทุกคนออนไลน์อยู่ในหาดเดียวกัน ไม่ต้องสร้างห้อง'], ['🚐', 'รถแดง', 'โบกขึ้นรถแดงคันเดียวกับเพื่อน'], ['🤝', 'เพิ่มเพื่อน', 'เจอกันตัวต่อตัวแล้วจับมือ ไม่ต้องมีบัญชี'], ['🥎', 'ตะกร้อวง', 'เดินเข้าวงแล้วเดาะด้วยกันได้ทันที กี่คนก็ได้'], ['🏆', 'กระดานคะแนน', 'แข่งสถิติกับเพื่อนและทุกคน'], ['📔', 'สมุดปิดเทอม', 'ภารกิจประจำวัน เหรียญ ตราสะสม สมุดสะสมสัตว์ทะเล'], ['📷', 'โปสการ์ด', 'ถ่ายรูปในเกมส่งให้เพื่อน'], ['👗', 'ตู้เสื้อผ้าแฟนซี', 'ใช้เงินค่าขนมในเกมแต่งตัว ไม่มีซื้อด้วยเงินจริง']],
+      parents: ['เล่นฟรีทั้งเกม ไม่มีการซื้อด้วยเงินจริง ของในเกมซื้อด้วยเงินค่าขนมที่หาได้ในเกม', 'ไม่ต้องสมัครสมาชิก ไม่ขอชื่อ อีเมล หรือข้อมูลส่วนตัว ความคืบหน้าเก็บในเครื่อง', 'แชทเป็นประโยคสำเร็จรูปเท่านั้น ไม่มีการพิมพ์ข้อความอิสระระหว่างผู้เล่น', 'ตัวละครทุกตัวเป็นตัวละครสมมติ ร้านในเกมเป็นร้านสมมติ ยกเว้นร้านพันธมิตรที่ยืนยันแล้ว', 'แผนที่มาจาก OpenStreetMap เมืองในเกมคือหาดบางแสนจริง ๆ ชวนลูกไปเที่ยวของจริงได้เลย', 'มีปุ่ม 💌 ในเกมสำหรับบอกคนทำเกมถ้าเจออะไรไม่เหมาะสม'],
+    },
+    en: {
+      title: 'Summer Break at Bang Saen', sub: 'A 3D seaside adventure on the real map of Bang Saen beach · free, no sign-up · plays on phones too',
+      play: '▶ Play now!', cont: '▶ Continue', play2: '▶ Start your summer break!', skip: 'Next time go straight to the game',
+      back: 'Welcome back! You have <b>฿{baht}</b> · <b>{badges}</b> badges{streak}', streak: ' · 🔥 <b>{n}</b>-day streak',
+      shotsH: "Let's go to Bang Saen!", shotsP: 'The beach, the walking street, Khao Sam Muk, Laem Thaen, the Navy pier — all on the real map. Walk it, ride the red truck, talk to everyone.',
+      shot1: 'Bang Saen beach in the afternoon', shot2: 'The walking street, food on both sides', shot3: 'Beach volleyball with a friend',
+      gamesH: 'What is there to play?', gamesP: '13 mini-games from real seaside life. Each is over in minutes, all open from day one, and they pay pocket money for fantasy dress-up.',
+      togH: 'Play with friends, and with everyone', togP: 'Everyone online shares one beach: you see each other, chat with preset phrases, and play together.',
+      parH: 'For parents', foot: 'Map © OpenStreetMap contributors · heights Mapzen Terrarium · open source on',
+      games: [['🦀', 'Ghost crabs', 'Catch crabs by flashlight at dusk'], ['🦑', 'Squid jigging', 'Night fishing from a boat'], ['🐒', 'Monkeys', 'Guard the snacks on Khao Sam Muk'], ['🛟', 'Inner tube', 'Float and collect shells in the waves'], ['🥗', 'Som tam stall', "Keep up with Aunt Nuan's customers"], ['🍌', 'Banana boat', 'Lean to stay upright, with friends too'], ['🛋️', 'Sofa boat', 'Press in time as it bounces'], ['🌊', 'Jet ski', 'Ride through every buoy gate'], ['🎋', 'Khao lam', "Pound the bamboo for Grandma"], ['⚫', 'Go', 'Play the teacher or open a table'], ['⚽', 'Beach football', 'Three a side on the sand'], ['🏐', 'Beach volleyball', 'Fireball spikes against the next beach'], ['🥎', 'Takraw circle', 'Keep it up with everyone in the circle']],
+      together: [['🌐', 'One world', 'Everyone online is on the same beach, no rooms'], ['🚐', 'Red truck', 'Ride the same truck as your friends'], ['🤝', 'Friends', 'Meet face to face and shake hands, no accounts'], ['🥎', 'Takraw circle', 'Walk in and play straight away, any number'], ['🏆', 'Leaderboard', 'Chase records with friends and everyone'], ['📔', 'Summer journal', 'Daily tasks, medals, badges, a collection book'], ['📷', 'Postcards', 'Snap a picture in the game to send to friends'], ['👗', 'Fantasy wardrobe', 'Spend in-game pocket money on outfits; no real money']],
+      parents: ['Free, with no real-money purchases: things in the game cost pocket money earned in the game', 'No account, no name, e-mail or personal data; progress stays on the device', 'Chat is preset phrases only, no free text between players', 'Every character is fictional, and so is every shop except confirmed partner shops', 'The map is OpenStreetMap: the town is the real Bang Saen, so you can visit it for real', 'A 💌 button in the game reaches the makers if anything looks wrong'],
+    },
+  };
+  let lang = 'th';
+  try { lang = localStorage.getItem('bangsaen.lang') === 'en' ? 'en' : 'th'; } catch {}
+  const $ = s => document.querySelector(s);
+  function draw() {
+    const L = T[lang];
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(el => { if (L[el.dataset.t]) el.textContent = L[el.dataset.t]; });
+    $('#lang').textContent = lang === 'th' ? 'EN' : 'ไทย';
+    $('#games').innerHTML = L.games.map(([ic, n, d]) => `<div class="card"><span class="ic">${ic}</span><b>${n}</b><small>${d}</small></div>`).join('');
+    $('#together').innerHTML = L.together.map(([ic, n, d]) => `<div class="card"><span class="ic">${ic}</span><div><b>${n}</b><small>${d}</small></div></div>`).join('');
+    $('#parents').innerHTML = L.parents.map(p => `<li>${p}</li>`).join('');
+    // a returning player: continue, with what they have
+    try {
+      const s = JSON.parse(localStorage.getItem('bangsaen.save.v1') || 'null');
+      if (s?.met?.grandma) {
+        $('#play').textContent = L.cont;
+        const j = s.journal || {}, badges = Object.keys(j.badges || {}).length;
+        $('#back').innerHTML = L.back.replace('{baht}', (s.baht || 0).toLocaleString()).replace('{badges}', badges).replace('{streak}', j.streak ? L.streak.replace('{n}', j.streak) : '');
+        $('#back').hidden = false;
+      }
+    } catch {}
+  }
+  $('#lang').addEventListener('click', () => { lang = lang === 'th' ? 'en' : 'th'; try { localStorage.setItem('bangsaen.lang', lang); } catch {} draw(); });
+  const skip = $('#skip');
+  try { skip.checked = localStorage.getItem('bangsaen.skipLanding') === '1'; } catch {}
+  skip.addEventListener('change', () => { try { localStorage.setItem('bangsaen.skipLanding', skip.checked ? '1' : '0'); } catch {} });
+  $('#ver').textContent = `v${GAME_VERSION}`;
+  draw();
+</script>
 </body>
 </html>
