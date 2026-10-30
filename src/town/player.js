@@ -1,4 +1,4 @@
-// Player movement: camera-relative WASD, walk / Shift-run, jump, smooth turning,
+// Player movement: camera-relative WASD, walk (running after 2 s, or with Shift), jump, smooth turning,
 // collision with sliding, and the walkable-area rule from collision.js.
 import { createKid } from './kid/index.js';
 
@@ -9,6 +9,8 @@ const MOVE = {
   jump: 4.4, gravity: 13,
   radius: 0.28,
   runStick: 0.8,                // joystick push (0..1) that switches to running
+  holdRun: 2,                   // seconds of walking before it turns into a run
+  holdGap: 0.2,                 // a stop shorter than this keeps the count (changing keys)
 };
 
 /** lift(x, z): extra height of the walkable surface (road / pavement) above the terrain. */
@@ -39,9 +41,11 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
   let kid = createKid(scene);
   const p = { x: 0, y: 0, z: 0, yaw: 0, vx: 0, vz: 0, vy: 0, grounded: true, speed: 0, prevSpeed: 0, prevYaw: 0 };
   const ground = (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea - collision.wade);
+  let held = 0, gap = 0;         // how long the kid has kept walking, and how long since they last did
 
   function place(x, z, yaw = 0) {
     Object.assign(p, { x, z, yaw, vx: 0, vz: 0, vy: 0, grounded: true });
+    held = 0;
     p.y = ground(x, z);
   }
 
@@ -49,9 +53,11 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
   function update(dt, camYaw, frozen = false) {
     const { f, r, mag } = frozen ? { f: 0, r: 0, mag: 0 } : input.axis();   // keys or on-screen joystick
     const len = Math.hypot(f, r);
-    // Shift runs; on the joystick, pushing past `runStick` runs and less walks slower (keys alone walk)
+    // Shift runs, and so does walking on for `holdRun` seconds (pushing against a wall does not count);
+    // on the joystick, pushing past `runStick` runs at once and less walks slower
+    if (len && p.speed > 0.3) { held += dt; gap = 0; } else if ((gap += dt) > MOVE.holdGap) held = 0;
     const shift = input.down('ShiftLeft') || input.down('ShiftRight'), stick = Math.hypot(input.stick.x, input.stick.y) > 0.12;
-    const top = shift || (stick && mag > MOVE.runStick) ? MOVE.run : stick ? MOVE.walk * Math.max(0.45, mag / MOVE.runStick) : MOVE.walk;
+    const top = shift || held >= MOVE.holdRun || (stick && mag > MOVE.runStick) ? MOVE.run : stick ? MOVE.walk * Math.max(0.45, mag / MOVE.runStick) : MOVE.walk;
     // forward = away from camera
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
     const wx = len ? (fx * f + rx * r) / len * top : 0, wz = len ? (fz * f + rz * r) / len * top : 0;
