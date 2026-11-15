@@ -80,14 +80,14 @@ export function start(ctx) {
     B.hips.position.y -= 0.12 * (s.crouch / 0.3);                     // the pump: a quick dip
     if (!riding) {                                                    // in the air: knees up, arms wide; a hand to the skate for a grab
       const grab = input.axis().f < -0.5 && st.stun <= 0;
-      for (const sd of ['L', 'R']) { B[`leg${sd}`].rotation.x = -1.25; B[`shin${sd}`].rotation.x = 1.5; B[`arm${sd}`].rotation.set(-0.4, 0, (sd === 'L' ? 1 : -1) * 1.35); B[`fore${sd}`].rotation.x = -0.3; }
+      for (const sd of ['L', 'R']) { B[`leg${sd}`].rotation.x = -1.25; B[`shin${sd}`].rotation.x = 1.5; B[`foot${sd}`].rotation.set(-0.25, 0, 0); B[`arm${sd}`].rotation.set(-0.4, 0, (sd === 'L' ? 1 : -1) * 1.35); B[`fore${sd}`].rotation.x = -0.3; }
       if (grab) { B.armR.rotation.set(-1.0, 0, 0.35); B.foreR.rotation.x = -0.2; B.spine.rotation.x = 0.55; }
     }
     if (st.stun > 0 && riding) { B.armL.rotation.set(-0.4, 0, 1.4); B.armR.rotation.set(-0.4, 0, -1.4); B.spine.rotation.z += Math.sin(s.t * 24) * 0.3; }
     // facing along the pipe, tipped to the wall, spun and flipped by the tricks
     Qt.setFromAxisAngle(Z, tilt); Qy.setFromAxisAngle(Y, (dir > 0 ? Math.PI / 2 : -Math.PI / 2) + THREE.MathUtils.degToRad(riding ? 0 : st.spin)); Qf.setFromAxisAngle(X, -THREE.MathUtils.degToRad(riding ? 0 : st.flip));
     kid.mesh.quaternion.copy(Qt).multiply(Qy).multiply(Qf);
-    kid.mesh.position.set(x, y + 0.06 * Math.cos(tilt), 0).add(w.set(-Math.sin(tilt), 0, 0).multiplyScalar(0.06));
+    kid.mesh.position.set(x, y + SKATE.lift * Math.cos(tilt), 0).add(w.set(-Math.sin(tilt), 0, 0).multiplyScalar(SKATE.lift));
     // camera: side-on from the sea side, rising a little with the big jumps
     const portrait = camera.aspect < 1, dist = portrait ? 15 : 9.6;
     s.camY += ((riding ? 0 : Math.max(0, run.height() - 1) * 0.5) - s.camY) * Math.min(1, dt * 3);

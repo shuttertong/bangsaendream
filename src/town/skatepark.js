@@ -16,13 +16,15 @@ export const SKATE = {
   find: { from: [50, 460], sea: [19, 34], flat: 1.9, road: 6.5, houses: 22 },   // (road: the generated promenade runs along the road's sea side: keep behind it)
   oval: { straight: 16, r: 5.2, lane: 2.2 },   // the painted oval: straights, bend radius, half-width the lessons use
   ride: { speed: 6.2, turn: 3.2, accel: 2.4, coast: 0.7 },   // the kid on skates: top speed, steering (rad/s), pick-up, and how slowly they roll to a stop (m/s²)
-  pose: { crouch: 0.07, forward: 0.2, hip: 0.6, knee: 1.0, sway: 0.05, lean: 0.11 },   // knees bent, body forward; hip and knee bend of the gliding leg; sideways weight shift (m); roll per rad/s of turning
+  pose: { crouch: 0.07, forward: 0.2, hip: 0.6, knee: 1.0, sway: 0.05, lean: 0.11, edge: 0.35 },   // knees bent, body forward; hip and knee bend of the gliding leg; sideways weight shift (m); roll per rad/s of turning
+  lift: 0.08,                                  // how far the wheels raise a skater off the ground
   reach: 2.4,                                  // how near the rack the F prompt shows
   skaters: { n: 5, speed: [3.4, 5.4], detail: 0.5, range: 170 },
   colors: { slab: '#bfc8cd', apron: '#cfc8b8', line: '#f4f1e8', rail: '#f4f1e8', cone: '#f08a3a', kiosk: '#eee3cc', roof: '#3a9a8a', box: '#6a9ad0', boot: '#d8443a' },
 };
 const col = hex => new THREE.Color(hex);
 
+const QP = new THREE.Quaternion(), QA = new THREE.Quaternion(), EU = new THREE.Euler();
 const sstep = (a, b, v) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
 /** How far the stride cycle turns (radians) for `dist` metres at speed v: long, slow strokes at speed, shorter ones when slow. */
 export const strideStep = (dist, v) => dist * Math.PI * 2 / (2.6 + 0.9 * v);
@@ -43,18 +45,21 @@ export function skatePose(B, phase, k = 1, lean = 0) {
   B.head.rotation.set(-P.forward * 1.7, -sw * 0.06 * k, -lean * 0.5);
   for (const s of ['L', 'R']) {
     const sd = s === 'L' ? 1 : -1, g = (((phase + (s === 'L' ? 0 : Math.PI)) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    let hip, knee, out, toe, footX;
+    let hip, knee, out, toe, pitch = 0;
     if (g < Math.PI) {                                                // on the ground: glide, then push
       const push = sstep(0.45 * Math.PI, Math.PI, g) * k;
       hip = -P.hip + 0.5 * push; knee = P.knee - 0.62 * push; out = 0.05 + 0.5 * push; toe = 0.5 * push;
-      footX = -(hip + knee) - P.forward;                              // the skate stays flat on the ground
     } else {                                                          // in the air: lift the heel, tuck, swing in under the body
       const r = (g - Math.PI) / Math.PI, lift = Math.sin(r * Math.PI) * k, back = (1 - sstep(0, 0.75, r)) * k;
       hip = -P.hip + 0.5 * back - 0.12 * lift; knee = P.knee - 0.62 * back + 0.85 * lift; out = 0.05 + 0.5 * back * (1 - r); toe = 0.5 * back;
-      footX = -(hip + knee) - P.forward + 0.45 * lift;
+      pitch = 0.45 * lift;
     }
     const scissor = (1 - k) * sd * 0.12;                              // coasting: one skate a little ahead of the other
-    B[`leg${s}`].rotation.set(hip - scissor, 0, sd * out); B[`shin${s}`].rotation.x = knee; B[`foot${s}`].rotation.set(footX, sd * toe, 0);
+    B[`leg${s}`].rotation.set(hip - scissor, 0, sd * out); B[`shin${s}`].rotation.x = knee; 
+    // the skate is set in the body's own frame, whatever the leg does: flat on its wheels, toe turned out on the push,
+    // a little on its inside edge, heel lifted on the recovery — so the boot never twists off the line of the shin
+    QP.setFromEuler(B.hips.rotation).multiply(QA.setFromEuler(B[`leg${s}`].rotation)).multiply(QA.setFromEuler(B[`shin${s}`].rotation)).invert();
+    B[`foot${s}`].quaternion.copy(QP).multiply(QA.setFromEuler(EU.set(pitch, sd * toe, sd * (out - 0.05) * P.edge + lean, 'YXZ')));
     const swing = -sw * sd * 0.8 * k;                                 // arms against the legs, elbows bent; hanging loose when coasting
     B[`arm${s}`].rotation.set(swing - 0.15, 0, sd * (0.2 + 0.1 * k)); B[`fore${s}`].rotation.x = -0.45 - 0.5 * k - Math.max(0, swing) * 0.5;
   }
@@ -192,7 +197,7 @@ export function createSkating({ scene, park, hub, player, audio, input, setLook,
       const q = at(k.d, k.lane);
       let turn = k.yaw == null ? 0 : q.yaw - k.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1); k.yaw = q.yaw;
       k.lean = (k.lean || 0) + (Math.max(-0.3, Math.min(0.3, turn * K.pose.lean * k.v / 4)) - (k.lean || 0)) * Math.min(1, dt * 4);
-      k.p.root.position.set(q.x, rink.top + 0.06, q.z); k.p.root.rotation.y = q.yaw;
+      k.p.root.position.set(q.x, rink.top + SKATE.lift, q.z); k.p.root.rotation.y = q.yaw;
       k.p.bones.hips.position.copy(k.p.bones.hips.userData.rest);
       skatePose(k.p.bones, k.ph, 0.85, k.lean);
     }
@@ -208,7 +213,7 @@ export function createSkating({ scene, park, hub, player, audio, input, setLook,
     let turn = p.yaw - s.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1); s.yaw = p.yaw;
     s.lean += (Math.max(-0.32, Math.min(0.32, turn * K.pose.lean * p.speed / 4)) - s.lean) * Math.min(1, dt * 5);
     skatePose(player.kid.bones, s.phase, s.k, s.lean);
-    player.kid.mesh.position.y += 0.06;                                // up on the wheels
+    player.kid.mesh.position.y += SKATE.lift;                                // up on the wheels
   }
   return {
     update, use, off,

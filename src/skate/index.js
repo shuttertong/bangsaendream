@@ -96,7 +96,7 @@ export function start(ctx) {
       kid.bones.spine.rotation.z += Math.sin(s.t * 22) * 0.25 * (s.wob / SK.stumble.time);
       if (s.wob > 0) { kid.bones.armL.rotation.set(-0.4, 0, 1.3); kid.bones.armR.rotation.set(-0.4, 0, -1.3); }
     }
-    kid.mesh.position.y += 0.06;
+    kid.mesh.position.y += SKATE.lift;
     // chase camera
     const yawTo = s.phase === 'intro' ? yaw + 2.6 + Math.sin(s.t * 0.4) * 0.5 : yaw, portrait = camera.aspect < 1;
     s.camYaw += Math.atan2(Math.sin(yawTo - s.camYaw), Math.cos(yawTo - s.camYaw)) * Math.min(1, dt * 4);
