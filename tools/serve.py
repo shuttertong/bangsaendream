@@ -42,7 +42,7 @@ def clean_co(v, depth=0):
     if v is None or isinstance(v, bool):
         return v
     if isinstance(v, (int, float)):
-        if not math.isfinite(v) or abs(v) > 1e6:
+        if not math.isfinite(v) or abs(v) > 2 ** 31:   # (player ids online are random up to 2^30: see core/mpcheck.js coNum)
             raise ValueError
         return v
     if isinstance(v, str):

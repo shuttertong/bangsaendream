@@ -9,6 +9,7 @@ export const LIMITS = {
   games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football', 'volley', 'gp'],
   look: ['shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom'],
   fx: ['hat', 'wings', 'back', 'hand', 'tail', 'aura'], fxMax: 64,   // wardrobe item indices (0 = none)
+  coNum: 2 ** 31,                     // the largest number a co-op payload may carry: player ids online are random up to 2^30, and games name players by id (a seat on a bicycle, who the takraw ball goes to)
   coKeys: ['k', 'room', 'game', 'seats', 't', 'seed', 'lean', 's', 'e', 'ev', 'phase', 'n', 'i', 'side', 'team', 'r'],
 };
 const L = LIMITS, WORD = /^[a-z]{1,12}$/;
@@ -42,7 +43,7 @@ export function cleanTrucks(lst) {
 export function cleanCo(v, depth = 0) {
   if (depth > 4) throw new Error('deep');
   if (v === null || typeof v === 'boolean') return v;
-  if (typeof v === 'number') { if (!Number.isFinite(v) || Math.abs(v) > 1e6) throw new Error('num'); return v; }
+  if (typeof v === 'number') { if (!Number.isFinite(v) || Math.abs(v) > L.coNum) throw new Error('num'); return v; }
   if (typeof v === 'string') { if (!WORD.test(v)) throw new Error('word'); return v; }
   if (Array.isArray(v)) { if (v.length > 64) throw new Error('len'); return v.map(x => cleanCo(x, depth + 1)); }
   if (typeof v === 'object') {
