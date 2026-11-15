@@ -15,7 +15,7 @@ export const SKATE = {
   // its middle's distance from the sea; ground range across the plot; clear of roads (the promenade too) and buildings
   find: { from: [50, 460], sea: [19, 34], flat: 1.9, road: 6.5, houses: 22 },   // (road: the generated promenade runs along the road's sea side: keep behind it)
   oval: { straight: 16, r: 5.2, lane: 2.2 },   // the painted oval: straights, bend radius, half-width the lessons use
-  ride: { speed: 6.2, turn: 3.2, accel: 2.4, coast: 0.7 },   // the kid on skates: top speed, steering (rad/s), pick-up, and how slowly they roll to a stop (m/s²)
+  ride: { speed: 7, turn: 11, accel: 14, coast: 0.7 },   // the kid on skates: top speed (running is 4.3), steering and pick-up as nimble as on foot (player.js MOVE), and how slowly they roll to a stop (m/s²)
   pose: { crouch: 0.07, forward: 0.2, hip: 0.6, knee: 1.0, sway: 0.05, lean: 0.11, edge: 0.35 },   // knees bent, body forward; hip and knee bend of the gliding leg; sideways weight shift (m); roll per rad/s of turning
   lift: 0.08,                                  // how far the wheels raise a skater off the ground
   reach: 2.4,                                  // how near the rack the F prompt shows
