@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { buildTrack } from '../gp/track.js';
 import { createLesson } from './sim.js';
 import { SK } from './rules.js';
-import { SKATE, ovalPoints, skatePose } from '../town/skatepark.js';
+import { SKATE, ovalPoints, skatePose, strideStep } from '../town/skatepark.js';
 import { createKid } from '../town/kid/index.js';
 import { KID_LOOK } from '../town/kid/model.js';
 import { createGameUI } from '../shared/gameUI.js';
@@ -89,10 +89,11 @@ export function start(ctx) {
     at(st.s, st.d, pos);
     const moved = st.v * dt;
     kid.update(dt, { x: pos.x, y: top + st.y, z: pos.z, yaw, speed: st.v, dist: moved, accel: 0, turn: 0, grounded: st.y <= 0, vy: st.vy, groundAt: () => top });
-    s.stride += moved * 1.5 + dt * 0.5; s.wob = Math.max(0, s.wob - dt);
+    s.stride += strideStep(moved, st.v); s.wob = Math.max(0, s.wob - dt);
     if (st.y <= 0) {
-      skatePose(kid.bones, s.stride, Math.min(1, 0.3 + st.v / 6));
-      kid.bones.spine.rotation.z += -st.vd * 0.06 + Math.sin(s.t * 22) * 0.25 * (s.wob / SK.stumble.time);
+      // a steady stride round the oval; rolling into each change of line, coasting while braking
+      skatePose(kid.bones, s.stride, s.phase === 'play' ? (input.axis().f < -0.4 ? 0.1 : 0.75) : 0, -st.vd * 0.07);
+      kid.bones.spine.rotation.z += Math.sin(s.t * 22) * 0.25 * (s.wob / SK.stumble.time);
       if (s.wob > 0) { kid.bones.armL.rotation.set(-0.4, 0, 1.3); kid.bones.armR.rotation.set(-0.4, 0, -1.3); }
     }
     kid.mesh.position.y += 0.06;

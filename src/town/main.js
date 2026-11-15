@@ -266,7 +266,7 @@ async function boot() {
   hub.takraw = takraw;
   const bikes = createBikes({ scene, hub, mp, player, map, lift, collision, audio, seaDist: layout.seaDist, at: hub.places.beach });   // 🚲 three-seat bicycles for rent
   hub.bike = bikes; mp.bikes = bikes;
-  const skating = createSkating({ scene, park: skatePark, hub, player, audio, setLook: l => player.setLook(l), baseLook: () => ({ ...KID_LOOK }) });   // 🛼 skates for the kid, skaters on the oval
+  const skating = createSkating({ scene, park: skatePark, hub, player, audio, input, setLook: l => player.setLook(l), baseLook: () => ({ ...KID_LOOK }) });   // 🛼 skates for the kid, skaters on the oval
   hub.skate = skating; townCtx.skate = skatePark?.rink || null;
   player.input = input;
   // 🏆 the online leaderboard: bests go up after a round; a medal tile in the journal opens a game's board

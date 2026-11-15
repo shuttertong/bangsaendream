@@ -61,7 +61,7 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
     // forward = away from camera
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
     const wx = len ? (fx * f + rx * r) / len * top : 0, wz = len ? (fz * f + rz * r) / len * top : 0;
-    const a = p.ride ? p.ride.accel : len ? MOVE.accel : MOVE.decel;      // p.ride: on the bicycle (bike.js sets speed, turn, accel)
+    const a = p.ride ? (len ? p.ride.accel : p.ride.coast ?? p.ride.accel) : len ? MOVE.accel : MOVE.decel;      // p.ride: on the bicycle (bike.js sets speed, turn, accel)
     const dvx = wx - p.vx, dvz = wz - p.vz, dv = Math.hypot(dvx, dvz), k = Math.min(1, (a * dt) / (dv || 1));
     p.vx += dvx * k; p.vz += dvz * k;
 

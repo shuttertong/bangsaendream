@@ -15,22 +15,48 @@ export const SKATE = {
   // its middle's distance from the sea; ground range across the plot; clear of roads (the promenade too) and buildings
   find: { from: [50, 460], sea: [19, 34], flat: 1.9, road: 6.5, houses: 22 },   // (road: the generated promenade runs along the road's sea side: keep behind it)
   oval: { straight: 16, r: 5.2, lane: 2.2 },   // the painted oval: straights, bend radius, half-width the lessons use
-  ride: { speed: 6.2, turn: 3.6, accel: 2.6 }, // the kid on skates (m/s, rad/s, m/s²)
+  ride: { speed: 6.2, turn: 3.2, accel: 2.4, coast: 0.7 },   // the kid on skates: top speed, steering (rad/s), pick-up, and how slowly they roll to a stop (m/s²)
+  pose: { crouch: 0.07, forward: 0.2, hip: 0.6, knee: 1.0, sway: 0.05, lean: 0.11 },   // knees bent, body forward; hip and knee bend of the gliding leg; sideways weight shift (m); roll per rad/s of turning
   reach: 2.4,                                  // how near the rack the F prompt shows
   skaters: { n: 5, speed: [3.4, 5.4], detail: 0.5, range: 170 },
   colors: { slab: '#bfc8cd', apron: '#cfc8b8', line: '#f4f1e8', rail: '#f4f1e8', cone: '#f08a3a', kiosk: '#eee3cc', roof: '#3a9a8a', box: '#6a9ad0', boot: '#d8443a' },
 };
 const col = hex => new THREE.Color(hex);
 
-/** The skating pose: knees bent, leaning in, legs pushing out to the side in turn, arms swinging (k = how hard, 0–1). */
-export function skatePose(B, phase, k = 1) {
-  const sw = Math.sin(phase);
-  B.hips.position.y -= 0.05;
-  B.hips.rotation.set(0.16, 0, sw * 0.06 * k); B.spine.rotation.set(0.3, 0, -sw * 0.1 * k); B.head.rotation.set(-0.3, 0, 0);
+const sstep = (a, b, v) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
+/** How far the stride cycle turns (radians) for `dist` metres at speed v: long, slow strokes at speed, shorter ones when slow. */
+export const strideStep = (dist, v) => dist * Math.PI * 2 / (2.6 + 0.9 * v);
+
+/**
+ * The skating pose. One cycle of `phase` is a stroke with each leg: a leg glides under the body (knee bent, the
+ * weight over it), pushes out to the side and back with the toe turned out, then lifts, tucks and swings in to land
+ * as the other leg pushes. The body rides low and leans forward, sways over the gliding leg, the arms swing against
+ * the legs. k (0–1): how hard the skater is working — 0 is coasting, both skates down, one a little ahead.
+ * lean: roll into a turn (rad, + = to the left).
+ */
+export function skatePose(B, phase, k = 1, lean = 0) {
+  const P = SKATE.pose, sw = Math.sin(phase);
+  B.hips.position.y -= P.crouch + 0.015 * k * Math.abs(sw);
+  B.hips.position.x = sw * P.sway * k;                                // the weight goes over the gliding leg (left for the first half)
+  B.hips.rotation.set(P.forward + 0.06 * k, sw * -0.1 * k, -sw * 0.07 * k + lean);
+  B.spine.rotation.set(P.forward * 0.9, sw * 0.16 * k, sw * 0.05 * k + lean * 0.4);
+  B.head.rotation.set(-P.forward * 1.7, -sw * 0.06 * k, -lean * 0.5);
   for (const s of ['L', 'R']) {
-    const sd = s === 'L' ? 1 : -1, v = sw * sd, push = Math.max(0, v), lift = Math.max(0, -v);
-    B[`leg${s}`].rotation.set(-0.42 + 0.3 * lift * k, 0, sd * (0.06 + 0.42 * push * k)); B[`shin${s}`].rotation.x = 0.62 + 0.55 * lift * k; B[`foot${s}`].rotation.x = -0.2;
-    B[`arm${s}`].rotation.set(-v * 0.75 * k - 0.1, 0, sd * 0.22); B[`fore${s}`].rotation.x = -0.65;
+    const sd = s === 'L' ? 1 : -1, g = (((phase + (s === 'L' ? 0 : Math.PI)) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    let hip, knee, out, toe, footX;
+    if (g < Math.PI) {                                                // on the ground: glide, then push
+      const push = sstep(0.45 * Math.PI, Math.PI, g) * k;
+      hip = -P.hip + 0.5 * push; knee = P.knee - 0.62 * push; out = 0.05 + 0.5 * push; toe = 0.5 * push;
+      footX = -(hip + knee) - P.forward;                              // the skate stays flat on the ground
+    } else {                                                          // in the air: lift the heel, tuck, swing in under the body
+      const r = (g - Math.PI) / Math.PI, lift = Math.sin(r * Math.PI) * k, back = (1 - sstep(0, 0.75, r)) * k;
+      hip = -P.hip + 0.5 * back - 0.12 * lift; knee = P.knee - 0.62 * back + 0.85 * lift; out = 0.05 + 0.5 * back * (1 - r); toe = 0.5 * back;
+      footX = -(hip + knee) - P.forward + 0.45 * lift;
+    }
+    const scissor = (1 - k) * sd * 0.12;                              // coasting: one skate a little ahead of the other
+    B[`leg${s}`].rotation.set(hip - scissor, 0, sd * out); B[`shin${s}`].rotation.x = knee; B[`foot${s}`].rotation.set(footX, sd * toe, 0);
+    const swing = -sw * sd * 0.8 * k;                                 // arms against the legs, elbows bent; hanging loose when coasting
+    B[`arm${s}`].rotation.set(swing - 0.15, 0, sd * (0.2 + 0.1 * k)); B[`fore${s}`].rotation.x = -0.45 - 0.5 * k - Math.max(0, swing) * 0.5;
   }
 }
 
@@ -127,14 +153,14 @@ export function buildSkatePark(kit, scene, map, layout, start) {
 }
 
 /** Skates for the kid (F at the rack) and the skaters lapping the oval. park: buildSkatePark()'s result. */
-export function createSkating({ scene, park, hub, player, audio, setLook, baseLook }) {
+export function createSkating({ scene, park, hub, player, audio, input, setLook, baseLook }) {
   if (!park) return { on: false, near: false, use() {}, off() {}, update() {}, prompt: () => [null, null] };
   const K = SKATE, { rink } = park, S = rink.slab, c = Math.cos(S.ry), sn = Math.sin(S.ry);
   const onSlab = (x, z) => { const dx = x - S.x, dz = z - S.z, u = dx * c - dz * sn, w = dx * sn + dz * c; return Math.abs(u) < S.hx && Math.abs(w) < S.hz; };
-  const s = { on: false, near: false, phase: 0, px: 0, pz: 0 };
+  const s = { on: false, near: false, phase: 0, px: 0, pz: 0, k: 0, lean: 0, yaw: 0 };
   const toast = (m, snd = 'click') => { hub.hud?.toast(m); audio?.play(snd); };
   function wear(on) { s.on = on; setLook({ ...baseLook(), skates: on ? K.colors.boot : null }); if (!on) player.state.ride = null; }
-  function use() { if (!s.near || s.on) return; wear(true); s.px = player.state.x; s.pz = player.state.z; toast(t('skateOnToast'), 'coin'); }
+  function use() { if (!s.near || s.on) return; wear(true); s.px = player.state.x; s.pz = player.state.z; s.yaw = player.state.yaw; s.k = s.lean = 0; toast(t('skateOnToast'), 'coin'); }
   function off(quiet = false) { if (!s.on) return; wear(false); if (!quiet) toast(t('skateOffToast')); }
 
   // the skaters: one skinned mesh, each lapping the oval at their own pace
@@ -162,19 +188,26 @@ export function createSkating({ scene, park, hub, player, audio, setLook, baseLo
     const p = player.state, far = Math.hypot(p.x - rink.x, p.z - rink.z) > K.skaters.range;
     crew.mesh.visible = !far;
     if (!far) for (const k of skaters) {
-      k.d += k.v * dt; k.ph += k.v * dt * 1.5;
+      k.d += k.v * dt; k.ph += strideStep(k.v * dt, k.v);
       const q = at(k.d, k.lane);
+      let turn = k.yaw == null ? 0 : q.yaw - k.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1); k.yaw = q.yaw;
+      k.lean = (k.lean || 0) + (Math.max(-0.3, Math.min(0.3, turn * K.pose.lean * k.v / 4)) - (k.lean || 0)) * Math.min(1, dt * 4);
       k.p.root.position.set(q.x, rink.top + 0.06, q.z); k.p.root.rotation.y = q.yaw;
       k.p.bones.hips.position.copy(k.p.bones.hips.userData.rest);
-      skatePose(k.p.bones, k.ph, 1);
+      skatePose(k.p.bones, k.ph, 0.85, k.lean);
     }
     s.near = active && !s.on && Math.hypot(p.x - park.rack.x, p.z - park.rack.z) < K.reach;
     if (!s.on) return;
     if (!onSlab(p.x, p.z)) { off(true); toast(t('skateOnlyHere')); return; }
     p.ride = K.ride;
     const d = Math.hypot(p.x - s.px, p.z - s.pz); s.px = p.x; s.pz = p.z;
-    s.phase += d * 1.5 + dt * 0.6;
-    skatePose(player.kid.bones, s.phase, Math.min(1, 0.25 + p.speed / 4));
+    // striding while the stick is pushed (harder when still picking up speed), coasting with both skates down when it is let go
+    const pushing = input?.axis().mag > 0.1 ? Math.min(1, 0.55 + Math.max(0, K.ride.speed - p.speed) / 4) : 0;
+    s.k += (pushing - s.k) * Math.min(1, dt * (pushing > s.k ? 6 : 2.5));
+    s.phase += strideStep(d, p.speed) * (0.35 + 0.65 * s.k);
+    let turn = p.yaw - s.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1); s.yaw = p.yaw;
+    s.lean += (Math.max(-0.32, Math.min(0.32, turn * K.pose.lean * p.speed / 4)) - s.lean) * Math.min(1, dt * 5);
+    skatePose(player.kid.bones, s.phase, s.k, s.lean);
     player.kid.mesh.position.y += 0.06;                                // up on the wheels
   }
   return {
