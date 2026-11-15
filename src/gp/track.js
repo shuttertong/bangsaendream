@@ -4,22 +4,26 @@
 
 /** loop: [[x, z], …] closed. Returns { n, step, length, x, z, tx, tz, k, at(s), project(x, z, hint) }. */
 export function buildTrack(loop, { step = 2, smooth = 3 } = {}) {
-  let pts = loop.map(p => [...p]);
-  for (let it = 0; it < smooth; it++) {                                  // Chaikin corner cutting on the closed polygon
-    const out = [];
-    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); }
-    pts = out;
-  }
-  // resample at a constant step
-  const seg = pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; return Math.hypot(b[0] - a[0], b[1] - a[1]); });
-  const total = seg.reduce((a, b) => a + b, 0), n = Math.round(total / step), ds = total / n;
-  const x = new Float32Array(n), z = new Float32Array(n), tx = new Float32Array(n), tz = new Float32Array(n), k = new Float32Array(n);
+  // resample the closed polyline at a constant step …
+  const pts = loop, seg = pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; return Math.hypot(b[0] - a[0], b[1] - a[1]); });
+  const total0 = seg.reduce((a, b) => a + b, 0), n = Math.round(total0 / step);
+  let x = new Float32Array(n), z = new Float32Array(n);
   for (let i = 0, j = 0, acc = 0; i < n; i++) {
-    const s = i * ds;
+    const s = i * total0 / n;
     while (acc + seg[j] < s) { acc += seg[j]; j++; }
     const a = pts[j], b = pts[(j + 1) % pts.length], u = (s - acc) / seg[j];
     x[i] = a[0] + (b[0] - a[0]) * u; z[i] = a[1] + (b[1] - a[1]) * u;
   }
+  // … then round the corners with a short moving average (`smooth` passes over ±2 samples): the line stays
+  // within about a metre of the road's own centreline, so it never leaves the road the way corner-cutting does
+  for (let it = 0; it < smooth; it++) {
+    const ax = new Float32Array(n), az = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let sx = 0, sz = 0; for (let q = -2; q <= 2; q++) { const k = ((i + q) % n + n) % n; sx += x[k]; sz += z[k]; } ax[i] = sx / 5; az[i] = sz / 5; }
+    x = ax; z = az;
+  }
+  let total = 0;
+  for (let i = 0; i < n; i++) { const b = (i + 1) % n; total += Math.hypot(x[b] - x[i], z[b] - z[i]); }
+  const ds = total / n, tx = new Float32Array(n), tz = new Float32Array(n), k = new Float32Array(n);
   for (let i = 0; i < n; i++) { const a = (i + n - 1) % n, b = (i + 1) % n, L = Math.hypot(x[b] - x[a], z[b] - z[a]) || 1; tx[i] = (x[b] - x[a]) / L; tz[i] = (z[b] - z[a]) / L; }
   for (let i = 0; i < n; i++) {                                           // signed curvature (1/m), + = turning left, over ±3 samples
     const a = (i + n - 3) % n, b = (i + 3) % n, h = Math.atan2(tx[b] * tz[a] - tz[b] * tx[a], tx[b] * tx[a] + tz[b] * tz[a]);

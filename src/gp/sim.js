@@ -50,15 +50,16 @@ export function createRace(track, entries, rand = Math.random, R = GP) {
     const ahead = B.look[0] + B.look[1] * k.v, t = track.at(k.prog + ahead), nx = t.tz, nz = -t.tx;
     k.laneT -= 1 / 60;
     if (k.laneT <= 0) { k.laneT = 2 + rand() * 4; k.want = (rand() * 2 - 1) * B.lane; }
-    for (const o of karts) {                                                     // someone slower just ahead: move over
+    let passing = false;
+    for (const o of karts) {                                                     // someone slower just ahead: pull out to pass
       if (o === k) continue;
       const gap = o.prog - k.prog;
-      if (gap > 0 && gap < 9 && Math.abs(o.d - k.d) < 1.3 && o.v < k.v + 1) k.want = clamp(o.d + (o.d > 0 ? -1.6 : 1.6), -B.lane - 0.5, B.lane + 0.5);
+      if (gap > 0 && gap < 12 && Math.abs(o.d - k.d) < 1.5 && o.v < k.v + 1.5) { const room = (track.half[k.i] || R.track.half) - 0.6; k.want = clamp(o.d + (o.d > 0 ? -2.1 : 2.1), -room, room); passing = true; }
     }
-    k.lane += ((k.want ?? k.lane) - k.lane) * 0.03;
+    k.lane += ((k.want ?? k.lane) - k.lane) * (passing ? 0.08 : 0.03);
     let kmax = 0;                                                                // the tightest bend in the road ahead
     for (let m = 0; m < B.corner; m += track.step * 2) kmax = Math.max(kmax, Math.abs(track.k[track.wrap(k.i + Math.round(m / track.step))]));
-    const off = k.lane * clamp(1 - kmax * 14, 0.15, 1);                          // keep to the middle through bends
+    const off = k.lane * (passing ? 1 : clamp(1 - kmax * 14, 0.15, 1));   // keep to the middle through bends (unless passing)
     const tx = t.x + nx * off, tz = t.z + nz * off, steer = clamp(angle(Math.atan2(tx - k.x, tz - k.z) - k.h) * B.steer, -1, 1);
     let band = 1;
     if (lead != null) { const gap = k.prog - lead; band = gap > B.band[0] ? 1 - B.band[1] : gap < -B.band[0] ? 1 + B.band[1] : 1; }
@@ -84,7 +85,7 @@ export function createRace(track, entries, rand = Math.random, R = GP) {
       const push = (min - dist) * K.shove, ux = dx / dist, uz = dz / dist, wp = p.kind === 'ghost' ? 0 : q.kind === 'ghost' ? 1 : 0.5;
       p.x -= ux * push * 2 * wp; p.z -= uz * push * 2 * wp; q.x += ux * push * 2 * (1 - wp) * (q.kind === 'ghost' ? 0 : 1); q.z += uz * push * 2 * (1 - wp) * (q.kind === 'ghost' ? 0 : 1);
       const slow = p.prog < q.prog ? p : q;
-      if (slow.kind !== 'ghost') slow.v *= 0.985;
+      if (slow.kind !== 'ghost' && Math.abs(p.d - q.d) < 0.8) slow.v *= 0.99;   // running into the back of someone costs a little
     }
   }
   /** A remote kart's place from the network: distance round, lateral offset, speed (eased by `blend` per second). */

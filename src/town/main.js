@@ -61,6 +61,7 @@ import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
 import { createBikes } from './bike.js';
 import { GP } from '../gp/rules.js';
+import { LOOP } from '../gp/loop.js';
 import { createSponsor } from './sponsor.js';
 import { createLeaderboard } from './leaderboard.js';
 import * as scores from '../shared/scores.js';
@@ -133,7 +134,16 @@ async function boot() {
   scene.add(beach.group);
   const walkZones = [...landmarks.walkZones, ...GP.walk];           // the roundabout; the kart loop's short stretch outside the strip
   const inZone = (x, z) => walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
-  const roadblocks = buildRoadblocks(kit, scene, map, layout, (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z)));   // fence off road 3137 (and every road out)
+  const walkable = (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z));
+  // the kart circuit leaves the map for a stretch round the hill's north tip: the two barriers that close it to walkers
+  // are built apart from the rest, so they can be taken away for a race
+  const segDist = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1))); return Math.hypot(a[0] + dx * u - x, a[1] + dz * u - z); };
+  const onCircuit = p => LOOP.some((a, i) => segDist(p.x, p.z, a, LOOP[(i + 1) % LOOP.length]) < 14);
+  const roadblocks = buildRoadblocks(kit, scene, map, layout, walkable, p => !onCircuit(p));   // fence off road 3137 (and every road out)
+  const raceKit = new Kit(), raceBlocks = buildRoadblocks(raceKit, scene, map, layout, walkable, onCircuit);
+  roadblocks.solids.push(...raceBlocks.solids); roadblocks.spots.push(...raceBlocks.spots);
+  const raceGates = raceKit.build();
+  scene.add(raceGates);
   const town = kit.build();
   scene.add(town);
   const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
@@ -174,7 +184,7 @@ async function boot() {
     scene, camera, map,
     ground: (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea),
     roadEdge: (x, z) => { const n = layout.roadIdx.nearest(x, z, 12); return n ? -n.d : 0; },   // metres inside the nearest road's edge
-    setRace(on) { for (const tk of hub.trucks.trucks) tk.g.visible = !on; player.kid.mesh.visible = !on; if (!on) resize(); },
+    setRace(on) { for (const tk of hub.trucks.trucks) tk.g.visible = !on; player.kid.mesh.visible = !on; for (const m of [raceGates, ...raceBlocks.meshes]) m.visible = !on; if (!on) resize(); },
   };
   let game = null, gameMod = null, gameId = null, loading = false;
   /** opts.coop: co-op session (see coop.js) for games that support it. */

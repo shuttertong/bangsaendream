@@ -25,8 +25,12 @@ export const ROADBLOCK = {
 
 const col = h => new THREE.Color(h);
 
-/** walkable(x, z): the collision's area rule (strip + open corridors + walk zones). */
-export function buildRoadblocks(kit, scene, map, layout, walkable) {
+/**
+ * walkable(x, z): the collision's area rule (strip + open corridors + walk zones).
+ * only(spot): build just these barriers (main.js builds the ones on the kart circuit apart, to take them away for a race).
+ * Returns { solids, count, spots, meshes } — meshes: the dolls' waving arms and the painted boards (not part of the kit).
+ */
+export function buildRoadblocks(kit, scene, map, layout, walkable, only = null) {
   const R = ROADBLOCK, r = rng(3137), solids = [], spots = [], { roadIdx } = layout;
   const ground = (x, z) => Math.max(map.heightAt(x, z), map.sea);
 
@@ -51,6 +55,7 @@ export function buildRoadblocks(kit, scene, map, layout, walkable) {
   }
 
   const B = R.barrier, F = R.fence, S = R.sign, Dr = R.dress, arms = [], boards = [];
+  if (only) spots.splice(0, spots.length, ...spots.filter(only));
   for (const p of spots) {
     const ry = Math.atan2(p.ox, p.oz), f = kit.frame(p.x, 0, p.z, ry);  // +w points out along the closed road; u across it
     const y = (u, w) => { const q = f.P(u, 0, w); return ground(q.x, q.z); };
@@ -109,10 +114,10 @@ export function buildRoadblocks(kit, scene, map, layout, walkable) {
     for (let u = u0; u <= u1; u += 0.4) { const q = f.P(u, 0, 0.5); solids.push({ x: q.x, z: q.z, r: 0.45, top: ground(q.x, q.z) + F.h }); }
     Object.assign(p, { u0, u1, ry });
   }
-  createWavingArms(scene, arms);
+  const wave = createWavingArms(scene, arms);
   const signs = createSignFaces(scene, boards, drawBoard);
   if (signs) onLang(signs.redraw);
-  return { solids, count: spots.length, spots };
+  return { solids, count: spots.length, spots, meshes: [wave, signs?.mesh].filter(Boolean) };
 }
 
 /** The painted board: a cartoon beach, the "closed" line and a turn-back arrow. */

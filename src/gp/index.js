@@ -9,6 +9,7 @@ import { buildTrack } from './track.js';
 import { createRace, payFor } from './sim.js';
 import { createGpNet } from './net.js';
 import { buildKart } from './kart.js';
+import { buildBarriers } from './barriers.js';
 import { GP } from './rules.js';
 import { createGameUI } from '../shared/gameUI.js';
 import { KID_LOOK } from '../town/kid/model.js';
@@ -69,6 +70,7 @@ export function start(ctx) {
     gate.position.set(s0.x, T.ground(s0.x, s0.z) + 0.04, s0.z); gate.rotation.y = lineYaw;
     root.add(gate);
   }
+  root.add(buildBarriers(track, T.ground));                              // concrete blocks and catch fences along the whole circuit, for the race only
   T.setRace(true);                                                       // hide the trucks and the kid on foot
 
   const ui = createGameUI(ctx.root, { game: 'gp', title: t('gpTitle'), how: t(co ? 'gpHowCoop' : 'gpHow'), keys: t('gpKeys'), audio: ctx.audio });

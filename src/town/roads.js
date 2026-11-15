@@ -22,6 +22,7 @@ export const ROAD_STYLE = {
   cycleway:      { w: 2, col: '#8a6e62' },
 };
 export const ROAD_LIFT = 0.06;
+const SKIRT = { col: '#8a8478', min: 0.12 };   // a road's concrete side where it stands this far above the ground
 export const SIDEWALK = { kinds: ['secondary', 'tertiary'], w: 2.4, lift: 0.2, col: '#c2baa9', col2: '#b4ab98', curb: '#dcd7cb' };
 // Beach promenade (ทางเดินริมหาด): on the sea side of beachfront roads, a wide brick-paved
 // walk replaces the pavement. `sea`: how far from the waterline the road must be.
@@ -77,7 +78,7 @@ function frame(p, step = STEP) {
  * `cols` columns so it follows the terrain. colour(sAlong, tAcross) → Color, sampled
  * once per quad (flat: paving slabs) or at every vertex (smooth: asphalt).
  */
-function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false, keep = null) {
+function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false, keep = null, skirt = null) {
   const { pts, nrm, along } = F;
   const pos = [], col = [];
   const P = (i, t) => {
@@ -98,6 +99,17 @@ function strip(kit, map, F, t0, t1, cols, lift, colour, at, smooth = false, keep
     }
   }
   if (!pos.length) return;
+  if (skirt) {                                                       // sides down to the ground: where the road stands above it (a fill, a hairpin's upper arm)
+    const dark = new THREE.Color(skirt.col);
+    for (const t of [t0, t1]) for (let i = 1; i < pts.length; i++) {
+      const a = P(i - 1, t), b = P(i, t), ga = map.groundAt ? map.groundAt(a[0], a[2]) : a[1], gb = map.groundAt ? map.groundAt(b[0], b[2]) : b[1];
+      if (a[1] - ga < skirt.min && b[1] - gb < skirt.min) continue;
+      if (keep && !keep((a[0] + b[0]) / 2, (a[2] + b[2]) / 2)) continue;
+      const a0 = [a[0], Math.min(a[1], ga) - 0.3, a[2]], b0 = [b[0], Math.min(b[1], gb) - 0.3, b[2]];
+      pos.push(...(t === t0 ? [...a, ...a0, ...b, ...b, ...a0, ...b0] : [...a, ...b, ...a0, ...a0, ...b, ...b0]));
+      for (let v = 0; v < 6; v++) col.push(dark.r, dark.g, dark.b);
+    }
+  }
   // kit.add visits vertices in order, so hand it the per-quad colours one by one
   let n = 0;
   const tmp = new THREE.Color();
@@ -197,7 +209,7 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
         const track = Math.exp(-(((lane - 0.5) / 0.14) ** 2)) * -0.03;
         const edge = Math.max(0, lane - 0.85) * 0.12;
         return c.copy(base).offsetHSL(0, 0, track + edge + Math.sin(s * 0.11 + t) * 0.006);
-      }, at, true);
+      }, at, true, null, SKIRT);
     }
 
     if (st.dash) {

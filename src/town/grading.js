@@ -18,8 +18,16 @@ export const GRADE = {
   pin: 0.6,              // a sample within (other road's half-width + this) takes that road's height
   wetReach: 9,           // under-sea grid nodes are raised only this close to a road edge: one grid cell, so a
                          // waterfront road has solid ground under both edges, and the shore moves no further
-  maxGrade: { town: 0.08, hill: 0.25 },   // steepest climb (scene height per metre; heights are ×1.5): gentle in town,
+  rejoin: 14,            // metres over which a road is eased back onto the roads it meets, after the grade limit
+  finish: 5,             // metres (sigma) of a last smoothing along each road, after the pins and the grade limit
+  maxGrade: { town: 0.08, hill: 0.2 },   // steepest climb (scene height per metre; heights are ×1.5): gentle in town,
   hill: 12,              // steep allowed where the raw ground is higher than this (Khao Sam Muk)
+  // the road surface itself (map.heightAt on and beside a road): the smooth profile, level across — the 8 m grid
+  // cannot hold a level 6 m road on a steep slope, or two arms of a hairpin at different heights
+  level: 2.4,            // level with the road this far beyond its edge (the pavement), then…
+  verge: 5.5,            // …eased back to the ground by this far beyond the edge
+  bank: 0.3,             // …rising this steeply (height per metre) away from the road's edge
+  under: 0.12,           // the grid is kept this far below any road within one grid cell of it (never pokes through)
 };
 
 /** Keep |dh/ds| ≤ g(i) (per step i-1 → i) while staying close to h: the mean of the upper and lower envelopes. */
@@ -83,11 +91,11 @@ export function gradeRoads(map) {
     });
     // pins: where this road runs onto a graded (more important) road, take its height; spread the
     // correction along this road, fading out over the smoothing length beyond the last pin
-    const pins = [];
-    S.forEach((s, i) => { const o = surfaceAt(s.x, s.z); if (o) pins.push({ i, d: o.h - s.h }); });
-    if (pins.length) {
-      pinned++;
-      const fade = Math.max(win, 12);
+    /** Take the height of the graded (more important) roads this one runs onto; the correction fades out over `fade` beyond the pins. */
+    const pinTo = fade => {
+      const pins = [];
+      S.forEach((s, i) => { const o = surfaceAt(s.x, s.z); if (o) pins.push({ i, d: o.h - s.h }); });
+      if (!pins.length) return false;
       for (let i = 0, p = 0; i < S.length; i++) {
         while (p < pins.length - 1 && pins[p + 1].i <= i) p++;
         const A = pins[p], B = pins[p + 1];
@@ -97,9 +105,23 @@ export function gradeRoads(map) {
         else { const t = (S[i].s - S[A.i].s) / Math.max(1e-6, S[B.i].s - S[A.i].s); d = A.d + (B.d - A.d) * t; }
         S[i].h += d;
       }
-    }
+      return true;
+    };
+    if (pinTo(Math.max(win, 12))) pinned++;
     // hill or town, stretch by stretch (a coastal road may climb onto the hill at one end only)
     if (r.k !== 'steps') limitGrade(S, i => (S[i].raw > G.hill && S[i - 1].raw > G.hill ? G.maxGrade.hill : G.maxGrade.town));
+    // a last light smoothing: the junction pins and the grade limit leave small kinks, felt as bumps on the hill
+    if (r.k !== 'steps' && S.length > 4) {
+      const sg = G.finish, rc = Math.ceil(2.5 * sg / G.step), out = S.map((s, i) => {
+        let sw = 0, sh = 0;
+        for (let k = Math.max(0, i - rc); k <= Math.min(S.length - 1, i + rc); k++) { const d = S[k].s - s.s, w = Math.exp(-(d * d) / (2 * sg * sg)); sw += w; sh += w * S[k].h; }
+        const edge = Math.min(1, Math.min(i, S.length - 1 - i) / rc);            // leave the ends where they meet other roads
+        return s.h + (sh / sw - s.h) * edge;
+      });
+      S.forEach((s, i) => { s.h = out[i]; });
+    }
+    pinTo(G.rejoin);                                                 // the grade limit and the smoothing may have pulled a junction apart: close it again
+    S.forEach((s, i) => { s.next = S[i + 1] || null; });
     for (const s of S) {
       s.h = Math.max(s.h, floor);
       s.hw = hw; s.rank = G.rank.indexOf(r.k);
@@ -110,13 +132,14 @@ export function gradeRoads(map) {
   }
 
   // pull the grid toward the profiles: full weight under the road and its shoulders, then ease out
-  const W = new Float32Array(nx * nz), T = new Float32Array(nx * nz), D = new Float32Array(nx * nz).fill(Infinity);
+  const W = new Float32Array(nx * nz), T = new Float32Array(nx * nz), D = new Float32Array(nx * nz).fill(Infinity), Lo = new Float32Array(nx * nz).fill(Infinity);
   for (const s of all) {
     const flat = G.flat, R = s.hw + flat + G.blend;
     const i0 = Math.max(0, Math.floor((s.x - R - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((s.x + R - x0) / step));
     const j0 = Math.max(0, Math.floor((s.z - R - z0) / step)), j1 = Math.min(nz - 1, Math.ceil((s.z + R - z0) / step));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       const n = j * nx + i, d = Math.hypot(x0 + i * step - s.x, z0 + j * step - s.z) - s.hw;   // metres past the road edge
+      if (d <= step) Lo[n] = Math.min(Lo[n], s.h + G.bank * Math.max(0, d));                // the most this node may stand: a bank rising gently from each road's edge
       if (d > flat + G.blend) continue;
       if (orig[n] < sea && d > G.wetReach) continue;                                      // don't push the shoreline out
       const w = d <= flat ? 1 : 1 - smoothstep((d - flat) / G.blend);
@@ -126,10 +149,43 @@ export function gradeRoads(map) {
   let moved = 0, raised = 0;
   for (let n = 0; n < h.length; n++) {
     if (!W[n]) continue;
-    const v = orig[n] + (T[n] - orig[n]) * W[n];
+    let v = orig[n] + (T[n] - orig[n]) * W[n];
+    if (Lo[n] < Infinity && !(orig[n] < sea && D[n] > G.wetReach)) v = Math.min(v, Lo[n] - G.under);
     if (Math.abs(v - orig[n]) > 0.05) moved++;
     if (orig[n] < sea && v >= sea) raised++;
     h[n] = v;
   }
+  // the road surface: project onto the nearest stretch of graded road (the higher-ranked one where two overlap)
+  const QC = 8, grid2 = new Map(), qk = (x, z) => Math.floor(x / QC) * 100003 + Math.floor(z / QC);
+  for (const a of all) {
+    if (!a.next) continue;
+    const reach = a.hw + G.verge, i0 = Math.floor((Math.min(a.x, a.next.x) - reach) / QC), i1 = Math.floor((Math.max(a.x, a.next.x) + reach) / QC);
+    const j0 = Math.floor((Math.min(a.z, a.next.z) - reach) / QC), j1 = Math.floor((Math.max(a.z, a.next.z) + reach) / QC);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const k = i * 100003 + j; (grid2.get(k) || grid2.set(k, []).get(k)).push(a); }
+  }
+  const ground = map.heightAt;
+  /** { h, e }: the road's height at (x, z) and how far past its edge the point is (≤ 0 on the road), or null. */
+  const surface = (x, z) => {
+    const list = grid2.get(qk(x, z));
+    if (!list) return null;
+    let best = null, be = Infinity, br = Infinity;
+    for (const a of list) {
+      const b = a.next, dx = b.x - a.x, dz = b.z - a.z, t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+      const e = Math.hypot(a.x + dx * t - x, a.z + dz * t - z) - a.hw;
+      if (e > G.verge) continue;
+      // on two roads at once (a junction): the more important one; otherwise the nearest edge
+      if (e <= 0 ? (be > 0 || a.rank < br || (a.rank === br && e < be)) : (be > 0 && e < be)) { be = e; br = a.rank; best = a.h + (b.h - a.h) * t; }
+    }
+    return best == null ? null : { h: best, e: be };
+  };
+  map.groundAt = ground;                                              // the terrain alone (the grid), without the road surface
+  map.roadSurface = surface;
+  map.roadSamples = all;                                              // (debug: every graded sample { x, z, h, hw, rank })
+  map.heightAt = (x, z) => {
+    const g = ground(x, z), sf = surface(x, z);
+    if (!sf) return g;
+    if (sf.e <= G.level) return sf.h;
+    return sf.h + (g - sf.h) * smoothstep((sf.e - G.level) / (G.verge - G.level));
+  };
   return { roads: roads.length, samples: all.length, pinned, moved, raised };
 }

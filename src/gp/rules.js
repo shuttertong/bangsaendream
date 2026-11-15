@@ -1,7 +1,7 @@
 // บางแสนโกคาร์ทกรังด์ปรีซ์ — tunables for the kart race round Khao Sam Muk.
 export const GP = {
   laps: 1, grid: 6,                         // one lap of the 4.1 km loop is about three minutes; karts on the grid (bots fill the empty places)
-  track: { step: 2, smooth: 3, half: 2.7, minHalf: 2.1, maxHalf: 6.5, margin: 0.5 },   // metres between centreline samples, corner-rounding passes; half-width the karts may use (default; in the town it is the real road's, between min and max, less a margin)
+  track: { step: 2, smooth: 2, half: 2.7, minHalf: 2.1, maxHalf: 6.5, margin: 0.5 },   // metres between centreline samples, corner-rounding passes; half-width the karts may use (default; in the town it is the real road's, between min and max, less a margin)
   kart: {
     top: 26, accel: 9, brake: 18, drag: 0.1,     // m/s, m/s², m/s², per second
     turn: 1.9, grip: 18,                            // steering: most yaw (rad/s), and the sideways grip that caps it at speed (m/s²)
@@ -9,7 +9,7 @@ export const GP = {
     radius: 0.75, wall: 0.55, shove: 0.5,           // kart-to-kart radius; speed kept after a wall; share of overlap pushed out per step
   },
   bot: {
-    skill: [0.84, 0.97],                            // share of the cornering limit and top speed a bot uses (slowest → fastest)
+    skill: [0.86, 0.99],                            // share of the cornering limit and top speed a bot uses (slowest → fastest)
     look: [6, 0.45], steer: 3, lane: 1.1,         // look-ahead (m + s × speed), steering gain, how far off the centreline they run
     corner: 36, band: [60, 0.06],                   // metres of road ahead they brake for; rubber band: beyond this gap to the player, ± this share of speed
   },
