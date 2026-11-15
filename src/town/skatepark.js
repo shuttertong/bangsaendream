@@ -38,7 +38,7 @@ export const strideStep = (dist, v) => dist * Math.PI * 2 / (2.6 + 0.9 * v);
  */
 export function skatePose(B, phase, k = 1, lean = 0) {
   const P = SKATE.pose, sw = Math.sin(phase);
-  B.hips.position.y -= P.crouch + 0.015 * k * Math.abs(sw);
+  B.hips.position.y = B.hips.userData.rest.y - P.crouch - 0.015 * k * Math.abs(sw);   // from the rest height, not from what the walk cycle left there: its running bob at skating speed shook the whole kid
   B.hips.position.x = sw * P.sway * k;                                // the weight goes over the gliding leg (left for the first half)
   B.hips.rotation.set(P.forward + 0.06 * k, sw * -0.1 * k, -sw * 0.07 * k + lean);
   B.spine.rotation.set(P.forward * 0.9, sw * 0.16 * k, sw * 0.05 * k + lean * 0.4);
