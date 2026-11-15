@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null, sponsor = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null, sponsor = null, bike = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -135,8 +135,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     if (riding) hopOff();
     else if (seats.seated) seats.stand();
     else if (takraw?.playing) takraw.leave();
+    else if (bike?.busy) bike.off();
     else if (sponsor?.picking && sponsor.near) sponsor.ask();
     else if (near) startTalk();
+    else if (bike?.near) bike.use();
     else if (nearTruck) board(nearTruck);
     else if (takraw?.near) takraw.join();
     else if (nearChat) startTalk(nearChat);
@@ -216,6 +218,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     set postcard(p) { postcard = p; },
     /** main.js sets this: the takraw circle (takraw.js); while playing, F leaves and the kid stays at its spot. */
     set takraw(v) { takraw = v; },
+    /** main.js sets this: the rental bicycles (bike.js); while on one, F gets off. */
+    set bike(v) { bike = v; },
     /** main.js sets this: { post(game, best) } → the online leaderboard (shared/scores.js). */
     set scores(v) { scores = v; },
     /** main.js sets this: sponsor.js (pick a building to sponsor; donate). */
@@ -251,9 +255,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       people.update(dt, p);
       talk.update(dt);
       if (talkingTo) player.faceTo(talkingTo.state.x, talkingTo.state.z, dt);
-      const busy = talk.active || riding || seats.seated || !!takraw?.playing;
+      const busy = talk.active || riding || seats.seated || !!takraw?.playing || !!bike?.busy;
       near = busy ? null : people.nearest(p);
-      nearTruck = near || busy ? null : trucks.nearest(p);
+      nearTruck = near || busy || bike?.near ? null : trucks.nearest(p);
       nearChat = near || nearTruck || busy || wardrobe?.open ? null : chatNear(p);
       nearSeat = near || nearTruck || nearChat || busy ? null : seats.nearest(p);
       nearScope = near || nearTruck || nearChat || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
@@ -263,8 +267,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
       sponsor?.update(p, !busy);
       const [spKey, spVars] = sponsor?.picking && sponsor.near ? sponsor.prompt() : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : spKey ? spKey : near ? 'talk' : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
-        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, spKey ? spVars : seatVars || null);
+      const [bkKey, bkVars] = !busy && !near && bike?.near ? bike.prompt() : [null, null];
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : bike?.busy ? 'bikeOff' : spKey ? spKey : near ? 'talk' : bkKey ? bkKey : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
+        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, spKey ? spVars : bkKey ? bkVars : seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;

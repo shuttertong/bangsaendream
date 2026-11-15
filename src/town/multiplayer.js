@@ -109,6 +109,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   }
 
   // ---------- remote players ----------
+  let bikes = null;                                           // main.js sets it: the rental bicycles
   function add(p) {
     remove(p.id);
     const kid = createKid(scene, lookOf(p.look, p.fx));
@@ -256,7 +257,8 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
       const s = sample(r);
       if (!s) continue;
       const B = r.kid.bones, tk = s.ride != null ? trucks.trucks[s.ride] : null;
-      if (tk) {
+      if (bikes?.remote(r, s)) r.prev = null;                    // on a rental bicycle (bike.js poses and places them)
+      else if (tk) {
         // riding: sit in their seat on OUR copy of the truck (no lag behind it)
         trucks.seat(tk, v, slotOf(r.id));
         r.kid.mesh.position.set(v.x, v.y - SEAT_HIP, v.z); r.kid.mesh.rotation.y = trucks.seatYaw(tk, slotOf(r.id));
@@ -304,5 +306,5 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   // co-op mini-game channel: to = [ids] or null for everyone; d = small numeric payload
   const co = { send: (to, d) => net?.send({ t: 'co', to, d }), on: fn => coFns.add(fn), off: fn => coFns.delete(fn) };
 
-  return { update, remotes, info, co, rehello: () => net?.send(hello()), get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
+  return { set bikes(b) { bikes = b; }, update, remotes, info, co, rehello: () => net?.send(hello()), get online() { return !!(net?.online && myId); }, get host() { return hostId; }, get id() { return myId; }, say, emote, debug: { net, sample } };
 }

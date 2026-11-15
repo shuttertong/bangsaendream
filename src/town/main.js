@@ -59,6 +59,7 @@ import { createFriends } from './friends.js';
 import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
+import { createBikes } from './bike.js';
 import { createSponsor } from './sponsor.js';
 import { createLeaderboard } from './leaderboard.js';
 import * as scores from '../shared/scores.js';
@@ -240,6 +241,8 @@ async function boot() {
   const friends = createFriends({ root: $('hud'), mp, player, hub, drone, map, audio });   // 👫 add friends face to face + the friends map (G)
   const takraw = createTakraw({ scene, root: $('hud'), hub, mp, player, audio, map, lift, collision, spot: kickabout?.takraw });   // 🥎 ตะกร้อวง: a keep-up circle anyone online can join
   hub.takraw = takraw;
+  const bikes = createBikes({ scene, hub, mp, player, map, lift, collision, audio, seaDist: layout.seaDist, at: hub.places.beach });   // 🚲 three-seat bicycles for rent
+  hub.bike = bikes; mp.bikes = bikes;
   player.input = input;
   // 🏆 the online leaderboard: bests go up after a round; a medal tile in the journal opens a game's board
   scores.configure({ uid: F.keyOf(F.myUid()), name: () => nameOf(profile.n1, profile.n2) });
@@ -268,7 +271,8 @@ async function boot() {
     else if (drone.active) { drone.update(dt); focus = drone.target; hub.update(dt); }
     else if (binos.active) { binos.update(dt); focus = binos.focus; hub.update(dt); }
     else {
-      if (!hub.seated && !takraw.playing) player.update(dt, tpc.state.yaw, hub.frozen);
+      if (!hub.seated && !takraw.playing && !bikes.aboard) player.update(dt, tpc.state.yaw, hub.frozen);
+      bikes.update(dt, !hub.frozen && !hub.seated && !takraw.playing);
       roadNotice(dt);
       tutorial.update(dt);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
@@ -329,7 +333,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

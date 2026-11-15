@@ -57,11 +57,11 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
     // on the joystick, pushing past `runStick` runs at once and less walks slower
     if (len && p.speed > 0.3) { held += dt; gap = 0; } else if ((gap += dt) > MOVE.holdGap) held = 0;
     const shift = input.down('ShiftLeft') || input.down('ShiftRight'), stick = Math.hypot(input.stick.x, input.stick.y) > 0.12;
-    const top = shift || held >= MOVE.holdRun || (stick && mag > MOVE.runStick) ? MOVE.run : stick ? MOVE.walk * Math.max(0.45, mag / MOVE.runStick) : MOVE.walk;
+    const top = p.ride ? p.ride.speed : shift || held >= MOVE.holdRun || (stick && mag > MOVE.runStick) ? MOVE.run : stick ? MOVE.walk * Math.max(0.45, mag / MOVE.runStick) : MOVE.walk;
     // forward = away from camera
     const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
     const wx = len ? (fx * f + rx * r) / len * top : 0, wz = len ? (fz * f + rz * r) / len * top : 0;
-    const a = len ? MOVE.accel : MOVE.decel;
+    const a = p.ride ? p.ride.accel : len ? MOVE.accel : MOVE.decel;      // p.ride: on the bicycle (bike.js sets speed, turn, accel)
     const dvx = wx - p.vx, dvz = wz - p.vz, dv = Math.hypot(dvx, dvz), k = Math.min(1, (a * dt) / (dv || 1));
     p.vx += dvx * k; p.vz += dvz * k;
 
@@ -80,12 +80,12 @@ export function createPlayer(scene, map, collision, input, lift = () => 0) {
       const want = Math.atan2(p.vx, p.vz);
       let d = want - p.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      p.yaw += d * Math.min(1, MOVE.turn * dt);
+      p.yaw += d * Math.min(1, (p.ride ? p.ride.turn : MOVE.turn) * dt);
     }
 
     // vertical: jump and gravity
     const g = ground(p.x, p.z);
-    if (!frozen && p.grounded && (input.down('Space') || input.jump)) { p.vy = MOVE.jump; p.grounded = false; }
+    if (!frozen && !p.ride && p.grounded && (input.down('Space') || input.jump)) { p.vy = MOVE.jump; p.grounded = false; }
     if (!p.grounded) {
       p.vy -= MOVE.gravity * dt;
       p.y += p.vy * dt;
