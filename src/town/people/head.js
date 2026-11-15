@@ -82,6 +82,7 @@ export function headParts(K, R) {
     face(patch(0.115 * R, (K.brow || 0.03) * R, 0.02 * R), darker(K.hair, 0.1), s * 0.43, 0.37 - (1 - ES) * 0.14, 0.012, -s * 0.24);   // brows, gently arched (brow: thickness)
     head.push(colored(at(sc(sph(0.14 * R, 10, 8), 0.55, 0.95, 0.75), s * R * 0.99, -0.04 * R, -0.03 * R), K.skin));   // ears
     if (close) head.push(colored(at(sc(sph(0.08 * R, 8, 6), 0.4, 0.8, 0.6), s * R * 1.03, -0.05 * R, 0.0), darker(K.skin, 0.2)));   // the hollow of the ear
+    if (K.earring) head.push(colored(at(sph(0.045 * R, 8, 6), s * R * 1.02, -0.2 * R, 0.0), K.earring));               // a pearl at each ear
     if (K.freckles) for (let i = 0; i < 3; i++) face(patch(0.026 * R, 0.02 * R), darker(K.skin, 0.22), s * (0.2 + i * 0.15), -0.27 - (i % 2) * 0.04, 0.005);   // freckles across the cheeks
   }
   face(sc(sph(1, 10, 8), 0.045 * R, 0.04 * R, 0.035 * R), K.skin, 0, -0.19, 0.012);                       // soft nose (shading shows it)
@@ -117,8 +118,9 @@ export function headParts(K, R) {
 
   if (K.hairStyle !== 'bald') head.push(...hairParts(K, R));
   if (K.glasses) {
-    if (K.glasses !== 'sun') for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry(0.2 * R, 0.03 * R, seg(6, 3), seg(18, 6)), R, s * E.x * R, T.eyeY * R, 0.05 * R), '#2a2a2a'));
-    head.push(colored(onFace(sc(sph(1, 8, 6), 0.06 * R, 0.02 * R, 0.02 * R), R, 0, T.eyeY * R, 0.055 * R), '#2a2a2a'));   // bridge
+    const frame = K.glassColor || '#2a2a2a', fine_ = K.glasses === 'thin';                                       // 'thin': light wire frames
+    if (K.glasses !== 'sun') for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry((fine_ ? 0.215 : 0.2) * R, (fine_ ? 0.014 : 0.03) * R, seg(6, 3), seg(24, 6)), R, s * E.x * R, T.eyeY * R, 0.05 * R), frame));
+    head.push(colored(onFace(sc(sph(1, 8, 6), 0.06 * R, (fine_ ? 0.012 : 0.02) * R, 0.02 * R), R, 0, T.eyeY * R, 0.055 * R), frame));   // bridge
     if (K.glasses === 'sun') for (const s of [-1, 1]) head.push(colored(onFace(patch(0.28 * R, 0.235 * R, 0.03 * R), R, s * E.x * R, (T.eyeY + 0.02) * R, 0.06 * R, 0, -s * 0.06), '#22262c'));   // dark lenses
   }
   for (const g of head) g.translate(0, up, 0);
@@ -138,7 +140,11 @@ function hairParts(K, R) {
   hair(at(new THREE.SphereGeometry(Rh, seg(48, 8), seg(16), 0, Math.PI * 2, 0, Math.PI * 0.34), 0, 0.02 * R, -0.01 * R));
   hair(at(new THREE.SphereGeometry(Rh, seg(36, 8), seg(16), Math.PI * 0.5 + Math.PI * 0.3, Math.PI * 2 - Math.PI * 0.6, 0, Math.PI * 0.64), 0, 0.02 * R, -0.01 * R));
   // bangs: a fan of tapered locks across the forehead, swept a little to one side
-  const n = 7, bangLen = (long || bob ? 0.3 : 0.25) * R;
+  const n = K.bangs === 'none' ? 0 : 7, bangLen = (long || bob ? 0.3 : 0.25) * R;
+  if (!n) {                                                          // swept back: a lower hairline and a soft roll of hair over the brow
+    hair(at(new THREE.SphereGeometry(Rh, seg(40, 8), seg(8), 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.085), 0, 0.02 * R, -0.01 * R));
+    hair(at(sc(sph(1, 20, 10), 0.66 * R, 0.13 * R, 0.26 * R), 0, 0.8 * R, 0.56 * R));
+  }
   for (let i = 0; i < n; i++) {
     const u = (i / (n - 1)) * 2 - 1, x = u * 0.62 * R, y = 0.5 * R - Math.abs(u) * 0.08 * R;
     const g = lock(0.16 * R, bangLen * (1 - Math.abs(u) * 0.2) * (i % 2 ? 0.9 : 1), 0.07 * R);
@@ -165,8 +171,15 @@ function hairParts(K, R) {
       hair(at(lock(0.24 * R, 1.0 * R, 0.14 * R, -0.3 * s).rotateZ(s * 0.18).rotateX(0.12), s * 0.8 * R, -0.95 * R, 0.08 * R));   // in front of the shoulders
     }
   } else if (style === 'bun') {                                      // a bun with a wrapped band
-    hair(at(sph(0.4 * R), 0, 0.7 * R, -0.7 * R));
-    band(0.3 * R, 0, 0.66 * R, -0.52 * R, 0.4);
+    if (K.bun === 'low') {                                           // a neat chignon at the back, a pin through it and a flower
+      hair(at(sc(sph(0.42 * R, 18, 12), 1.15, 0.9, 0.8), 0, 0.12 * R, -1.0 * R));
+      out.push(colored(at(new THREE.CylinderGeometry(0.018 * R, 0.018 * R, 1.1 * R, 6).rotateZ(1.2), 0, 0.16 * R, -1.22 * R), K.pin || '#d9b24a'));
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; out.push(colored(at(sc(sph(0.07 * R, 8, 6), 1, 1, 0.5), 0.4 * R + Math.cos(a) * 0.08 * R, 0.3 * R + Math.sin(a) * 0.08 * R, -1.2 * R), K.flower || '#f4f1e8')); }
+      out.push(colored(at(sph(0.045 * R, 8, 6), 0.4 * R, 0.3 * R, -1.24 * R), '#f6d86a'));
+    } else {
+      hair(at(sph(0.4 * R), 0, 0.7 * R, -0.7 * R));
+      band(0.3 * R, 0, 0.66 * R, -0.52 * R, 0.4);
+    }
   } else if (style === 'ponytail') {                                 // tied at the back, a wavy tail hanging from the band
     hair(at(sph(0.2 * R), 0, 0.4 * R, -0.92 * R));
     band(0.17 * R, 0, 0.4 * R, -0.98 * R, 1.2);

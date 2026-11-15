@@ -136,7 +136,7 @@ export function toonParts(K, B) {
     colored(ring(0.116, 0.008, 0.075, 0.8), darker(K.bottomColor, 0.25))];                                      // waistband
   if (close && K.bottom !== 'skirt') for (const s of [-1, 1]) hips.push(colored(at(patch(0.03, 0.026, 0.0025), s * 0.052, -0.05, -0.096), darker(K.bottomColor, 0.1)));   // back pockets
   if (K.bottom === 'skirt') {                                          // pleated skirt
-    const S = TOON.skirt, g = lathe([[0.125, 0.06], [0.135, 0.0], [0.15, -0.2], [0.168, -S.len + 0.01], [0.166, -S.len]], 48);
+    const S = { ...TOON.skirt, len: K.skirtLen || TOON.skirt.len }, g = lathe([[0.125, 0.06], [0.135, 0.0], [0.15, -0.2], [0.168, -S.len + 0.01], [0.166, -S.len]], 48);
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), z = p.getZ(i), y = p.getY(i), a = Math.atan2(z, x), r = Math.hypot(x, z);
@@ -145,7 +145,7 @@ export function toonParts(K, B) {
     }
     g.computeVertexNormals();
     hips.push(colored(sc(g, 1, 1, 0.82), K.bottomColor), colored(ring(0.168, 0.005, -S.len + 0.004, 0.82), darker(K.bottomColor, 0.2)));
-    if (K.sarong) for (const y of [-0.24, -0.29, -0.36]) hips.push(colored(ring(0.138 + 0.08 * -y, y === -0.29 ? 0.012 : 0.006, y, 0.82), K.sarong));   // a sarong's woven bands
+    if (K.sarong) for (const u of [0.57, 0.69, 0.86]) { const y = -u * S.len; hips.push(colored(ring(y > -0.2 ? 0.138 + 0.075 * -y : 0.153 + (0.017 / (S.len - 0.2)) * (-y - 0.2), u === 0.69 ? 0.012 : 0.006, y, 0.82), K.sarong)); }   // a sarong's woven bands
   }
 
   const out = { hips, spine, head, hat, eyes, mouth, joy, ...side('L'), ...side('R') };

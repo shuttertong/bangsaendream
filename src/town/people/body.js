@@ -27,6 +27,7 @@ export const DEFAULT_LOOK = {
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
   outfit: 'tee', bag: null,                                  // outfit.js: tee | hawaii | sailor | overalls | floral | jersey | work | vest (vestColor, vestPockets); bag: a backpack's colour
   towel: null, sash: null, pouch: null, neck: null,          // outfit.js extras: towel colour, sash [a, b], belt-bag colour, 'whistle' | 'binoculars'
+  necklace: null, earring: null, bangs: null, bun: null, skirtLen: null, glassColor: null,   // beads, ear pearls (colours); bangs: 'none' = swept back; bun: 'low' = a chignon with a pin; glasses 'thin' = wire frames
   sarong: null, kerchief: null,                              // bands on a skirt (colour); a scarf tied over the hair (colour); glasses: true | 'sun'
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };

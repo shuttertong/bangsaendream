@@ -14,8 +14,10 @@ export const ROSTER = [
   {
     id: 'grandma', place: 'grandma',
     name: { th: 'ยาย', en: 'Grandma' },
-    look: { ...ADULT, scale: 1.2, skin: '#c99a74', hair: '#d9d6d0', hairStyle: 'bun', outfit: 'floral', sarong: '#e9dfe8', shirt: '#b98fb8', shirtTrim: '#e9dfe8',
-      bottom: 'skirt', bottomColor: '#6a4a7a', hat: 'none', glasses: true, shoe: '#6a5040', belly: 0.4, print: 'none', smile: 'small', eyeScale: 0.78 },
+    look: { ...ADULT, scale: 1.17, headScale: 0.96, legScale: 0.9, skin: '#d2a37e', hair: '#dedbd5', hairStyle: 'bun', bun: 'low', bangs: 'none',
+      outfit: 'floral', shirt: '#b98fb8', shirtTrim: '#f1e8f0', bottom: 'skirt', bottomColor: '#6a4a7a', skirtLen: 0.45, sarong: '#e9dfe8',
+      hat: 'none', glasses: 'thin', glassColor: '#c9a24a', necklace: '#f4f1e8', earring: '#f4f1e8', shoe: '#6a5040', belly: 0.22, print: 'none',
+      smile: 'smile', eyeScale: 0.84, brow: 0.024, cheek: '#eda39c' },
     script: s => {
       const has = pre => Object.keys(s.bag).find(k => k.startsWith(pre) && s.bag[k] > 0);
       if (!s.met.grandma) return [

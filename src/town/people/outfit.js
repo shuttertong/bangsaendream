@@ -47,7 +47,7 @@ export function outfitParts(K, B, ctx) {
   if (kind === 'hawaii' || kind === 'floral') {                        // a holiday shirt: flowers all over, buttons, an open collar (floral: a blouse with a round one)
     const F = OUTFIT.flower;
     for (let i = 0; i < F.n; i++) {
-      const th = i * 2.39996 + 0.5, y = -0.06 + ((i * 0.618034) % 1) * 0.29;
+      const th = i * 2.39996 + 0.5, y = -0.06 + (((i * 7) % 11) / 11) * 0.29;
       if (Math.abs(Math.sin(th / 2)) < 0.12 && Math.cos(th / 2) > 0) continue;       // keep the button line clear
       for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2 + i; spine.push(colored(on(at(sc(sph(1, 6, 4), F.petal, F.petal, 0.004), Math.cos(a) * F.petal * 1.15, Math.sin(a) * F.petal * 1.15, 0), th, y), K.shirtTrim)); }
       spine.push(colored(on(sc(sph(1, 6, 4), F.petal * 0.6, F.petal * 0.6, 0.005), th, y, 0.003), F.centre));
@@ -119,6 +119,7 @@ export function extraParts(K, B, ctx) {
   if (K.pouch) {
     out.push(colored(band(-0.075, -0.05, 0, Math.PI * 2, 0.007), darker(K.pouch, 0.35)), colored(on(pod(0.05, 0.03, 0.024, 3), 0.55, -0.058, 0.02), K.pouch), colored(on(pod(0.04, 0.006, 0.026, 3), 0.55, -0.045, 0.021), darker(K.pouch, 0.2)));
   }
+  if (K.necklace) for (let i = -5; i <= 5; i++) out.push(colored(on(sph(0.0075, 8, 6), i * 0.11, B.torso - 0.088 - 0.03 * Math.cos(i * 0.11 * 2.6), 0.004), K.necklace));   // a string of beads
   if (K.neck) {
     for (const s of [-1, 1]) out.push(colored(on(lock(0.005, 0.085, 0.004).rotateZ(-s * 0.42), s * 0.3, 0.2, 0.006), OUTFIT.cord));
     if (K.neck === 'whistle') out.push(colored(on(pod(0.016, 0.011, 0.008, 3), 0, 0.115, 0.008), OUTFIT.whistle));
