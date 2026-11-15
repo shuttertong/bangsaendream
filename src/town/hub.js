@@ -267,9 +267,9 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
       sponsor?.update(p, !busy);
       const [spKey, spVars] = sponsor?.picking && sponsor.near ? sponsor.prompt() : [null, null];
-      const [bkKey, bkVars] = !busy && !near && bike?.near ? bike.prompt() : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : bike?.busy ? 'bikeOff' : spKey ? spKey : near ? 'talk' : bkKey ? bkKey : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
-        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, spKey ? spVars : bkKey ? bkVars : seatVars || null);
+      const [bkKey, bkVars] = bike && (bike.busy || (!busy && !near && bike.near)) ? bike.prompt() : [null, null];
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : bike?.busy ? bkKey : spKey ? spKey : near ? 'talk' : bkKey ? bkKey : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
+        near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, bike?.busy ? bkVars : spKey ? spVars : bkKey ? bkVars : seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }
       posTimer += dt;
