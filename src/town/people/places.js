@@ -15,6 +15,7 @@ export const PLACES = {
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
   goHouse:   { name: { th: 'บ้านหมากล้อม', en: 'Go house' }, icon: 'go', anchor: 'goHouse' },   // a dressed shophouse row (gohouse.js)
   gp:        { name: { th: 'สนามโกคาร์ทกรังด์ปรีซ์ (เขาสามมุข)', en: 'Kart Grand Prix start (Khao Sam Muk)' }, icon: 'kart', anchor: { near: [103, -1530] } },   // beside the start line (gp/track.js at(0))
+  skate:     { name: { th: 'ลานสเก็ต · โรงเรียนสอนสเก็ต', en: 'Skating rink & school' }, icon: 'skate', anchor: { near: 'start', sea: 40 } },   // the apron by the kiosk (skatepark.js hands the spot)
   viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: 'viewpoint' },   // the terrace (viewpoint.js)
 };
 

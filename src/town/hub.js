@@ -82,7 +82,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   }
   const people = createPeople(scene, map, places, collision, lift);
 
-  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null, sponsor = null, bike = null;
+  let hud = null, coopHandler = null, journal = null, postcard = null, takraw = null, scores = null, sponsor = null, bike = null, skate = null;
   const toast = (msg, sound = 'coin') => { hud?.toast(msg); audio?.play(sound); };
   const talk = createTalk(root, {
     audio,
@@ -136,9 +136,11 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     else if (seats.seated) seats.stand();
     else if (takraw?.playing) takraw.leave();
     else if (bike?.busy) bike.off();
+    else if (skate?.on) skate.off();
     else if (sponsor?.picking && sponsor.near) sponsor.ask();
     else if (near) startTalk();
     else if (bike?.near) bike.use();
+    else if (skate?.near) skate.use();
     else if (nearTruck) board(nearTruck);
     else if (takraw?.near) takraw.join();
     else if (nearChat) startTalk(nearChat);
@@ -220,6 +222,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     set takraw(v) { takraw = v; },
     /** main.js sets this: the rental bicycles (bike.js); while on one, F gets off. */
     set bike(v) { bike = v; },
+    /** main.js sets this: the skating rink (skatepark.js); F at its rack puts skates on, F again takes them off. */
+    set skate(v) { skate = v; },
     /** main.js sets this: { post(game, best) } → the online leaderboard (shared/scores.js). */
     set scores(v) { scores = v; },
     /** main.js sets this: sponsor.js (pick a building to sponsor; donate). */
@@ -268,7 +272,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       sponsor?.update(p, !busy);
       const [spKey, spVars] = sponsor?.picking && sponsor.near ? sponsor.prompt() : [null, null];
       const [bkKey, bkVars] = bike && (bike.busy || (!busy && !near && bike.near)) ? bike.prompt() : [null, null];
-      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : bike?.busy ? bkKey : spKey ? spKey : near ? 'talk' : bkKey ? bkKey : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
+      hud.setPrompt(scopes?.active ? null : riding ? (alighting ? null : 'alight') : seats.seated ? 'standUp' : takraw?.playing ? 'takrawLeave' : bike?.busy ? bkKey : spKey ? spKey : near ? 'talk' : bkKey ? bkKey : skate?.near ? 'skateOn' : skate?.on && !nearTruck ? 'skateOff' : nearTruck ? 'board' : takraw?.near ? 'takrawJoin' : nearChat ? 'talk' : seatKey,
         near ? near.def.name : nearChat && !nearTruck ? nearChat.def.name : null, bike?.busy ? bkVars : spKey ? spVars : bkKey ? bkVars : seatVars || null);
       ambTimer -= dt;
       if (ambTimer <= 0) { ambTimer = 0.5; ambience(); }

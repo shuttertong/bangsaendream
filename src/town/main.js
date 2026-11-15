@@ -60,6 +60,8 @@ import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
 import { createBikes } from './bike.js';
+import { buildSkatePark, createSkating } from './skatepark.js';
+import { KID_LOOK } from './kid/model.js';
 import { GP } from '../gp/rules.js';
 import { LOOP } from '../gp/loop.js';
 import { createSponsor } from './sponsor.js';
@@ -126,6 +128,7 @@ async function boot() {
   const walking = buildWalkingStreet(kit, map, layout);                // market stalls, bulbs, the paved seafront lot
   const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
   createBobbingBoats(scene, navyFleet);
+  const skatePark = buildSkatePark(kit, scene, map, layout, START);   // 🛼 the inline-skating rink and its school, on the beach by the promenade (first, so umbrellas, palms and stalls keep off the plot)
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
   const goHouse = buildGoHouse(kit, scene, counts.rows);   // บ้านหมากล้อม: one shophouse row dressed as the Go club
@@ -154,7 +157,7 @@ async function boot() {
   scene.add(crowd.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, 'crowd', crowd.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || []), ...(skatePark?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks, ...(skatePark?.decks || [])], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
@@ -215,7 +218,7 @@ async function boot() {
     return true;
   };
   const binos = createBinoculars({ spots: viewpoint.scopes, camera, input, map, root: $('hud'), audio, player, toast: m => { hub.hud.toast(m); audio.play('coin'); } });   // look through the viewpoint's coin binoculars
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place }, scopes: binos, ambient: [crowd, strollers] });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place, ...(skatePark ? { skate: skatePark.place } : {}) }, scopes: binos, ambient: [crowd, strollers] });
 
   const kickabout = buildKickabout({ scene, map, lift, seaDist: layout.seaDist, collision, at: hub.places.beach });   // goals on the sand in front of Tonkla (ฟุตบอลชายหาด)
   const sponsor = createSponsor({ scene, map, hub, root: $('hud'), audio, rows: counts.rows, osm: map.buildings, lift });   // 🏬 sponsor a building / ❤️ donate
@@ -263,6 +266,8 @@ async function boot() {
   hub.takraw = takraw;
   const bikes = createBikes({ scene, hub, mp, player, map, lift, collision, audio, seaDist: layout.seaDist, at: hub.places.beach });   // 🚲 three-seat bicycles for rent
   hub.bike = bikes; mp.bikes = bikes;
+  const skating = createSkating({ scene, park: skatePark, hub, player, audio, setLook: l => player.setLook(l), baseLook: () => ({ ...KID_LOOK }) });   // 🛼 skates for the kid, skaters on the oval
+  hub.skate = skating; townCtx.skate = skatePark?.rink || null;
   player.input = input;
   // 🏆 the online leaderboard: bests go up after a round; a medal tile in the journal opens a game's board
   scores.configure({ uid: F.keyOf(F.myUid()), name: () => nameOf(profile.n1, profile.n2) });
@@ -294,6 +299,7 @@ async function boot() {
     else {
       if (!hub.seated && !takraw.playing && !bikes.aboard) player.update(dt, tpc.state.yaw, hub.frozen);
       bikes.update(dt, !hub.frozen && !hub.seated && !takraw.playing);
+      skating.update(dt, !hub.frozen && !hub.seated && !takraw.playing && !bikes.busy);
       roadNotice(dt);
       tutorial.update(dt);
       hub.update(dt);                                    // trucks, NPCs; seats the kid when riding
@@ -354,7 +360,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

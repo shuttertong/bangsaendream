@@ -182,4 +182,21 @@ export const ROSTER = [
       ] },
     ],
   },
+  {
+    id: 'pond', place: 'skate', game: 'skate',
+    name: { th: 'ครูปอนด์', en: 'Coach Pond' },
+    look: { ...ADULT, scale: 1.26, headScale: 0.9, skin: '#c68f66', shirt: '#3a9a8a', shirtTrim: '#f4f1e8', shirtStyle: 'raglan', bottom: 'shorts', bottomColor: '#2a2a2a', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#3a9a8a', hairStyle: 'ponytail', smile: 'grin', neck: 'whistle', skates: '#d8443a', print: 'none' },
+    script: s => {
+      const learnt = Math.min(3, s.best.skate?.biggest || 0);
+      return [
+        { say: learnt >= 3
+          ? { th: 'นักเรียนคนเก่งของครูมาแล้ว! เรียนจบครบสามบทแล้ว จะซ้อมทบทวนอีกรอบก็ได้นะ หรือจะหยิบสเก็ตที่ชั้นไปไถเล่นในลานก็ได้ ฟรีเลย', en: "Here's my star pupil! You have finished all three lessons. Come back for practice any time, or take a pair from the rack and skate the rink for free." }
+          : { th: `ยินดีต้อนรับสู่โรงเรียนสอนสเก็ต! เราเรียนกันสามบท: ทรงตัว สลาลอม แล้วก็กระโดด ตอนนี้เธออยู่บทที่ ${learnt + 1} ไถข้ามแผ่นสีเขียว อย่าชนกรวย ผ่านหกในสิบก็สอบผ่านแล้ว`, en: `Welcome to the skating school! Three lessons: balance, slalom, then jumps. You are on lesson ${learnt + 1}. Skate over the green pads, mind the cones — six in ten is a pass.` } },
+        { ask: [
+          { label: learnt >= 3 ? { th: '🛼 ซ้อมทบทวน', en: '🛼 Practise' } : { th: `🛼 เรียนบทที่ ${learnt + 1}`, en: `🛼 Take lesson ${learnt + 1}` }, then: [{ game: 'skate' }] },
+          { label: { th: 'ขอดูก่อนครับ', en: 'Just looking' }, then: [{ say: { th: 'ตามสบายเลย สเก็ตอยู่ที่ชั้นข้างเคาน์เตอร์ หยิบไปลองไถในลานได้ฟรีนะ', en: 'Take your time. The skates are on the rack by the counter: borrow a pair and try the rink, no charge.' } }] },
+        ] },
+      ];
+    },
+  },
 ];

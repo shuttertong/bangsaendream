@@ -6,7 +6,7 @@ export const LIMITS = {
   players: 32, trucks: 64, phrases: 64,
   emotes: ['wave', 'dance', 'cheer', 'heart'],
   poses: [null, 'bench', 'lounge'],
-  games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football', 'volley', 'gp'],
+  games: [null, 'crab', 'squid', 'monkey', 'tube', 'stall', 'banana', 'sofa', 'jetski', 'khaolam', 'go', 'football', 'volley', 'gp', 'skate'],
   look: ['shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom'],
   fx: ['hat', 'wings', 'back', 'hand', 'tail', 'aura'], fxMax: 64,   // wardrobe item indices (0 = none)
   coNum: 2 ** 31,                     // the largest number a co-op payload may carry: player ids online are random up to 2^30, and games name players by id (a seat on a bicycle, who the takraw ball goes to)

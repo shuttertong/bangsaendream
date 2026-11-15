@@ -21,6 +21,7 @@ export const GAMES = {
   football: { load: () => import('./football/index.js') },
   volley: { load: () => import('./volley/index.js') },
   gp: { load: () => import('./gp/index.js') },
+  skate: { load: () => import('./skate/index.js') },
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };

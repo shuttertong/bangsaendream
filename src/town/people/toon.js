@@ -82,6 +82,11 @@ export function toonParts(K, B) {
       colored(at(sc(sph(1, 12, 8), 0.041, 0.03, 0.05), 0, -B.ankle + 0.03, 0.066), lighter(K.shoe, 0.25)),      // toe cap
       ...(close ? [colored(at(sc(sph(1, 12, 6), 0.051, 0.011, 0.02), 0, -B.ankle + 0.071, 0.046), lighter(K.shoe, 0.5)),   // strap across the instep
         colored(at(sc(sph(1, 8, 6), 0.012, 0.02, 0.008), 0, -B.ankle + 0.065, -0.062), darker(K.shoe, 0.25))] : [])];      // heel tab
+    if (K.skates) {                                                                                               // inline skates: a boot over the shoe, a cuff, a frame and four wheels in a row
+      foot.push(colored(at(sc(sph(1, 14, 10), 0.053, 0.052, 0.1), 0, -B.ankle + 0.04, 0.03), K.skates), colored(at(new THREE.CylinderGeometry(0.046, 0.043, 0.09, seg(12, 6)), 0, -B.ankle + 0.1, -0.012), K.skates),
+        colored(at(new THREE.BoxGeometry(0.11, 0.02, 0.05), 0, -B.ankle + 0.075, 0.035), TOON.sole), colored(at(new THREE.BoxGeometry(0.022, 0.03, 0.21), 0, -B.ankle - 0.012, 0.03), '#3a3a3a'));
+      for (let i = 0; i < 4; i++) foot.push(colored(at(new THREE.CylinderGeometry(0.032, 0.032, 0.022, seg(12, 6)).rotateZ(Math.PI / 2), 0, -B.ankle - 0.042, -0.05 + i * 0.054), i % 2 ? '#f4f1e8' : '#f0b43a'));
+    }
     for (const g of foot) at(g.scale(ends, ends, ends), 0, B.ankle * (ends - 1), 0);                              // bigger, still standing on the ground
     return {
       [`arm${s}`]: [colored(taper(B.upperArm, ...L.arm), long ? sleeveCol : K.skin),
