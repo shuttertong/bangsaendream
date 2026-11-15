@@ -19,5 +19,6 @@ export const GP = {
   net: { hz: 8, blend: 6 },                         // snapshots a second; how fast a remote kart eases to its reported place
   cam: { back: 5.6, up: 2.5, ahead: 5, fov: [62, 74], ease: 5 },
   walk: [{ x: -745, z: -2444, r: 16 }],            // where the loop leaves the walkable strip for a few metres: made walkable, so no roadblock stands on the track
+  map: { size: 150, top: 64, pad: 0.1, back: 'rgba(20,30,40,.45)', road: '#f4f1e8', edge: 'rgba(0,0,0,.6)' },   // the mini-map: CSS px, distance from the top, margin round the circuit
   colors: ['#d8392f', '#2f6fc4', '#f2c230', '#3a9a6a', '#9a5a8a', '#f08a3a'],
 };

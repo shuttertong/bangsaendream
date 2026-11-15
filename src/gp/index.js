@@ -12,6 +12,7 @@ import { buildKart } from './kart.js';
 import { buildBarriers } from './barriers.js';
 import { GP } from './rules.js';
 import { createGameUI } from '../shared/gameUI.js';
+import { createMinimap } from './minimap.js';
 import { KID_LOOK } from '../town/kid/model.js';
 import { lookOf } from '../shared/avatar.js';
 import { t } from '../shared/i18n.js';
@@ -78,6 +79,7 @@ export function start(ctx) {
   document.querySelector('#game-ui .g-top')?.appendChild(pill);
   ctx.audio?.ambience({ breeze: 0.6, engine: 1 });
   const s = { phase: 'intro', count: 0, shown: 9, done: 0, place: GP.grid, camYaw: lineYaw, t: 0 };
+  const minimap = createMinimap(ctx.root, track, GP.colors);             // the circuit and everyone on it, in the corner
   ui.onStart = () => { s.phase = 'count'; s.count = GP.start.count + 0.99; };
   ui.onQuit = () => finish(true);
   ui.onBack = () => ctx.onExit(result());
@@ -136,6 +138,7 @@ export function start(ctx) {
     const fov = (portrait ? 8 : 0) + C.fov[0] + (C.fov[1] - C.fov[0]) * Math.min(1, me.v / GP.kart.top);
     if (Math.abs(fov - camera.fov) > 0.2) { camera.fov = fov; camera.updateProjectionMatrix(); }
     focus.set(me.x, y, me.z);
+    minimap.update(race.karts, myId);
     if (s.phase !== 'intro' && s.phase !== 'end') {
       ui.bar(Math.max(0, race.state.time), `${s.place}/${race.karts.length}`, baht(), '🏁');
       pill.textContent = `${Math.round(me.v * 3.6)} km/h · ${Math.max(0, Math.min(100, Math.round(100 * me.prog / race.state.goal)))}%`;
@@ -146,7 +149,7 @@ export function start(ctx) {
   current = {
     dispose() {
       net?.bye(); net?.close();
-      ui.dispose();
+      ui.dispose(); minimap.dispose();
       scene.remove(root);
       root.traverse(o => { o.geometry?.dispose?.(); o.material?.map?.dispose?.(); });
       T.setRace(false);
