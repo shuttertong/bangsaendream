@@ -9,6 +9,7 @@ import { connect } from '../core/net.js';
 import { createKid } from './kid/index.js';
 import { seatPose, SEAT_HIP } from './player.js';
 import { lookOf, nameOf, wearLook, saveProfile, reroll } from '../shared/avatar.js';
+import { KID_LOOK } from './kid/model.js';
 import { TITLES } from '../shared/goals.js';
 import { fxOf, wornOf } from '../shared/wardrobe.js';
 import * as P from '../shared/progress.js';
@@ -60,7 +61,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
   });
 
   function drawPanel() {
-    const looks = [['shirt', '👕'], ['bottom', '🩳'], ['hat', '👒'], ['hatColor', '🎨'], ['hair', '💇'], ['skin', '🧒']];
+    const looks = [['shirt', '👕'], ['bottom', '🩳'], ['hat', '👒'], ['hatColor', '🎨'], ['hair', '💇'], ['outfit', '🎽'], ['skin', '🧒']];
     panel.innerHTML = `<div class="panel">
       <h2>${t('mpTitle')} <small>${t('mpOnline', { n: remotes.size + 1 })}</small></h2>
       <div class="mp-me"><b>${nameOf(profile.n1, profile.n2)}</b><button data-r="name">🎲 ${t('mpNewName')}</button>
@@ -74,7 +75,7 @@ export function createMultiplayer({ scene, root, camera, player, hub, map, lift,
     for (const b of panel.querySelectorAll('[data-r]')) b.addEventListener('pointerdown', stop(() => {
       reroll(profile, b.dataset.r);
       saveProfile(profile);
-      if (b.dataset.r !== 'name') { wearLook(profile.look); player.setLook(lookOf(profile.look)); }
+      if (b.dataset.r !== 'name') { wearLook(profile.look); player.setLook({ ...KID_LOOK }); }   // (KID_LOOK keeps the wardrobe items on)
       net?.send(hello());
       audio?.play('click');
       drawPanel();

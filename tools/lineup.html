@@ -53,7 +53,23 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 renderer.setSize(innerWidth, innerHeight, false);
 let t = 0;
 renderer.setAnimationLoop(() => { t += 1 / 60; U.time.value = t; lights.follow(new THREE.Vector3(cx, 0.8, 0), 3); renderer.render(scene, camera); });
-window.__lineup = { people, scene, camera, renderer };
+// sheet(id, views?, look?): one person from several angles side by side, as a JPEG data URL (for design checks).
+// views: [[yaw, look-at height, distance], ...]; look: build a fresh person with this look instead.
+function sheet(id = 'kid', views, look) {
+  let p = people.find(q => q.id === id) || people[0];
+  if (look) { const n = buildPerson(look); n.mesh.position.copy(p.mesh.position); scene.add(n.mesh); p.mesh.visible = false; p = { ...n, was: p }; }
+  const W = 420, H = 560, x = p.mesh.position.x, h = 1.35 * (p.look.scale || 1), out = document.createElement('canvas');
+  views ||= [[0.25, h * 0.52, 3.3 * h / 1.35], [2.6, h * 0.52, 3.3 * h / 1.35], [0.3, h * 0.88, 1.2], [1.3, h * 0.88, 1.2]];
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+  out.width = W * views.length; out.height = H;
+  views.forEach(([yaw, cy, d], i) => {
+    p.mesh.rotation.y = yaw; camera.position.set(x, cy + d * 0.12, d); camera.lookAt(x, cy, 0);
+    renderer.render(scene, camera); out.getContext('2d').drawImage(renderer.domElement, i * W, 0, W, H);
+  });
+  if (p.was) { scene.remove(p.mesh); p.was.mesh.visible = true; }
+  return { url: out.toDataURL('image/jpeg', 0.82), tris: Math.round(p.mesh.geometry.attributes.position.count / 3), person: p };
+}
+window.__lineup = { people, scene, camera, renderer, sheet };
 </script>
 </body>
 </html>

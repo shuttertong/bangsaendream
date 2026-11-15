@@ -158,7 +158,12 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
   guide = createGuide({ scene, root, tpc: camera, player, people, input, quest: () => quest, toast,
     who: () => (quest ? questPeople(quest) : journal?.goalPeople() || []) });   // marker + arrow to the active goal (or today's task's host)
   hud.setGoal(() => questText(quest) || journal?.goalText() || '');   // the story's goal; once it is done, today's next task
-  P.onChange(what => { if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); } });
+  let purse = P.get().baht;
+  P.onChange(what => {
+    if (what !== 'baht') { quest = updateQuests(toast); hud.refresh(); return; }
+    if (P.get().baht > purse) player.kid.express();              // money in: the kid beams
+    purse = P.get().baht;
+  });
   addEventListener('keydown', e => { if (e.code === 'KeyF' && !talk.active) act(); });
 
   // restore the last position (if it's still a valid spot)

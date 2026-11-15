@@ -2,7 +2,7 @@
 // 2-joint IK legs that plant the feet on the terrain, hip sway and a toe-off in the step, arm
 // swing, lean into acceleration and turns, a spring on the hat; a jump that stretches on the way
 // up, spreads the arms on the way down and squashes on landing; idle breathing, a weight shift
-// and a look around now and then.
+// and a look around now and then; blinking, and a joy face (express()) when something good happens.
 import * as THREE from 'three';
 import { buildKid } from './model.js';
 
@@ -17,6 +17,7 @@ const TUNE = {
   bobWalk: 0.02, bobRun: 0.05,                   // hip bob per step (m)
   stretch: 0.07, squash: 0.09, landTime: 0.24, landDip: 0.1,   // squash & stretch of the whole body (jump up / land), landing crouch (s, m)
   look: { every: [3, 7], hold: [1.2, 2.2], yaw: 0.5 },       // idle: a glance to one side every few seconds
+  joy: { secs: 1.6, mouth: [1.35, 1.9] },                    // the joy face: how long, and the mouth's stretch
 };
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -28,7 +29,7 @@ export function createKid(scene, look) {
     phase: 0, speed: 0, lean: 0, side: 0, t: 0,
     hatOff: new THREE.Vector3(), hatVel: new THREE.Vector3(),
     headPrev: new THREE.Vector3(), headPrev2: new THREE.Vector3(), first: true, blinkIn: 2, blink: 0,
-    wasGrounded: true, airT: 0, land: 0, stretch: 1, look: { yaw: 0, want: 0, hold: 0, next: 4 },
+    wasGrounded: true, airT: 0, land: 0, stretch: 1, joy: 0, joyOn: false, look: { yaw: 0, want: 0, hold: 0, next: 4 },
   };
   const baseScale = mesh.scale.x;
   const tmp = new THREE.Vector3(), acc = new THREE.Vector3();
@@ -111,7 +112,14 @@ export function createKid(scene, look) {
     s.blinkIn -= dt;                                                     // blink every few seconds
     if (s.blinkIn <= 0) { s.blink = 0.12; s.blinkIn = 2 + Math.random() * 3; }
     s.blink = Math.max(0, s.blink - dt);
-    B.eyes.scale.y = s.blink > 0 ? 0.12 : 1;
+    B.eyes.scale.set(1, s.blink > 0 ? 0.12 : 1, 1);
+    // joy: for a moment the eyes close into smiling arches and the mouth opens wide
+    if (s.joy > 0 || s.joyOn) {
+      s.joy -= dt;
+      const on = s.joy > 0;
+      if (on !== s.joyOn) { s.joyOn = on; B.joy.scale.setScalar(on ? 1 : 1e-4); B.mouth.scale.set(on ? TUNE.joy.mouth[0] : 1, on ? TUNE.joy.mouth[1] : 1, 1); }
+      if (on) B.eyes.scale.setScalar(1e-4);
+    }
 
     if (m.grounded) {
       const [tl, tr] = targets;
@@ -152,5 +160,8 @@ export function createKid(scene, look) {
     B.hat.rotation.set(s.hatOff.z * 6, 0, -s.hatOff.x * 6);
   }
 
-  return { mesh, bones: B, update };
+  /** Show joy (closed smiling eyes, an open mouth) for `secs`. */
+  const express = (secs = TUNE.joy.secs) => { s.joy = Math.max(s.joy, secs); };
+
+  return { mesh, bones: B, update, express };
 }

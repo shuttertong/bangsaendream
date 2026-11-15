@@ -17,11 +17,12 @@ export const LOOKS = {
   skin: ['#d9a57c', '#c68f66', '#b8835c', '#e0b08a', '#a8764f'],
   hat: ['straw', 'cap', 'bucket', 'none'],
   hatColor: ['#e8d49a', '#d8443a', '#2f6fc4', '#f4f1e8', '#3a9a6a', '#f0b43a'],
-  hair: ['short', 'long', 'bun'],
+  hair: ['short', 'long', 'bun', 'bob', 'ponytail', 'twin', 'spiky'],
   bottom: ['#34507a', '#3a3a3a', '#6a5a4a', '#e8e4d8', '#3a6a4a', '#9a5a8a'],
+  outfit: ['tee', 'hawaii', 'sailor', 'overalls'],          // people/outfit.js
 };
 const KEY = 'bangsaen.mp.v1';
-const DEFAULT = { shirt: 0, skin: 0, hat: 0, hatColor: 0, hair: 0, bottom: 0 };   // the classic kid
+const DEFAULT = { shirt: 0, skin: 0, hat: 0, hatColor: 0, hair: 0, bottom: 0, outfit: 0 };   // the classic kid
 const BASE = { ...KID_LOOK };
 
 const rand = n => Math.floor(Math.random() * n);
@@ -43,7 +44,7 @@ export function lookOf(l, fx = null) {
   return {
     ...fxLook(wornOf(fx)),
     ...BASE, shirt: LOOKS.shirt[l.shirt] || BASE.shirt, skin: LOOKS.skin[l.skin], hat: LOOKS.hat[l.hat],
-    hatColor: LOOKS.hatColor[l.hatColor], hairStyle: LOOKS.hair[l.hair], bottomColor: LOOKS.bottom[l.bottom],
+    hatColor: LOOKS.hatColor[l.hatColor], hairStyle: LOOKS.hair[l.hair] || 'short', bottomColor: LOOKS.bottom[l.bottom], outfit: LOOKS.outfit[l.outfit] || 'tee',
     ...(LOOKS.hat[l.hat] === 'cap' ? { hatBand: '#f4f1e8' } : {}),
   };
 }

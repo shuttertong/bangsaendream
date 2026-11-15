@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applyHaze } from '../../world/haze.js';
-import { toonParts, TOON } from './toon.js';
+import { toonParts } from './toon.js';
+import { HEAD } from './head.js';
 import { DETAIL } from './geo.js';
 import { patch, replaceInclude } from '../../core/shaderPatch.js';
 
@@ -16,7 +17,7 @@ export const BODY = {
 
 export const DEFAULT_LOOK = {
   scale: 1, headScale: 1.2, belly: 0,            // kids: a big-ish toon head (≈ 1/5 of their height); adults pass ≈ 0.86
-  skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bun | long | ponytail | spiky | bald
+  skin: '#d9a57c', hair: '#2a2320', hairStyle: 'short',     // short | bob | bun | long | ponytail | twin | spiky | bald
   shirt: '#7fc4e8', shirtTrim: '#f4f1e8', sleeves: 'short',  // short | long | none
   bottom: 'shorts', bottomColor: '#34507a',                   // shorts | pants | skirt
   shoe: '#8a5a3a', sock: '#f4f1e8', apron: null, vest: null, glasses: false,
@@ -24,6 +25,7 @@ export const DEFAULT_LOOK = {
   shirtStyle: 'plain',                                       // plain | stripes | stripesDark | raglan (toon.js)
   smile: 'smile', eyeScale: undefined, brow: 0.03, freckles: false,   // face: smile | grin | small; eye size (default by age); brow thickness
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
+  outfit: 'tee', bag: null,                                  // outfit.js: tee | hawaii | sailor | overalls; bag: a backpack's colour
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
 
@@ -40,10 +42,11 @@ const bonesFor = B => ({
   hips: [null, [0, B.hip, 0]],
   spine: ['hips', [0, 0.1, 0]],
   head: ['spine', [0, B.torso - 0.1 + B.neck, 0]],
-  // face bones sit on the head centre (TOON.up above the neck): eyes at the eye line, mouth at the mouth
-  eyes: ['head', [0, B.head * (TOON.up + TOON.eyeY), 0]],
-  mouth: ['head', [0, B.head * (TOON.up + TOON.mouthY), 0]],
-  hat: ['head', [0, B.head * (TOON.up + TOON.hatY), 0]],
+  // face bones sit on the head centre (HEAD.up above the neck): eyes at the eye line, mouth at the mouth
+  eyes: ['head', [0, B.head * (HEAD.up + HEAD.eyeY), 0]],
+  mouth: ['head', [0, B.head * (HEAD.up + HEAD.mouthY), 0]],
+  joy: ['head', [0, B.head * (HEAD.up + HEAD.eyeY), 0]],       // closed, smiling eyes: shrunk away until the joy expression
+  hat: ['head', [0, B.head * (HEAD.up + HEAD.hatY), 0]],
   armL: ['spine', [B.shoulderW, B.torso - 0.14, 0]],
   armR: ['spine', [-B.shoulderW, B.torso - 0.14, 0]],
   foreL: ['armL', [0, -B.upperArm, 0]],
@@ -56,13 +59,29 @@ const bonesFor = B => ({
   footR: ['shinR', [0, -B.shin, 0]],
 });
 
-// soft toon shading: "wrapped" diffuse light (half-Lambert), so faces and limbs turn gently
-// from light to shade instead of going dark on the side away from the sun
+// soft toon shading: "wrapped" diffuse light (half-Lambert) with a gentle step at the terminator, so
+// faces and limbs turn softly from light to shade; shade that keeps its colour instead of going grey;
+// and a warm rim of light round the silhouette, strongest on the sun's side
+export const SHADE = { step: 0.4, rim: 0.85, rimPow: 3.0, rimTint: [1.0, 0.94, 0.82], deep: 0.22 };
+const f = v => v.toFixed(3);
 const softLight = {
-  key: 'toon-wrap',
+  key: 'toon-wrap-2',
   apply(shader) {
     replaceInclude(shader, 'fragment', 'lights_lambert_pars_fragment', THREE.ShaderChunk.lights_lambert_pars_fragment
-      .replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );', 'float dotNL = dot( geometryNormal, directLight.direction ) * 0.5 + 0.5; dotNL *= dotNL;'));
+      .replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );',
+        `float wrapNL = dot( geometryNormal, directLight.direction ) * 0.5 + 0.5; float dotNL = mix( wrapNL * wrapNL, smoothstep( 0.3, 0.72, wrapNL ), ${f(SHADE.step)} );`));
+    replaceInclude(shader, 'fragment', 'opaque_fragment', /* glsl */`
+      {
+        float fres = pow( 1.0 - saturate( dot( normal, normalize( vViewPosition ) ) ), ${f(SHADE.rimPow)} );
+        #if NUM_DIR_LIGHTS > 0
+          float sunSide = saturate( dot( normal, directionalLights[ 0 ].direction ) * 0.5 + 0.5 );
+        #else
+          float sunSide = 0.5;
+        #endif
+        outgoingLight += diffuseColor.rgb * fres * ( 0.3 + 0.7 * sunSide ) * vec3( ${SHADE.rimTint.map(f).join(', ')} ) * ${f(SHADE.rim)};
+        outgoingLight += diffuseColor.rgb * diffuseColor.rgb * ( 1.0 - sunSide ) * ${f(SHADE.deep)};
+      }
+      #include <opaque_fragment>`);
   },
 };
 const material = () => applyHaze(patch(new THREE.MeshLambertMaterial({ vertexColors: true }), softLight));
@@ -78,7 +97,7 @@ export function buildPerson(lookIn = {}, detail = 1) {
     const b = new THREE.Bone();
     b.name = name;
     b.position.set(...off);
-    if (name === 'eyes' || name === 'mouth' || name === 'hat') b.position.multiplyScalar(look.headScale);
+    if (name === 'eyes' || name === 'mouth' || name === 'hat' || name === 'joy') b.position.multiplyScalar(look.headScale);
     b.userData.rest = b.position.clone();
     if (parent) bones[parent].add(b);
     bones[name] = b;
@@ -102,6 +121,7 @@ export function buildPerson(lookIn = {}, detail = 1) {
   const mesh = new THREE.SkinnedMesh(mergeGeometries(geos), sharedMat || (sharedMat = material()));
   mesh.add(bones.hips);
   mesh.bind(new THREE.Skeleton(list));
+  bones.joy.scale.setScalar(1e-4);                             // (after binding: the rest pose keeps it full size)
   mesh.scale.setScalar(look.scale);
   mesh.castShadow = mesh.receiveShadow = true;
   mesh.frustumCulled = false;

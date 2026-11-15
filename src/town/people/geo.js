@@ -29,3 +29,33 @@ export const lathe = (pts, seg = 22) => {
 };
 /** Thin ring (collar, hem trim, waistband) lying flat at y, radius r, thickness t. */
 export const ring = (r, t, y, depth = 1) => at(sc(new THREE.TorusGeometry(r, t, seg(6, 3), seg(24, 6)).rotateX(Math.PI / 2), 1, 1, depth), 0, y, 0);
+/** True while a close-up figure is being built (the kid, the cast): the coarse background crowd skips the finest touches. */
+export const fine = () => DETAIL.k >= 0.5;
+const _c = new THREE.Color(), _p = new THREE.Vector3(), _n = new THREE.Vector3();
+/**
+ * Repaint a coloured geometry vertex by vertex: fn(colour, position, normal) changes `colour` in place.
+ * Blends toward a lighter or darker shade of the same colour survive the crowd's recolouring (crowd.js);
+ * blends toward another hue do not, so keep those behind fine().
+ */
+export function tint(g, fn) {
+  const c = g.attributes.color, p = g.attributes.position, n = g.attributes.normal;
+  for (let i = 0; i < c.count; i++) {
+    fn(_c.fromBufferAttribute(c, i), _p.fromBufferAttribute(p, i), n ? _n.fromBufferAttribute(n, i) : _n);
+    c.setXYZ(i, _c.r, _c.g, _c.b);
+  }
+  return g;
+}
+/** 0 → 1 between a and b (either way round), eased. */
+export const ease = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const darker = (hex, k) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#000000'), k).getHexString();
+export const lighter = (hex, k) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), k).getHexString();
+/** A rounded box (a superellipsoid): half-sizes w, h, d; `p` squares it off (2 = an ellipsoid). */
+export function pod(w, h, d, p = 4, ws = 16, hs = 12) {
+  const g = sph(1, ws, hs), a = g.attributes.position;
+  for (let i = 0; i < a.count; i++) {
+    const x = a.getX(i), y = a.getY(i), z = a.getZ(i), k = (Math.abs(x) ** p + Math.abs(y) ** p + Math.abs(z) ** p) ** (-1 / p);
+    a.setXYZ(i, x * k * w, y * k * h, z * k * d);
+  }
+  g.computeVertexNormals();
+  return g;
+}

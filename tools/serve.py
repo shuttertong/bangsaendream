@@ -76,7 +76,7 @@ def clean_hello(m):
     fx_in = m.get('fx') or {}
     fx = {k: (fx_in[k] if isinstance(fx_in.get(k), int) and 0 <= fx_in[k] <= 64 else 0) for k in ('hat', 'wings', 'back', 'hand', 'tail', 'aura')}   # wardrobe items
     tl = m.get('tl', 0)
-    return {'n1': m['n1'], 'n2': m['n2'], 'look': {k: look[k] for k in ('shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom')}, 'fx': fx,
+    return {'n1': m['n1'], 'n2': m['n2'], 'look': {**{k: look[k] for k in ('shirt', 'skin', 'hat', 'hatColor', 'hair', 'bottom')}, 'outfit': look['outfit'] if ok('outfit', 32) else 0}, 'fx': fx,
             'tl': tl if isinstance(tl, int) and 0 <= tl < 9 else 0}   # tl: journal title index (shown under the name)
 
 
