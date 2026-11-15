@@ -144,7 +144,7 @@ export function inMap(map, x, z, margin = 6) {
 const CORRIDOR_CELL = 4, CORRIDOR_FAR = 60;
 export function stripSampler(map, seaDist, skip = () => false) {
   const inland = map.inland || 100, lines = (map.corridors || []).filter(c => !skip(c));
-  const { x0, z0 } = map.core, size = (map.core.nx - 1) * map.core.step, n = Math.ceil(size / CORRIDOR_CELL) + 1;
+  const { x0, z0 } = map.core, size = (Math.max(map.core.nx, map.core.nz) - 1) * map.core.step, n = Math.ceil(size / CORRIDOR_CELL) + 1;   // (the grid may be taller than wide: data.js PAD)
   const grid = new Float32Array(n * n).fill(CORRIDOR_FAR);
   for (const c of lines) for (let k = 1; k < c.p.length; k++) {
     const [ax, az] = c.p[k - 1], [bx, bz] = c.p[k], dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1, pad = c.w + CORRIDOR_FAR;
