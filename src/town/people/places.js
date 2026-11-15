@@ -14,6 +14,7 @@ export const PLACES = {
   crabBeach: { name: { th: 'หาดปูลม', en: 'Ghost-crab beach' }, icon: 'crab', anchor: { near: [-560, 20], sea: 9 } },
   laemThaen: { name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, icon: 'boat', anchor: { near: [-1330, -745], sea: 12 } },
   goHouse:   { name: { th: 'บ้านหมากล้อม', en: 'Go house' }, icon: 'go', anchor: 'goHouse' },   // a dressed shophouse row (gohouse.js)
+  gp:        { name: { th: 'สนามโกคาร์ทกรังด์ปรีซ์ (เขาสามมุข)', en: 'Kart Grand Prix start (Khao Sam Muk)' }, icon: 'kart', anchor: { near: [103, -1530] } },   // beside the start line (gp/track.js at(0))
   viewpoint: { name: { th: 'จุดชมวิวเขาสามมุข', en: 'Khao Sam Muk viewpoint' }, icon: 'hill', anchor: 'viewpoint' },   // the terrace (viewpoint.js)
 };
 

@@ -7,7 +7,7 @@ import { t } from '../shared/i18n.js';
 
 export const COOP = {
   // time: seconds the lobby waits (default lobbyTime); full: set off as soon as every seat is taken
-  games: { banana: { max: 4, icon: '🍌', title: 'bananaTitle' }, go: { max: 2, icon: '⚫', title: 'goTitle', time: 180, full: true, wait: 'goWaiting', empty: 'goEmptySeat', team: 'goTable' } },
+  games: { banana: { max: 4, icon: '🍌', title: 'bananaTitle' }, gp: { max: 6, icon: '🏎️', title: 'gpTitle', time: 30 }, go: { max: 2, icon: '⚫', title: 'goTitle', time: 180, full: true, wait: 'goWaiting', empty: 'goEmptySeat', team: 'goTable' } },
   lobbyTime: 25,           // seconds before the boat leaves anyway
   inviteEvery: 2,          // the leader re-announces (so late arrivals see it)
   inviteTTL: 6,            // an invite disappears if not re-announced

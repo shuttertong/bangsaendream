@@ -20,6 +20,7 @@ export const GAMES = {
   go: { load: () => import('./go/index.js') },
   football: { load: () => import('./football/index.js') },
   volley: { load: () => import('./volley/index.js') },
+  gp: { load: () => import('./gp/index.js') },
 };
 
 for (const s of CRABS) ITEMS[`crab_${s.id}`] = { icon: s.icon, name: s.name, price: s.price };

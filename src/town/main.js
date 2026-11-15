@@ -60,6 +60,7 @@ import { createJournal } from './journal.js';
 import { createPostcard } from './postcard.js';
 import { createTakraw } from './takraw.js';
 import { createBikes } from './bike.js';
+import { GP } from '../gp/rules.js';
 import { createSponsor } from './sponsor.js';
 import { createLeaderboard } from './leaderboard.js';
 import * as scores from '../shared/scores.js';
@@ -130,7 +131,8 @@ async function boot() {
   counts.goHouse = goHouse?.place || null;
   const beach = buildBeach(map, layout, kit);          // before trees so trees avoid the umbrellas
   scene.add(beach.group);
-  const inZone = (x, z) => landmarks.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
+  const walkZones = [...landmarks.walkZones, ...GP.walk];           // the roundabout; the kart loop's short stretch outside the strip
+  const inZone = (x, z) => walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
   const roadblocks = buildRoadblocks(kit, scene, map, layout, (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z)));   // fence off road 3137 (and every road out)
   const town = kit.build();
   scene.add(town);
@@ -144,7 +146,7 @@ async function boot() {
 
   const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
-  collision.walkZones.push(...landmarks.walkZones);                  // the whole roundabout is walkable, even its inland side
+  collision.walkZones.push(...walkZones);                  // the whole roundabout is walkable, even its inland side
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
   // audio can only start after a user gesture (iOS / Chrome autoplay rules)
@@ -167,6 +169,13 @@ async function boot() {
   if (free) cam.setView(params.get('view'));
   if (DEBUG) addEventListener('keydown', e => { if (e.code === 'KeyC') free = !free; });
   // mini-games: while one runs, the hub pauses and the game renders its own scene
+  // (a game that returns `town: true` is played in the hub's scene: the world keeps running round its `focus`)
+  const townCtx = {
+    scene, camera, map,
+    ground: (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea),
+    roadEdge: (x, z) => { const n = layout.roadIdx.nearest(x, z, 12); return n ? -n.d : 0; },   // metres inside the nearest road's edge
+    setRace(on) { for (const tk of hub.trucks.trucks) tk.g.visible = !on; player.kid.mesh.visible = !on; if (!on) resize(); },
+  };
   let game = null, gameMod = null, gameId = null, loading = false;
   /** opts.coop: co-op session (see coop.js) for games that support it. */
   const startGame = (id, opts = {}) => {
@@ -179,6 +188,7 @@ async function boot() {
       gameMod = mod; gameId = id;
       game = mod.start({
         renderer, input, touch, audio, progress: P, root: $('hud'), coop: opts.coop || null,
+        town: townCtx,                                 // for a game played in the town itself (the kart race)
         onExit: res => {
           document.body.classList.add('fading');
           setTimeout(() => {
@@ -265,9 +275,10 @@ async function boot() {
     takraw.update(dt, !game && !free && !hub.frozen);
     journal.update(dt, !game && !free && !hub.frozen);
     bots?.update(dt);
-    if (game) { game.update(dt, time); input.endFrame(); return; }
+    if (game) { game.update(dt, time); if (!game.town) { input.endFrame(); return; } }
     let focus;
-    if (free) { cam.update(dt); focus = cam.target; }
+    if (game) focus = game.focus;
+    else if (free) { cam.update(dt); focus = cam.target; }
     else if (drone.active) { drone.update(dt); focus = drone.target; hub.update(dt); }
     else if (binos.active) { binos.update(dt); focus = binos.focus; hub.update(dt); }
     else {
@@ -298,7 +309,7 @@ async function boot() {
   const dbg = DEBUG ? debugOverlay(renderer, camera) : null;
   startLoop(dt => {
     renderer.info.reset();
-    if (game) game.render(dt); else fx.render(dt);
+    if (game && !game.town) game.render(dt); else fx.render(dt);
     quality.update(dt);
     dbg?.(dt, quality.ratio);
   });

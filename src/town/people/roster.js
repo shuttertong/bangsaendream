@@ -169,4 +169,17 @@ export const ROSTER = [
       ] },
     ],
   },
+  {
+    id: 'keng', place: 'gp', game: 'gp',
+    name: { th: 'พี่เก่ง', en: 'Keng' },
+    look: { ...ADULT, scale: 1.28, skin: '#b8835c', shirt: '#d8392f', shirtTrim: '#f4f1e8', outfit: 'jersey', bottom: 'pants', bottomColor: '#2a2a2a', hat: 'cap', hatColor: '#2a2a2a', hatBand: '#d8392f', hairStyle: 'short', smile: 'grin', neck: 'whistle', print: 'none' },
+    script: () => [
+      { say: { th: 'ยินดีต้อนรับสู่บางแสนโกคาร์ทกรังด์ปรีซ์! เราแข่งกันบนถนนจริงรอบเขาสามมุข หนึ่งรอบ 4 กิโลเมตร รถเร่งเอง เธอแค่บังคับเลี้ยว แล้วเบรกก่อนเข้าโค้งแคบ ๆ', en: 'Welcome to the Bang Saen Kart Grand Prix! We race on the real roads round Khao Sam Muk: one lap, four kilometres. The kart goes by itself; you steer, and brake before the tight bends.' } },
+      { ask: [
+        { label: { th: '🏎️ แข่งกับนักแข่งบอท', en: '🏎️ Race the bots' }, then: [{ game: 'gp' }] },
+        { label: { th: '🏎️👫 เปิดกริดรอเพื่อน', en: '🏎️👫 Open a grid for friends' }, then: [{ coop: 'gp' }] },
+        { label: { th: 'ขอดูก่อน', en: 'Just looking' }, then: [] },
+      ] },
+    ],
+  },
 ];
