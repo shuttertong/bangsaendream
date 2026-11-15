@@ -21,7 +21,7 @@ export function start(ctx) {
   const track = buildTrack(ovalPoints(SKATE.oval, 1).map(([u, w]) => { const p = rink.world(u, w); return [p.x, p.z]; }), { step: 0.5, smooth: 1 });
   const lesson = createLesson(li, track.length), st = lesson.state, top = rink.top;
   /** World place of (s along the oval, d to the right of travel). */
-  const at = (s, d, out = new THREE.Vector3()) => { const c = track.at(s); return out.set(c.x - c.tz * d, top, c.z + c.tx * d); };
+  const at = (s, d, out = new THREE.Vector3()) => { const c = track.at(s), a = track.at(s - 0.8), b = track.at(s + 0.8), l = Math.hypot(b.x - a.x, b.z - a.z) || 1; return out.set(c.x - (b.z - a.z) / l * d, top, c.z + (b.x - a.x) / l * d); };   // (a smooth tangent from two points: the samples' own turn in steps)
 
   const root = new THREE.Group();
   scene.add(root);
@@ -85,7 +85,7 @@ export function start(ctx) {
     for (const it of stars) starM.setMatrixAt(it.idx, M.compose(at(it.s, it.c, V).setY(top + 0.75 + it.high + Math.sin(s.t * 3 + it.idx) * 0.06), Q.setFromAxisAngle(up, s.t * 2 + it.idx), it.done ? V.set(0, 0, 0) : S1));
     starM.instanceMatrix.needsUpdate = true;
     // the kid: where the lesson says, skating
-    const c = track.at(st.s), yaw = Math.atan2(c.tx, c.tz) - st.vd * 0.08;
+    const ca = track.at(st.s - 0.8), cb = track.at(st.s + 0.8), way = Math.atan2(cb.x - ca.x, cb.z - ca.z), yaw = way - st.vd * 0.08;   // the way the oval runs here, from two points (the samples' own tangents turn in steps, which shook the camera on the bends)
     at(st.s, st.d, pos);
     const moved = st.v * dt;
     kid.update(dt, { x: pos.x, y: top + st.y, z: pos.z, yaw, speed: st.v, dist: moved, accel: 0, turn: 0, grounded: st.y <= 0, vy: st.vy, groundAt: () => top });
@@ -98,11 +98,11 @@ export function start(ctx) {
     }
     kid.mesh.position.y += SKATE.lift;
     // chase camera
-    const yawTo = s.phase === 'intro' ? yaw + 2.6 + Math.sin(s.t * 0.4) * 0.5 : yaw, portrait = camera.aspect < 1;
+    const yawTo = s.phase === 'intro' ? way + 2.6 + Math.sin(s.t * 0.4) * 0.5 : way, portrait = camera.aspect < 1;
     s.camYaw += Math.atan2(Math.sin(yawTo - s.camYaw), Math.cos(yawTo - s.camYaw)) * Math.min(1, dt * 4);
     cam.set(pos.x - Math.sin(s.camYaw) * 5.2, top + (portrait ? 3.6 : 2.7), pos.z - Math.cos(s.camYaw) * 5.2);
     camera.position.lerp(cam, s.t < 0.1 ? 1 : Math.min(1, dt * 8));
-    camera.lookAt(pos.x + Math.sin(yaw) * 3, top + 0.8, pos.z + Math.cos(yaw) * 3);
+    camera.lookAt(pos.x + Math.sin(way) * 3, top + 0.8, pos.z + Math.cos(way) * 3);   // ahead along the oval, not along the kid's own weaving
     if (Math.abs(camera.fov - (portrait ? 70 : 58)) > 0.2) { camera.fov = portrait ? 70 : 58; camera.updateProjectionMatrix(); }
     focus.set(pos.x, top, pos.z);
     if (s.phase === 'play') ui.bar(`🛼 ${name}`, `${st.passed}/${st.tasks}`, lesson.result(false).baht, '🟢');
