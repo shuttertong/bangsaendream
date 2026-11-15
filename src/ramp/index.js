@@ -28,7 +28,7 @@ export function start(ctx) {
   const ui = createGameUI(ctx.root, { game: 'ramp', title: t('rampTitle'), how: t('rampHow'), keys: t('rampKeys'), audio: ctx.audio });
   ctx.touch?.setAction('jump');
   ctx.audio?.ambience({ surf: 0.3, breeze: 0.6 });
-  const s = { phase: 'intro', t: 0, crouch: 0, stride: 0, shake: 0, camY: 0 };
+  const s = { phase: 'intro', t: 0, crouch: 0, stride: 0, shake: 0, camY: 0, camX: 0 };
   ui.onStart = () => { s.phase = 'play'; };
   ui.onQuit = () => end();
   ui.onBack = () => ctx.onExit(result());
@@ -89,12 +89,13 @@ export function start(ctx) {
     kid.mesh.quaternion.copy(Qt).multiply(Qy).multiply(Qf);
     kid.mesh.position.set(x, y + SKATE.lift * Math.cos(tilt), 0).add(w.set(-Math.sin(tilt), 0, 0).multiplyScalar(SKATE.lift));
     // camera: side-on from the sea side, rising a little with the big jumps
-    const portrait = camera.aspect < 1, dist = portrait ? 15 : 9.6;
-    s.camY += ((riding ? 0 : Math.max(0, run.height() - 1) * 0.5) - s.camY) * Math.min(1, dt * 3);
+    const portrait = camera.aspect < 1, C = RAMP.cam, dist = portrait ? C.dist[1] : C.dist[0];
+    s.camY += ((y - 1) * C.rise - s.camY) * Math.min(1, dt * 4);     // follows the kid up the walls and into the air
+    s.camX += (x * C.follow - s.camX) * Math.min(1, dt * 5);
     root.updateMatrixWorld();
-    cam.set(s.phase === 'intro' ? Math.sin(s.t * 0.4) * 3 : 0, 2.6 + s.camY, dist).applyMatrix4(root.matrixWorld);
+    cam.set(s.phase === 'intro' ? Math.sin(s.t * 0.4) * 3 : s.camX, C.height + s.camY, dist).applyMatrix4(root.matrixWorld);
     camera.position.lerp(cam, s.t < 0.1 ? 1 : Math.min(1, dt * 6));
-    look.set(x * 0.25, 2.2 + s.camY * 1.4, 0).applyMatrix4(root.matrixWorld);
+    look.set(s.phase === 'intro' ? 0 : s.camX * C.aim, C.look + s.camY * 1.25, 0).applyMatrix4(root.matrixWorld);
     camera.lookAt(look);
     const fov = portrait ? 64 : 50;
     if (Math.abs(camera.fov - fov) > 0.2) { camera.fov = fov; camera.updateProjectionMatrix(); }
