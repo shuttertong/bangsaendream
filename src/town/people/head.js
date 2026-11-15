@@ -117,8 +117,9 @@ export function headParts(K, R) {
 
   if (K.hairStyle !== 'bald') head.push(...hairParts(K, R));
   if (K.glasses) {
-    for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry(0.2 * R, 0.03 * R, seg(6, 3), seg(18, 6)), R, s * E.x * R, T.eyeY * R, 0.05 * R), '#2a2a2a'));
+    if (K.glasses !== 'sun') for (const s of [-1, 1]) head.push(colored(onFace(new THREE.TorusGeometry(0.2 * R, 0.03 * R, seg(6, 3), seg(18, 6)), R, s * E.x * R, T.eyeY * R, 0.05 * R), '#2a2a2a'));
     head.push(colored(onFace(sc(sph(1, 8, 6), 0.06 * R, 0.02 * R, 0.02 * R), R, 0, T.eyeY * R, 0.055 * R), '#2a2a2a'));   // bridge
+    if (K.glasses === 'sun') for (const s of [-1, 1]) head.push(colored(onFace(patch(0.28 * R, 0.235 * R, 0.03 * R), R, s * E.x * R, (T.eyeY + 0.02) * R, 0.06 * R, 0, -s * 0.06), '#22262c'));   // dark lenses
   }
   for (const g of head) g.translate(0, up, 0);
   return { head, eyes, mouth, joy };
@@ -181,7 +182,12 @@ function hairParts(K, R) {
       hair(at(g, Math.sin(a) * 0.55 * R, 0.9 * R, -0.02 * R - Math.cos(a) * 0.3 * R));
     }
   }
-  if (K.hat === 'none' && !K.fxHat && (style === 'short' || style === 'bob' || !style) && K.headScale > 1)   // a kid's cowlick
+  if (K.kerchief) {                                                  // a scarf tied over the hair, knotted at the nape
+    out.push(colored(at(new THREE.SphereGeometry(Rh * 1.035, seg(32, 8), seg(12), 0, Math.PI * 2, 0, Math.PI * 0.43), 0, 0.02 * R, -0.01 * R), K.kerchief));
+    out.push(colored(at(sph(0.1 * R, 10, 8), 0, -0.2 * R, -1.06 * R), K.kerchief));
+    for (const s of [-1, 1]) out.push(colored(at(lock(0.09 * R, 0.2 * R, 0.04 * R).rotateZ(s * 0.5), s * 0.12 * R, -0.36 * R, -1.06 * R), darker(K.kerchief, 0.12)));
+  }
+  if (K.hat === 'none' && !K.kerchief && !K.fxHat && (style === 'short' || style === 'bob' || !style) && K.headScale > 1)   // a kid's cowlick
     hair(at(lock(0.07 * R, 0.2 * R, 0.05 * R, 0.5).rotateZ(Math.PI - 0.5), 0.06 * R, 1.16 * R, 0.05 * R));
   return out;
 }

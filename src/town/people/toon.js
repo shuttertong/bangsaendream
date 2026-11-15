@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { fantasyParts } from './fantasy.js';
 import { colored, at, sc, sph, cap, lathe, ring, seg, tint, ease, fine, darker, lighter } from './geo.js';
 import { headParts, hatParts, patch, lock } from './head.js';
-import { outfitParts, bagParts } from './outfit.js';
+import { outfitParts, extraParts, bagParts } from './outfit.js';
 
 export const TOON = {
   // natural, tapered limbs (radius at the top / widest point / bottom, and where the widest point sits)
@@ -119,7 +119,7 @@ export function toonParts(K, B) {
   const covered = K.vest || K.apron;
   if (striped) for (const y of [-0.04, 0.02, 0.08, 0.14, 0.2]) spine.push(colored(ring(torsoR(y) + 0.001, 0.011, y, depth), stripe));   // bands round the chest
   if (!covered && !bare && !striped && !O.plain && K.print !== 'none') spine.push(...chestPrint(K, 0.165, 0.138 * depth + 0.002 + belly * 0.02));
-  if (!covered) spine.push(...O.spine);
+  if (!covered) spine.push(...O.spine, ...extraParts(K, B, ctx));
   if (K.vest) {                                                        // life vest over the shirt
     spine.push(colored(sc(lathe([[0, -0.04], [0.16, -0.03], [0.168 + belly * 0.03, 0.08], [0.158, 0.2], [0.12, 0.27], [0, 0.28]]), 1, 1, 0.84 + belly * 0.3), K.vest));
     for (const y of [0.04, 0.15]) spine.push(colored(ring(0.166 + belly * 0.03, 0.012, y, 0.84 + belly * 0.3), '#1a1a1a'));
@@ -134,7 +134,7 @@ export function toonParts(K, B) {
   if (K.bag && close && !K.vest && !K.fxBack && !K.fxWings) spine.push(...bagParts(K, B, ctx));                // (a wardrobe item on the back takes its place)
   const hips = [colored(sc(lathe([[0, -0.1], [0.1, -0.1], [0.12, -0.05], [0.124, 0.04], [0.118, 0.1], [0, 0.1]]), 1, 1, 0.8), K.bottomColor),
     colored(ring(0.116, 0.008, 0.075, 0.8), darker(K.bottomColor, 0.25))];                                      // waistband
-  if (close && K.bottom !== 'skirt') for (const s of [-1, 1]) hips.push(colored(at(patch(0.032, 0.028, 0.004), s * 0.052, -0.05, -0.093), darker(K.bottomColor, 0.14)));   // back pockets
+  if (close && K.bottom !== 'skirt') for (const s of [-1, 1]) hips.push(colored(at(patch(0.03, 0.026, 0.0025), s * 0.052, -0.05, -0.096), darker(K.bottomColor, 0.1)));   // back pockets
   if (K.bottom === 'skirt') {                                          // pleated skirt
     const S = TOON.skirt, g = lathe([[0.125, 0.06], [0.135, 0.0], [0.15, -0.2], [0.168, -S.len + 0.01], [0.166, -S.len]], 48);
     const p = g.attributes.position;
@@ -145,6 +145,7 @@ export function toonParts(K, B) {
     }
     g.computeVertexNormals();
     hips.push(colored(sc(g, 1, 1, 0.82), K.bottomColor), colored(ring(0.168, 0.005, -S.len + 0.004, 0.82), darker(K.bottomColor, 0.2)));
+    if (K.sarong) for (const y of [-0.24, -0.29, -0.36]) hips.push(colored(ring(0.138 + 0.08 * -y, y === -0.29 ? 0.012 : 0.006, y, 0.82), K.sarong));   // a sarong's woven bands
   }
 
   const out = { hips, spine, head, hat, eyes, mouth, joy, ...side('L'), ...side('R') };

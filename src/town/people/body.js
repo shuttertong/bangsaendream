@@ -25,7 +25,9 @@ export const DEFAULT_LOOK = {
   shirtStyle: 'plain',                                       // plain | stripes | stripesDark | raglan (toon.js)
   smile: 'smile', eyeScale: undefined, brow: 0.03, freckles: false,   // face: smile | grin | small; eye size (default by age); brow thickness
   hat: 'straw', hatColor: '#e8d49a', hatBand: '#c9463a',      // straw | cap | bucket | none
-  outfit: 'tee', bag: null,                                  // outfit.js: tee | hawaii | sailor | overalls; bag: a backpack's colour
+  outfit: 'tee', bag: null,                                  // outfit.js: tee | hawaii | sailor | overalls | floral | jersey | work | vest (vestColor, vestPockets); bag: a backpack's colour
+  towel: null, sash: null, pouch: null, neck: null,          // outfit.js extras: towel colour, sash [a, b], belt-bag colour, 'whistle' | 'binoculars'
+  sarong: null, kerchief: null,                              // bands on a skirt (colour); a scarf tied over the hair (colour); glasses: true | 'sun'
   eye: '#2a1a14', iris: '#5a3a26', mouth: '#b8564a', cheek: '#f0a098',
 };
 
