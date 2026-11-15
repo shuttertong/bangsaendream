@@ -19,15 +19,23 @@ const rodBetween = (a, b, r, hex, n = 8) => {
   return paint(g.translate(...A.add(B).multiplyScalar(0.5).toArray()), hex);
 };
 
-/** frame: the frame's colour (rental bikes come in a few). */
-export function bikeGeometry(frame = BIKE.colors.frame) {
+const disc = (r, w, n) => new THREE.CylinderGeometry(r, r, w, n).rotateZ(Math.PI / 2);
+/** One wheel round its own centre (tyre, rim, hub, spokes): a ridden bike's wheels are separate meshes, so they turn. */
+export function wheelGeometry() {
+  const C = BIKE.colors, R = BIKE.wheel, out = [];
+  out.push(paint(new THREE.TorusGeometry(R - 0.03, 0.03, 8, 28).rotateY(Math.PI / 2), C.tyre));          // tyre
+  out.push(paint(new THREE.TorusGeometry(R - 0.065, 0.012, 6, 28).rotateY(Math.PI / 2), C.rim));        // rim
+  out.push(paint(disc(0.03, 0.1, 8), C.steel));                                                          // hub
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI; out.push(rodBetween([0, Math.sin(a) * (R - 0.07), Math.cos(a) * (R - 0.07)], [0, -Math.sin(a) * (R - 0.07), -Math.cos(a) * (R - 0.07)], 0.004, C.steel, 4)); }   // spokes
+  out.push(paint(new THREE.SphereGeometry(0.022, 6, 4).translate(0.02, R - 0.1, 0), '#f0a030'));       // a reflector, so the turning shows
+  return mergeGeometries(out);
+}
+
+/** frame: the frame's colour (rental bikes come in a few); wheels: false leaves them off (add wheelGeometry meshes at BIKE.axles). */
+export function bikeGeometry(frame = BIKE.colors.frame, wheels = true) {
   const C = BIKE.colors, R = BIKE.wheel, zf = BIKE.base / 2, zr = -BIKE.base / 2, out = [];
-  const disc = (r, w, n) => new THREE.CylinderGeometry(r, r, w, n).rotateZ(Math.PI / 2);
   for (const z of [zf, zr]) {
-    out.push(paint(new THREE.TorusGeometry(R - 0.03, 0.03, 8, 28).rotateY(Math.PI / 2).translate(0, R, z), C.tyre));          // tyre
-    out.push(paint(new THREE.TorusGeometry(R - 0.065, 0.012, 6, 28).rotateY(Math.PI / 2).translate(0, R, z), C.rim));        // rim
-    out.push(paint(disc(0.03, 0.1, 8).translate(0, R, z), C.steel));                                                          // hub
-    for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI; out.push(rodBetween([0, R + Math.sin(a) * (R - 0.07), z + Math.cos(a) * (R - 0.07)], [0, R - Math.sin(a) * (R - 0.07), z - Math.cos(a) * (R - 0.07)], 0.004, C.steel, 4)); }   // spokes
+    if (wheels) out.push(wheelGeometry().translate(0, R, z));
     out.push(paint(new THREE.TorusGeometry(R + 0.03, 0.022, 4, 16, Math.PI * 0.62).rotateZ(Math.PI * 0.19).rotateY(Math.PI / 2).scale(2.2, 1, 1).translate(0, R, z), frame));   // mudguard
   }
   // the long frame: a low main tube, a top tube, a seat post and saddle for each rider, a crank under each

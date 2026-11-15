@@ -117,6 +117,7 @@ export function createSongthaews(scene, map, collision = null) {
       const g = templates[(ri + k) % templates.length].clone();
       scene.add(g);
       trucks.push({
+        axles: g.children.filter(c => c.name === 'axle'), roll: 0, px: null, pz: null,
         g, route, s: route.length * (k + 0.3) / RUN.perRoute, dir: k % 2 ? -1 : 1, v: RUN.speed,
         stopIn: THREE.MathUtils.lerp(...RUN.stopEvery, r()), stopped: 0, holds: new Map(), x: 0, z: 0, yaw: 0, i: trucks.length,
       });
@@ -130,6 +131,8 @@ export function createSongthaews(scene, map, collision = null) {
     t.yaw = Math.atan2(fx, fz);
     t.g.position.set(t.x, Math.max(map.heightAt(t.x, t.z), map.sea) + RUN.lift, t.z);
     t.g.rotation.y = t.yaw;
+    if (t.px != null) { t.roll += Math.hypot(t.x - t.px, t.z - t.pz) / TRUCK.wheel; for (const a of t.axles) a.rotation.x = t.roll; }   // the wheels turn with the road covered
+    t.px = t.x; t.pz = t.z;
     return { fx, fz };
   };
 

@@ -11,7 +11,7 @@ import { paintedMaterial } from '../world/materials.js';
 import { t, onLang } from '../shared/i18n.js';
 import * as P from '../shared/progress.js';
 import { dayKey } from '../shared/wardrobe.js';
-import { BIKE, bikeGeometry, seatAt } from './assets/bike.js';
+import { BIKE, bikeGeometry, wheelGeometry } from './assets/bike.js';
 import { paint } from '../shared/beachset.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -47,7 +47,13 @@ export function createBikes({ scene, hub, mp, player, map, lift, collision, audi
   const myId = () => mp?.id ?? ME, now = () => performance.now() / 1000;
   const toast = (m, snd = 'coin') => { hub.hud?.toast(m); audio?.play(snd); };
   const mat = paintedMaterial({ amp: 0.05, scale: 1 });
-  const newBike = hex => { const m = new THREE.Mesh(bikeGeometry(hex), mat); m.castShadow = true; scene.add(m); return m; };
+  let wheelGeo = null;
+  /** A bike that can be ridden: the frame plus two wheel meshes that turn (mesh.userData.roll(metres)). */
+  const newBike = hex => {
+    const m = new THREE.Mesh(bikeGeometry(hex, false), mat), wheels = [1, -1].map(sd => { const w = new THREE.Mesh(wheelGeo || (wheelGeo = wheelGeometry()), mat); w.position.set(0, BIKE.wheel, sd * BIKE.base / 2); w.castShadow = true; m.add(w); return w; });
+    m.userData.roll = d => { for (const w of wheels) w.rotation.x += d / BIKE.wheel; };
+    m.castShadow = true; scene.add(m); return m;
+  };
 
   // ---------- stations along the coast: rental points and bicycle parks ----------
   // walk the coastline both ways from the start beach; a station stands a little inland of the waterline, on free ground
@@ -192,7 +198,7 @@ export function createBikes({ scene, hub, mp, player, map, lift, collision, audi
   });
   function drop(id) {
     const o = owners.get(id);
-    if (o?.mesh) { scene.remove(o.mesh); o.mesh.geometry.dispose(); }
+    if (o?.mesh) { scene.remove(o.mesh); o.mesh.geometry.dispose(); }   // (the wheels' geometry is shared: kept)
     owners.delete(id);
     if (s.mode === 'aboard' && s.owner === id) off(true);
   }
@@ -202,7 +208,7 @@ export function createBikes({ scene, hub, mp, player, map, lift, collision, audi
     const B = r.kid.bones, o = owners.get(r.id);
     if (o) {
       if (!o.mesh) o.mesh = newBike(BIKES.frames[r.id % BIKES.frames.length]);
-      if (o.x != null) o.phase += Math.hypot(st.x - o.x, st.z - o.z) / BIKES.pedal * Math.PI * 2;
+      if (o.x != null) { const d = Math.hypot(st.x - o.x, st.z - o.z); o.phase += d / BIKES.pedal * Math.PI * 2; o.mesh.userData.roll(d); }
       o.x = st.x; o.z = st.z;
       r.kid.mesh.position.set(st.x, st.y, st.z); r.kid.mesh.rotation.y = st.yaw;
       bikePose(B, o.phase);
@@ -230,7 +236,8 @@ export function createBikes({ scene, hub, mp, player, map, lift, collision, audi
       const crew = 1 + Math.min(2, [...pass.values()].filter(q => q.owner === myId()).length);
       if (crew !== s.crew) { if (crew > s.crew) toast(t('bikeCrew', { n: crew })); s.crew = crew; }
       p.ride = { speed: BIKES.speed[crew], turn: BIKES.turn, accel: BIKES.accel };
-      mine.phase += Math.hypot(p.x - s.px, p.z - s.pz) / BIKES.pedal * Math.PI * 2; s.px = p.x; s.pz = p.z;
+      const d = Math.hypot(p.x - s.px, p.z - s.pz);
+      mine.phase += d / BIKES.pedal * Math.PI * 2; mine.mesh.userData.roll(d); s.px = p.x; s.pz = p.z;
       fwd(p.yaw, -seat0, v);
       Object.assign(mine, { x: p.x + v.x, z: p.z + v.z, yaw: p.yaw });
       bikePose(player.kid.bones, mine.phase);

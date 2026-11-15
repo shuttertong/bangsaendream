@@ -7,6 +7,8 @@ import { Kit } from './kit.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { bakePerson, personMaterial } from '../people/body.js';
+import { paintedMaterial } from '../../world/materials.js';
+import { paint } from '../../shared/beachset.js';
 
 export const TRUCK = {
   red: '#d8392f', darkRed: '#a8281f', steel: '#d4d8dc', tyre: '#262626', glass: '#3a4a56',
@@ -17,7 +19,7 @@ export const TRUCK = {
     { scale: 1.32, headScale: 0.9, skin: '#a8764f', hair: '#4a4440', hairStyle: 'short', shirt: '#e8c46a', outfit: 'hawaii', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#d8392f', smile: 'grin', brow: 0.04, belly: 0.35, glasses: true, print: 'none' }] },
   seat: new THREE.Vector3(0.5, 1.22, -1.1),     // where a passenger sits (right bench)
   rear: new THREE.Vector3(0, 0, -2.9),          // hop-on point behind the step
-  length: 5.3, width: 1.8,
+  length: 5.3, width: 1.8, wheel: 0.36, axles: [1.55, -1.35],   // wheel radius; the axles along the truck
 };
 
 const col = hex => new THREE.Color(hex);
@@ -59,7 +61,7 @@ function label([rx, ry_, rw, rh], w, h, x, y, z, ry) {
   return g.rotateY(ry).translate(x, y, z);
 }
 
-let driverMat = null;
+let driverMat = null, wheelMat = null;
 /** The driver, frozen at the wheel: seated, both hands forward, glancing out of his open window with a smile. */
 function driver(look) {
   const D = TRUCK.driver;
@@ -92,11 +94,8 @@ export function songthaewTemplate({ route = 42, rack = false, driverLook = 0 } =
 
   // wheels: a tyre with rounded shoulders, a steel rim with lug nuts, an arch over each
   const tyreG = new THREE.LatheGeometry([[0.2, -0.12], [0.33, -0.12], [0.36, -0.085], [0.36, 0.085], [0.33, 0.12], [0.2, 0.12]].map(([r, y]) => new THREE.Vector2(r, y)), 22).rotateZ(Math.PI / 2);
-  for (const z of [1.55, -1.35]) for (const s of [-1, 1]) {
-    put('wall', tyreG, s * 0.8, 0.36, z, tyre);
-    put('metal', disc(0.215, 0.25, 18), s * 0.8, 0.36, z, steel);
-    put('metal', disc(0.07, 0.04, 10), s * 0.935, 0.36, z, grey);
-    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; put('wall', disc(0.022, 0.02, 6), s * 0.93, 0.36 + Math.sin(a) * 0.13, z + Math.cos(a) * 0.13, grey); }
+  // (the wheels are their own two meshes, one per axle, so they can turn: see `axles` below)
+  for (const z of TRUCK.axles) for (const s of [-1, 1]) {
     put('wall', new THREE.TorusGeometry(0.43, 0.045, 6, 16, Math.PI).rotateY(Math.PI / 2), s * 0.875, 0.38, z, dark);       // wheel arch
     put('wall', rb(0.3, 0.3, 0.025, 0.01), s * 0.8, 0.36, z - 0.5, black);                                                 // mud flap
   }
@@ -169,6 +168,14 @@ export function songthaewTemplate({ route = 42, rack = false, driverLook = 0 } =
     label(DECAL.plate, 0.5, 0.19, 0, 0.58, 2.972, 0), label(DECAL.plate, 0.5, 0.19, 0, 0.82, -2.572, Math.PI), screen];
   const letters = new THREE.Mesh(mergeGeometries(labels), dm);
   group.add(letters, driver(TRUCK.driver.looks[driverLook % TRUCK.driver.looks.length]));
+  // the axles: both wheels of one axle in one vertex-coloured mesh round its own centre; songthaew.js turns them
+  const wheelParts = [];
+  for (const sx of [-1, 1]) {
+    wheelParts.push(paint(tyreG.clone().translate(sx * 0.8, 0, 0), TRUCK.tyre), paint(disc(0.215, 0.25, 18).translate(sx * 0.8, 0, 0), TRUCK.steel), paint(disc(0.07, 0.04, 10).translate(sx * 0.935, 0, 0), '#4a4a4a'));
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; wheelParts.push(paint(disc(0.022, 0.02, 6).translate(sx * 0.93, Math.sin(a) * 0.13, Math.cos(a) * 0.13), '#4a4a4a')); }
+  }
+  const axleGeo = mergeGeometries(wheelParts);
+  for (const z of TRUCK.axles) { const m = new THREE.Mesh(axleGeo, wheelMat || (wheelMat = paintedMaterial({ amp: 0.05, scale: 1 }))); m.name = 'axle'; m.position.set(0, TRUCK.wheel, z); group.add(m); }
   group.traverse(o => { o.matrixAutoUpdate = true; o.castShadow = o.receiveShadow = !!o.geometry; });
   letters.castShadow = false;                                                 // (glass and paint cast no shadow)
   return group;
