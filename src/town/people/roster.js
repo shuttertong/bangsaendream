@@ -194,6 +194,7 @@ export const ROSTER = [
           : { th: `ยินดีต้อนรับสู่โรงเรียนสอนสเก็ต! เราเรียนกันสามบท: ทรงตัว สลาลอม แล้วก็กระโดด ตอนนี้เธออยู่บทที่ ${learnt + 1} ไถข้ามแผ่นสีเขียว อย่าชนกรวย ผ่านหกในสิบก็สอบผ่านแล้ว`, en: `Welcome to the skating school! Three lessons: balance, slalom, then jumps. You are on lesson ${learnt + 1}. Skate over the green pads, mind the cones — six in ten is a pass.` } },
         { ask: [
           { label: learnt >= 3 ? { th: '🛼 ซ้อมทบทวน', en: '🛼 Practise' } : { th: `🛼 เรียนบทที่ ${learnt + 1}`, en: `🛼 Take lesson ${learnt + 1}` }, then: [{ game: 'skate' }] },
+          { label: { th: '🌀 เล่นท่าบนแรมป์', en: '🌀 Tricks on the half-pipe' }, then: [{ game: 'ramp' }] },
           { label: { th: 'ขอดูก่อนครับ', en: 'Just looking' }, then: [{ say: { th: 'ตามสบายเลย สเก็ตอยู่ที่ชั้นข้างเคาน์เตอร์ หยิบไปลองไถในลานได้ฟรีนะ', en: 'Take your time. The skates are on the rack by the counter: borrow a pair and try the rink, no charge.' } }] },
         ] },
       ];

@@ -187,7 +187,7 @@ async function boot() {
     scene, camera, map,
     ground: (x, z) => Math.max(map.heightAt(x, z) + lift(x, z), map.sea),
     roadEdge: (x, z) => { const n = layout.roadIdx.nearest(x, z, 12); return n ? -n.d : 0; },   // metres inside the nearest road's edge
-    setRace(on) { for (const tk of hub.trucks.trucks) tk.g.visible = !on; player.kid.mesh.visible = !on; for (const m of [raceGates, ...raceBlocks.meshes]) m.visible = !on; if (!on) resize(); },
+    setRace(on) { for (const tk of hub.trucks.trucks) tk.g.visible = !on; player.kid.mesh.visible = !on; for (const m of [raceGates, ...raceBlocks.meshes]) m.visible = !on; skating.hide(on); if (!on) resize(); },
   };
   let game = null, gameMod = null, gameId = null, loading = false;
   /** opts.coop: co-op session (see coop.js) for games that support it. */

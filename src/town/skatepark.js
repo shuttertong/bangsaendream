@@ -154,7 +154,7 @@ export function buildSkatePark(kit, scene, map, layout, start) {
 
 /** Skates for the kid (F at the rack) and the skaters lapping the oval. park: buildSkatePark()'s result. */
 export function createSkating({ scene, park, hub, player, audio, input, setLook, baseLook }) {
-  if (!park) return { on: false, near: false, use() {}, off() {}, update() {}, prompt: () => [null, null] };
+  if (!park) return { on: false, near: false, use() {}, off() {}, hide() {}, update() {}, prompt: () => [null, null] };
   const K = SKATE, { rink } = park, S = rink.slab, c = Math.cos(S.ry), sn = Math.sin(S.ry);
   const onSlab = (x, z) => { const dx = x - S.x, dz = z - S.z, u = dx * c - dz * sn, w = dx * sn + dz * c; return Math.abs(u) < S.hx && Math.abs(w) < S.hz; };
   const s = { on: false, near: false, phase: 0, px: 0, pz: 0, k: 0, lean: 0, yaw: 0 };
@@ -186,8 +186,8 @@ export function createSkating({ scene, park, hub, player, audio, input, setLook,
   /** After player.update. active: the kid may act. */
   function update(dt, active) {
     const p = player.state, far = Math.hypot(p.x - rink.x, p.z - rink.z) > K.skaters.range;
-    crew.mesh.visible = !far;
-    if (!far) for (const k of skaters) {
+    crew.mesh.visible = !far && !s.hidden;
+    if (!far && !s.hidden) for (const k of skaters) {
       k.d += k.v * dt; k.ph += strideStep(k.v * dt, k.v);
       const q = at(k.d, k.lane);
       let turn = k.yaw == null ? 0 : q.yaw - k.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / (dt || 1); k.yaw = q.yaw;
@@ -212,6 +212,8 @@ export function createSkating({ scene, park, hub, player, audio, input, setLook,
   }
   return {
     update, use, off,
+    /** Clear the oval (a lesson or the half-pipe is on the rink). */
+    hide(on) { s.hidden = on; crew.mesh.visible = !on; },
     get on() { return s.on; }, get near() { return s.near; },
     prompt: () => (s.on ? ['skateOff', null] : s.near ? ['skateOn', null] : [null, null]),
     debug: { s, skaters, park },
