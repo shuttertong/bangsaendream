@@ -106,6 +106,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     if (s.baht >= FARE) { P.addBaht(-FARE); toast(t('fare', { n: FARE }), 'click'); }
     else toast(t('freeRide'), 'coin');
     if (!s.flags.rodDaeng) { P.setFlag('rodDaeng'); setTimeout(() => toast(t('firstRide'), 'catch'), 900); }
+    else setTimeout(() => { if (riding === tk) toast(t('driverHi' + (1 + Math.floor(Math.random() * 3))), 'click'); }, 900);   // the driver's a kind old soul
     audio?.play('thud');
     journal?.event('ride');
   }

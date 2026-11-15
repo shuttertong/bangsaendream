@@ -110,7 +110,7 @@ function sample(route, s) {
 export function createSongthaews(scene, map, collision = null) {
   const r = rng(4242);
   const routes = buildRoutes(map, collision);
-  const templates = [songthaewTemplate({ route: 42, rack: true }), songthaewTemplate({ route: 6088 })];
+  const templates = [songthaewTemplate({ route: 42, rack: true }), songthaewTemplate({ route: 6088, driverLook: 1 })];
   const trucks = [];
   routes.forEach((route, ri) => {
     for (let k = 0; k < RUN.perRoute; k++) {

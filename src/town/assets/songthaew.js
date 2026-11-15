@@ -6,17 +6,22 @@ import * as THREE from 'three';
 import { Kit } from './kit.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { bakePerson, personMaterial } from '../people/body.js';
 
 export const TRUCK = {
   red: '#d8392f', darkRed: '#a8281f', steel: '#d4d8dc', tyre: '#262626', glass: '#3a4a56',
   stripe: '#f2c230', vinyl: '#7a3a32', curtain: '#d9d2bc',
+  // the kind uncle at the wheel (right-hand drive: the driver's side is −x), one look per truck design
+  driver: { x: -0.4, hip: 1.01, z: 1.2, detail: 0.5, looks: [
+    { scale: 1.32, headScale: 0.9, skin: '#b8835c', hair: '#8a8680', hairStyle: 'short', shirt: '#8fb8d8', outfit: 'work', towel: '#f4f1e8', towelStripe: '#d8443a', hat: 'none', smile: 'grin', brow: 0.04, belly: 0.3, print: 'none' },
+    { scale: 1.32, headScale: 0.9, skin: '#a8764f', hair: '#4a4440', hairStyle: 'short', shirt: '#e8c46a', outfit: 'hawaii', hat: 'cap', hatColor: '#f4f1e8', hatBand: '#d8392f', smile: 'grin', brow: 0.04, belly: 0.35, glasses: true, print: 'none' }] },
   seat: new THREE.Vector3(0.5, 1.22, -1.1),     // where a passenger sits (right bench)
   rear: new THREE.Vector3(0, 0, -2.9),          // hop-on point behind the step
   length: 5.3, width: 1.8,
 };
 
 const col = hex => new THREE.Color(hex);
-const DECAL = { w: 512, h: 384, side: [0, 0, 512, 160], sign: [0, 160, 512, 96], plate: [0, 256, 256, 96] };   // regions of the lettering canvas (x, y, w, h)
+const DECAL = { w: 512, h: 384, side: [0, 0, 512, 160], sign: [0, 160, 512, 96], plate: [0, 256, 256, 96], glass: [264, 264, 240, 80] };   // regions of the lettering canvas (x, y, w, h)
 
 /** Canvas with the painted lettering (no brands, route names only): the sides, the roof signs, the number plates. */
 function decal(route) {
@@ -38,6 +43,10 @@ function decal(route) {
   g.fillText(`${route}–${1000 + route * 37 % 9000}`, 128, 310);
   g.font = '600 20px Kanit, Sarabun, sans-serif';
   g.fillText('บางแสน', 128, 336);
+  const [gx, gy, gw, gh] = DECAL.glass, sheen = g.createLinearGradient(gx, gy, gx + gw, gy + gh);   // clear glass: a faint tint with a streak of reflected sky
+  sheen.addColorStop(0, 'rgba(205,228,240,0.16)'); sheen.addColorStop(0.42, 'rgba(205,228,240,0.1)'); sheen.addColorStop(0.5, 'rgba(255,255,255,0.42)');
+  sheen.addColorStop(0.58, 'rgba(205,228,240,0.1)'); sheen.addColorStop(1, 'rgba(190,215,232,0.2)');
+  g.fillStyle = sheen; g.fillRect(gx - 8, gy - 8, gw + 16, gh + 16);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
@@ -50,8 +59,22 @@ function label([rx, ry_, rw, rh], w, h, x, y, z, ry) {
   return g.rotateY(ry).translate(x, y, z);
 }
 
-/** Template group: body meshes per material + one lettering mesh. */
-export function songthaewTemplate({ route = 42, rack = false } = {}) {
+let driverMat = null;
+/** The driver, frozen at the wheel: seated, both hands forward, glancing out of his open window with a smile. */
+function driver(look) {
+  const D = TRUCK.driver;
+  const g = bakePerson(look, B => {
+    for (const s of ['L', 'R']) { B[`arm${s}`].rotation.set(-1.05, 0, s === 'L' ? 0.16 : -0.16); B[`fore${s}`].rotation.x = -0.55; B[`leg${s}`].rotation.x = -1.4; B[`shin${s}`].rotation.x = 1.3; }
+    B.head.rotation.set(0.04, -0.3, 0); B.spine.rotation.x = 0.06;
+  }, D.detail);
+  g.translate(D.x, D.hip - 0.62 * look.scale, D.z);
+  const m = new THREE.Mesh(g, driverMat || (driverMat = personMaterial()));
+  m.name = 'driver';
+  return m;
+}
+
+/** Template group: body meshes per material + one lettering mesh + the driver. */
+export function songthaewTemplate({ route = 42, rack = false, driverLook = 0 } = {}) {
   // built in the middle of one map chunk so the kit keeps it in one mesh per material
   const C = 192;
   const kit = new Kit();
@@ -80,13 +103,18 @@ export function songthaewTemplate({ route = 42, rack = false } = {}) {
   // body: the bed's lower half; the cab and bonnet as one shaped piece (a sloping windscreen, rounded edges)
   put('wall', rb(1.78, 0.62, 3.5, 0.07), 0, 0.8, -0.82, red);
   put('wall', rb(1.72, 0.08, 4.9, 0.03), 0, 0.49, -0.1, dark);                                                             // sill shadow line
-  const side = new THREE.Shape([[0.84, 0.52], [2.76, 0.52], [2.86, 0.62], [2.86, 1.02], [2.78, 1.1], [2.2, 1.2], [1.74, 1.84], [1.6, 1.9], [0.9, 1.9], [0.84, 1.84]].map(([z, y]) => new THREE.Vector2(z, y)));
+  // (below the windows the cab is solid; above, pillars and a roof round an open cabin, so the driver shows)
+  const side = new THREE.Shape([[0.84, 0.52], [2.76, 0.52], [2.86, 0.62], [2.86, 1.02], [2.78, 1.1], [2.2, 1.2], [0.84, 1.2]].map(([z, y]) => new THREE.Vector2(z, y)));
   const cab = new THREE.ExtrudeGeometry(side, { depth: 1.6, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 3, curveSegments: 4 }).rotateY(-Math.PI / 2).translate(0.8, 0, 0);
   put('wall', cab, 0, 0, 0, red);
-  put('glass', rb(1.46, 0.72, 0.03, 0.01), 0, 1.565, 2.01, glass, -0.63);                                                  // windscreen, on the slope
-  put('glass', rb(1.4, 0.4, 0.03, 0.01), 0, 1.58, 0.775, glass);                                                           // cab rear window
+  put('wall', rb(1.72, 0.08, 0.98, 0.035), 0, 1.9, 1.27, red);                                                             // cab roof
+  put('wall', rb(1.72, 0.74, 0.07, 0.03), 0, 1.56, 0.84, red); put('glass', rb(1.3, 0.36, 0.03, 0.01), 0, 1.6, 0.8, glass);   // rear wall and its window
+  put('wall', rb(1.5, 0.13, 0.34, 0.04), 0, 1.29, 2.0, black);                                                             // dashboard
+  put('wall', new THREE.TorusGeometry(0.16, 0.022, 6, 16), TRUCK.driver.x, 1.42, 1.74, black, -0.5);   // steering wheel
+  for (const s of [-1, 1]) { put('wall', rb(0.5, 0.62, 0.12, 0.05), s * 0.4, 1.5, 0.98, vinyl); put('wall', rb(0.24, 0.16, 0.1, 0.04), s * 0.4, 1.86 - 0.08, 0.98, vinyl); }   // seat backs, head rests
   for (const s of [-1, 1]) {
-    put('glass', rb(0.03, 0.46, 0.74, 0.01), s * 0.865, 1.58, 1.28, glass);                                                // door window
+    put('wall', rb(0.075, 0.86, 0.075, 0.025), s * 0.82, 1.53, 1.975, red, -0.63);                                         // windscreen pillar
+    put('glass', rb(0.02, 0.05, 0.74, 0.008), s * 0.85, 1.275, 1.3, glass);                                                // the door window, wound right down: just its top edge shows
     put('wall', rb(0.02, 1.1, 0.015, 0.005), s * 0.866, 1.2, 0.9, dark); put('wall', rb(0.02, 0.62, 0.015, 0.005), s * 0.866, 0.95, 1.9, dark);   // door seams
     put('metal', rb(0.03, 0.035, 0.14, 0.01), s * 0.872, 1.2, 1.05, steel);                                                // door handle
     put('wall', rb(0.1, 0.03, 0.03, 0.01), s * 0.92, 1.42, 1.95, black); put('wall', rb(0.05, 0.2, 0.13, 0.03), s * 0.99, 1.47, 1.95, black);   // wing mirror
@@ -104,7 +132,7 @@ export function songthaewTemplate({ route = 42, rack = false } = {}) {
   for (const s of [-1, 1]) { put('glass', disc(0.07, 0.04, 14).rotateY(Math.PI / 2), s * 0.78, 0.99, -2.575, col('#e0302a')); put('glass', disc(0.05, 0.04, 12).rotateY(Math.PI / 2), s * 0.78, 0.84, -2.575, amber); }   // tail lights
   put('metal', new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8).rotateX(Math.PI / 2), -0.55, 0.36, -2.5, grey);              // exhaust
   // a marigold garland hanging in the windscreen, for luck
-  put('wall', new THREE.TorusGeometry(0.07, 0.022, 6, 14), 0, 1.58, 2.02, yellow, -0.63); put('wall', new THREE.SphereGeometry(0.03, 8, 6), 0, 1.49, 2.07, lamp);
+  put('wall', new THREE.TorusGeometry(0.06, 0.02, 6, 14), 0.34, 1.7, 1.86, yellow, -0.63); put('wall', new THREE.SphereGeometry(0.026, 8, 6), 0.34, 1.62, 1.9, lamp);
   // bed: floor, side walls with a steel top rail, padded benches facing each other with back rests
   put('wall', rb(1.7, 0.06, 3.3, 0.01), 0, 1.1, -0.85, grey);
   for (const s of [-1, 1]) {
@@ -135,10 +163,13 @@ export function songthaewTemplate({ route = 42, rack = false } = {}) {
   for (const m of group.children) m.geometry.translate(-C, 0, -C);
   // lettering: both sides, the two sign boards and the plates, all in one mesh (one draw call)
   const dm = new THREE.MeshLambertMaterial({ map: decal(route), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+  const screen = label(DECAL.glass, 1.52, 0.8, 0, 0, 0, 0).rotateX(-0.63).translate(0, 1.57, 2.0);                          // the clear windscreen (drawn with the lettering: no extra draw call)
   const labels = [...[-1, 1].map(s => label(DECAL.side, 2.1, 0.656, s * 0.896, 1.04, -0.9, s * Math.PI / 2)),
     label(DECAL.sign, 1.26, 0.236, 0, 2.66, 1.372, 0), label(DECAL.sign, 1.26, 0.236, 0, 2.27, -2.557, Math.PI),
-    label(DECAL.plate, 0.5, 0.19, 0, 0.58, 2.972, 0), label(DECAL.plate, 0.5, 0.19, 0, 0.82, -2.572, Math.PI)];
-  group.add(new THREE.Mesh(mergeGeometries(labels), dm));
+    label(DECAL.plate, 0.5, 0.19, 0, 0.58, 2.972, 0), label(DECAL.plate, 0.5, 0.19, 0, 0.82, -2.572, Math.PI), screen];
+  const letters = new THREE.Mesh(mergeGeometries(labels), dm);
+  group.add(letters, driver(TRUCK.driver.looks[driverLook % TRUCK.driver.looks.length]));
   group.traverse(o => { o.matrixAutoUpdate = true; o.castShadow = o.receiveShadow = !!o.geometry; });
+  letters.castShadow = false;                                                 // (glass and paint cast no shadow)
   return group;
 }
