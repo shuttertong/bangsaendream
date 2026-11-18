@@ -1,7 +1,11 @@
 // Online multiplayer over Supabase Realtime (public channel, publishable key) — used on https
 // hosts (the live GitHub Pages site), where there is no tools/serve.py. It speaks the Phoenix
 // channel protocol directly (no library) and stands in for the relay inside each browser:
-//   • who is here comes from Realtime presence (each player tracks {id, hello, bot, hidden, at});
+//   • who is here comes from Realtime presence (each player tracks {id, hello, bot, hidden, at, v}).
+//     The server lets a client update its presence only 5 times in 30 s and CLOSES THE CHANNEL on the
+//     next ("Client presence rate limit exceeded"), so updates are held back for a moment, merged, and
+//     kept within a budget (cfg.presence); players already here get each change at once by broadcast
+//     ('meta'), presence is for whoever arrives later;
 //   • every message is broadcast to the channel and checked by each receiver with the same
 //     whitelist the Wi-Fi relay uses (core/mpcheck.js) — no free text ever gets through;
 //   • the truck host is picked the same way everywhere: the first visible real player in the
@@ -13,7 +17,8 @@ import { cleanHello, cleanState, cleanTrucks, cleanCo, cleanTo, okPhrase, okEmot
 
 export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
   const topic = cfg.topic, peers = new Map();   // id → { hello, bot, hidden, at, state, lastTrucks, silent }
-  const me = { id: 1 + Math.floor(Math.random() * 2 ** 30), hello: null, bot: false, hidden: document.visibilityState !== 'visible', at: Date.now() };
+  const me = { id: 1 + Math.floor(Math.random() * 2 ** 30), hello: null, bot: false, hidden: document.visibilityState !== 'visible', at: Date.now(), v: 0 };   // v: counts our own changes, so a late copy of an old one is ignored
+  const PRES = cfg.presence || { max: 4, window: 30, gap: 0.4, retry: 1 };   // presence updates per `window` s; s an update waits for others to merge into it; s between tries when the budget is spent
   let ws = null, ref = 0, joinRef = null, joined = false, ever = false, fails = 0, stopped = false;
   let wait = cfg.backoff[0], hostId = null, hostSince = 0, beat = null, watch = null, sentTrucks = 0;
   const now = () => Date.now();
@@ -23,7 +28,22 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
     ws.send(JSON.stringify({ topic: t, event, payload, ref: String(++ref), join_ref: t === topic ? joinRef : null }));
   };
   const bcast = m => raw('broadcast', { type: 'broadcast', event: 'm', payload: { ...m, from: me.id } });
-  const track = () => raw('presence', { type: 'presence', event: 'track', payload: { id: me.id, hello: me.hello, bot: me.bot, hidden: me.hidden, at: me.at } });
+  // presence, merged and budgeted: a call asks for an update; one goes out `gap` s later with whatever is true by then
+  let tokens = PRES.max, pending = null, epoch = 0;
+  function track() {
+    if (pending) return;
+    const fire = () => {
+      pending = null;
+      if (!joined || !me.hello) return;
+      if (tokens <= 0) { pending = setTimeout(fire, PRES.retry * 1000); return; }
+      const e = epoch;
+      tokens--; setTimeout(() => { if (e === epoch) tokens++; }, PRES.window * 1000);
+      raw('presence', { type: 'presence', event: 'track', payload: { id: me.id, hello: me.hello, bot: me.bot, hidden: me.hidden, at: me.at, v: me.v } });
+    };
+    pending = setTimeout(fire, PRES.gap * 1000);
+  }
+  /** Our place in the queue or our visibility changed: tell the players here now, and update presence for later arrivals. */
+  function announce() { me.v++; bcast({ t: 'meta', hidden: me.hidden, at: me.at, v: me.v }); track(); }
 
   // ---------- the truck host: same choice in every browser ----------
   // Everyone sorts the visible real players by `at` — their place in the queue — and the first
@@ -56,7 +76,8 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
     const id = meta?.id;
     if (!Number.isInteger(id) || id === me.id) return;
     const hello = meta.hello ? cleanHello(meta.hello) : null;
-    const old = peers.get(id), p = { ...old, hello: hello || old?.hello || null, bot: !!meta.bot, hidden: !!meta.hidden, at: Number.isFinite(meta.at) ? meta.at : now() };
+    const old = peers.get(id), stale = old && Number.isFinite(meta.v) && meta.v < (old.v || 0);   // (presence can trail a broadcast: keep the newer queue place / visibility)
+    const p = { ...old, hello: hello || old?.hello || null, bot: !!meta.bot, ...(stale ? {} : { hidden: !!meta.hidden, at: Number.isFinite(meta.at) ? meta.at : now(), v: Number.isFinite(meta.v) ? meta.v : old?.v || 0 }) };
     peers.set(id, p);
     if (hello && (!old?.hello || JSON.stringify(old.hello) !== JSON.stringify(hello))) onMessage({ t: 'join', id, ...hello, state: p.state || null });
   }
@@ -72,7 +93,7 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
       const metas = metasOf(payload);
       if (!me.hello && metas.filter(m => m.id !== me.id).length >= LIMITS.players - 1) { stop(); return; }   // full: stay single-player
       for (const m of metas) seen(m);
-      if (requeue() && me.hello) track();                            // a newcomer queues behind everyone already here (whatever its clock says)
+      if (requeue() && me.hello) announce();                         // a newcomer queues behind everyone already here (whatever its clock says)
     } else {
       const joins = metasOf(payload.joins), joinIds = new Set(joins.map(m => m.id));
       for (const m of metasOf(payload.leaves)) if (!joinIds.has(m.id)) gone(m.id);   // (an update is a leave + a join)
@@ -87,7 +108,14 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
     if (!Number.isInteger(from) || from === me.id) return;
     const p = peers.get(from) || (peers.set(from, { hello: null, at: now() }), peers.get(from));
     switch (m.t) {
-      case 'join': { const h = cleanHello(m); if (h) seen({ id: from, hello: h, bot: p.bot, hidden: p.hidden, at: p.at }); break; }
+      case 'join': { const h = cleanHello(m); if (h) seen({ id: from, hello: h, bot: p.bot, hidden: p.hidden, at: p.at, v: p.v }); break; }
+      case 'meta': {
+        if (!Number.isInteger(m.v) || m.v < (p.v || 0) || m.v > LIMITS.coNum) break;
+        p.v = m.v; p.hidden = !!m.hidden;
+        if (Number.isFinite(m.at)) p.at = m.at;
+        electHost();
+        break;
+      }
       case 'state': { const s = cleanState(m); if (s) { p.state = s; onMessage({ t: 'state', id: from, ...s }); } break; }
       case 'trucks': {
         const s = cleanTrucks(m.s);
@@ -121,7 +149,7 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
         if (first) requeue();
         electHost();                                                  // (before the welcome, so it names the right host)
         if (first) onMessage({ t: 'welcome', id: me.id, host: hostId, players: [...peers].filter(([, p]) => p.hello).map(([id, p]) => ({ id, ...p.hello, state: p.state || null })) });
-        track(); bcast({ t: 'join', ...h });
+        bcast({ t: 'join', ...h }); announce();
         break;
       }
       case 'state': { const s = cleanState(m); if (s) bcast({ t: 'state', ...s }); break; }
@@ -129,17 +157,17 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
         if (hostId !== me.id) return;
         const t = now(), stalled = sentTrucks && t - sentTrucks > cfg.hostTimeout * 1000;
         sentTrucks = t;
-        if (stalled && requeue()) { track(); electHost(); return; }   // we froze long enough for the others to move on: don't take the trucks back
+        if (stalled && requeue()) { announce(); electHost(); return; }   // we froze long enough for the others to move on: don't take the trucks back
         if (![...peers.values()].some(p => p.hello && !p.hidden)) return;   // nobody to see them: save the message quota
         const s = cleanTrucks(m.s);
         if (s) bcast({ t: 'trucks', s });
         break;
       }
       case 'vis': {
-        const back = me.hidden && m.on;
+        const back = me.hidden && m.on, was = me.hidden;
         me.hidden = !m.on;
         if (back) requeue();                                          // back from a hidden tab: whoever took over keeps the trucks
-        if (me.hello) track();
+        if (me.hello && (back || was !== me.hidden)) announce();
         electHost();
         break;
       }
@@ -180,6 +208,7 @@ export function connectRealtime(cfg, { onOpen, onMessage, onClose, onFail }) {
       clearInterval(beat); clearInterval(watch);
       const was = joined;
       joined = false; me.hello = null; hostId = null; peers.clear();
+      clearTimeout(pending); pending = null; tokens = PRES.max; epoch++;   // (a new connection has a new presence budget)
       if (was) onClose?.();
       if (stopped) return;
       if (!ever && ++fails >= cfg.tries) { onFail?.(); return; }   // Realtime unreachable: single-player

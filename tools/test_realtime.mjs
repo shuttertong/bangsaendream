@@ -3,6 +3,8 @@
 // part of town/multiplayer.js that reacts to welcome / host / trucks. Every browser must agree
 // on who hosts the red trucks, and every follower must get the host's snapshots — through
 // arrivals, a wrong clock, the host leaving, hiding its tab, stalling, and two arriving at once.
+// The fake server also enforces Realtime's presence limit (5 updates per client per 30 s, then the channel is
+// closed), so a player who changes clothes or switches tabs many times must not be thrown out.
 //   node tools/test_realtime.mjs        (exit code 1 if a check fails)
 const REPO = new URL('..', import.meta.url).pathname;
 let clock = 1_000_000;                       // fake wall clock (ms); each client may have a skew
@@ -11,9 +13,11 @@ const timers = [];                           // setInterval / setTimeout, run by
 globalThis.setInterval = (fn, ms) => { const t = { fn, ms, next: clock + ms, every: true }; timers.push(t); return t; };
 globalThis.clearInterval = t => { const i = timers.indexOf(t); if (i >= 0) timers.splice(i, 1); };
 globalThis.setTimeout = (fn, ms) => { const t = { fn, ms, next: clock + ms }; timers.push(t); return t; };
+globalThis.clearTimeout = globalThis.clearInterval;
 
 // ---------- fake server ----------
-const server = { socks: new Set(), metas: new Map(), queue: [] };   // metas: key → meta
+const server = { socks: new Set(), metas: new Map(), queue: [], kicks: 0, most: 0 };   // metas: key → meta; kicks: clients closed for too many presence updates; most: the most updates one client made in 30 s
+const PRESENCE = { max: 5, window: 30_000 };
 const deliver = (sock, msg) => server.queue.push([sock, msg]);
 class FakeWS {
   constructor() { this.readyState = 0; server.socks.add(this); this._open = () => { this.readyState = 1; this.onopen?.(); }; FakeWS.last = this; }
@@ -25,6 +29,10 @@ class FakeWS {
       const state = {}; for (const [k, meta] of server.metas) state[k] = { metas: [meta] };
       deliver(this, { topic, event: 'presence_state', payload: state });
     } else if (m.event === 'presence') {
+      this.tracks = (this.tracks || []).filter(t => clock - t < PRESENCE.window);
+      this.tracks.push(clock);
+      server.most = Math.max(server.most, this.tracks.length);
+      if (this.tracks.length > PRESENCE.max) { server.kicks++; deliver(this, { topic, event: 'system', payload: { message: 'Client presence rate limit exceeded', status: 'error' } }); this.close(); return; }
       const old = server.metas.get(this.key), meta = { ...m.payload.payload, phx_ref: String(Math.random()) };
       server.metas.set(this.key, meta);
       const diff = { joins: { [this.key]: { metas: [meta] } }, leaves: old ? { [this.key]: { metas: [old] } } : {} };
@@ -64,6 +72,7 @@ function browser(name, { skew = 0, visible = true } = {}) {
   });
   b.ws = FakeWS.last;
   b.setVisible = on => { b.visible = on; withClock(b, () => b.net.send({ t: 'vis', on })); };
+  b.dress = n => withClock(b, () => b.net.send({ t: 'hello', n1: 1, n2: 2, look: { shirt: n % 9, skin: 0, hat: 0, hatColor: 0, hair: 0, bottom: 0 } }));   // a new look (wardrobe, profile): another hello
   b.leave = () => { b.alive = false; b.ws.close(); };
   return b;
 }
@@ -121,6 +130,24 @@ check('snapshots reach every follower', flowing());
 const E = add('E'), F = add('F'); step(2);
 check('E and F arrive together: one host, all follow it', hosts().length === 1 && followersOf(hosts()[0]));
 check('snapshots reach every follower', flowing());
+check('nobody was closed for too many presence updates so far', server.kicks === 0);
+// 6. a restless player: new clothes five times and the tab hidden / shown ten times within a few seconds
+const online = () => all.filter(b => b.alive).every(b => b.myId !== null);
+for (let i = 0; i < 5; i++) { E.dress(i + 1); step(0.4); }
+for (let i = 0; i < 10; i++) { E.setVisible(i % 2 === 1); step(0.3); }
+step(2);
+check(`E changes clothes 5× and hides / shows the tab 10×: nobody is thrown out (most presence updates by one client in 30 s: ${server.most} of ${PRESENCE.max} allowed)`, server.kicks === 0 && online());
+check('…and there is still exactly one host that everyone follows', hosts().length === 1 && followersOf(hosts()[0]));
+check('snapshots reach every follower', flowing());
+// 7. the host itself is restless: it hides, and the others must move on at once (not when presence catches up)
+const H = hosts()[0];
+for (let i = 0; i < 6; i++) { H.dress(i); step(0.2); }                 // (spends its presence budget)
+H.setVisible(false); step(1);
+check('a host with its presence budget spent hides: another player hosts within a second', hosts().length === 1 && hosts()[0] !== H && all.filter(b => b.alive && b.visible && b !== hosts()[0]).every(b => b.hostId === hosts()[0].myId));
+H.setVisible(true); step(35);
+check('it comes back and 35 s pass: nobody thrown out, one host, everyone follows', server.kicks === 0 && online() && hosts().length === 1 && followersOf(hosts()[0]));
+const G = add('G'); step(2);
+check('a newcomer sees the same host as everyone else', hosts().length === 1 && followersOf(hosts()[0]) && G.mode === 'follow');
 Date.now = realNow;
 console.log(fails ? `\n${fails} check(s) FAILED` : '\nall checks passed');
 process.exit(fails ? 1 : 0);
