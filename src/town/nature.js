@@ -21,7 +21,7 @@ const HILL = { height: 14, bonus: { rainTree: 0.5, casuarina: 0.25 }, roadGap: 1
 export const CROWN_OVER = HILL.over;
 export const CROWN_REACH = { rainTree: 9.5, casuarina: 4.8, palm: 5, frangipani: 1.5 };
 const VARIANTS = 2;
-const LOD = { near: 150, rebuild: 15 };   // metres
+const LOD = { near: 150, far: 1e6, rebuild: 15 };   // metres: full trees within `near`, simple ones to `far`, none beyond (setRange: the picture-quality level's `trees`)
 const TINT = { palm: 0.06, casuarina: 0.05, rainTree: 0.07, frangipani: 0.05 };
 
 /** extra: { species: [{ x, y, z, rot, s }] } planted by other modules (promenade, beach rows). */
@@ -103,11 +103,12 @@ export function buildNature(map, ctx, extra = {}) {
   function update(camPos) {
     if (last.distanceToSquared(camPos) < LOD.rebuild ** 2) return;
     last.copy(camPos);
-    const r2 = LOD.near ** 2;
+    const r2 = LOD.near ** 2, far2 = (LOD.far + Math.max(0, camPos.y - 40) * 12) ** 2;   // (from high up — the drone — the whole coast still has its trees)
     for (const set of sets) {
       let n = 0, f = 0;
       set.inst.forEach((t, k) => {
-        const isNear = (t.x - camPos.x) ** 2 + (t.z - camPos.z) ** 2 < r2;
+        const d2 = (t.x - camPos.x) ** 2 + (t.z - camPos.z) ** 2, isNear = d2 < r2;
+        if (d2 > far2) return;
         const meshes = isNear ? set.near : set.far, slot = isNear ? n++ : f++;
         for (const mesh of meshes) {
           mesh.instanceMatrix.array.set(set.mats.subarray(k * 16, k * 16 + 16), slot * 16);
@@ -123,5 +124,8 @@ export function buildNature(map, ctx, extra = {}) {
     }
   }
 
-  return { group, counts, placed, update };
+  /** [full trees within, no trees beyond] metres. */
+  function setRange([near, far]) { LOD.near = near; LOD.far = far; last.set(Infinity, 0, 0); }
+
+  return { group, counts, placed, update, setRange };
 }

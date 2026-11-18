@@ -11,6 +11,8 @@ const ICONS = {
   bag: '<svg viewBox="0 0 24 24"><path d="M8 7V6a4 4 0 0 1 8 0v1h3l1 14H4L5 7h3zm2 0h4V6a2 2 0 0 0-4 0v1z" fill="currentColor"/></svg>',
 };
 
+const GFX = { auto: 'gfxAuto', low: 'gfxLow', mid: 'gfxMid', high: 'gfxHigh' };   // i18n keys of the picture-quality choices
+
 export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
   const el = document.createElement('div');
   el.id = 'ui';
@@ -34,7 +36,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
   root.appendChild(el);
   const $ = s => el.querySelector(s);
   const baht = $('.baht'), goal = $('.goal'), prompt = $('.prompt'), toasts = $('.toasts');
-  let goalFn = () => '', promptKey = null, promptName = null, promptVars = null, support = null;
+  let goalFn = () => '', promptKey = null, promptName = null, promptVars = null, support = null, gfx = null;
 
   const stop = fn => e => { e.stopPropagation(); e.preventDefault(); fn(); };
   $('.b-travel').addEventListener('pointerdown', stop(onTravel));
@@ -51,9 +53,12 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
     credits.querySelector('.close').textContent = t('close');
     credits.querySelector('.c-body').innerHTML = (support ? `<div class="c-support"><button class="c-donate">${t('cSupport')}</button><button class="c-pick">${t('cPick')}</button></div>` : '')
       + `<h3>${t('howTitle')}</h3>${howToLines().map(l => `<p>${l}</p>`).join('')}`
+      + (gfx ? `<h3>${t('gfxTitle')}</h3><div class="c-gfx">${['auto', 'low', 'mid', 'high'].map(m => `<button data-m="${m}" class="${gfx.mode() === m ? 'on' : ''}">${t(GFX[m])}</button>`).join('')}</div>`
+        + `<p class="c-note">${gfx.mode() === 'auto' ? `${t('gfxNow', { level: t(GFX[gfx.level()]) })} · ` : ''}${t('gfxHint')}</p>` : '')
       + CREDITS.map(c => `<h3>${tr(c.head)}</h3>${c.lines.map(l => `<p>${tr(l)}</p>`).join('')}`).join('');
     credits.querySelector('.c-donate')?.addEventListener('pointerdown', stop(() => { credits.classList.remove('on'); support.donate(); }));
     credits.querySelector('.c-pick')?.addEventListener('pointerdown', stop(() => { credits.classList.remove('on'); support.pick(); }));
+    for (const b of credits.querySelectorAll('.c-gfx button')) b.addEventListener('pointerdown', stop(() => { audio?.play('click'); gfx.set(b.dataset.m); drawCredits(); }));
   }
 
   function refresh() {
@@ -97,5 +102,7 @@ export function createHUD(root, { onTravel, onBag, onTalk, onGoal, audio }) {
     hideDuringTalk(on) { el.classList.toggle('talking', on); },
     /** sponsor.js: { donate(), pick() } → two buttons at the top of the ⓘ panel. */
     set support(v) { support = v; },
+    /** main.js: { mode(), level(), set(mode) } → the picture-quality choice in the ⓘ panel. */
+    set gfx(v) { gfx = v; },
   };
 }

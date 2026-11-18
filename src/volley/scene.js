@@ -47,7 +47,7 @@ export function buildScene() {
   }
   g.computeVertexNormals();
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const ground = new THREE.Mesh(g, paintedMaterial({ amp: 0.22, scale: 1.4 }));
+  const ground = new THREE.Mesh(g, paintedMaterial({ amp: 0.22, scale: 1.4, detail: 'sand' }));
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -103,7 +103,7 @@ export function buildScene() {
     inst.castShadow = true;
     scene.add(inst);
   }
-  const cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2 }), tpl = TREES.palm(rng(5)), palms = [];
+  const cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2, detail: 'bark' }), tpl = TREES.palm(rng(5)), palms = [];
   for (const sx of [-1, 1]) for (let x = H + 5; x <= H + 60; x += 5 + r() * 5) palms.push([sx * x, 3 - r() * 13]);
   for (const [geo, mat, depth] of [[tpl.trunk, bark, null], [tpl.cards, cards.material, cards.depth]]) {
     const inst = new THREE.InstancedMesh(geo, mat, palms.length);

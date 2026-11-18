@@ -116,7 +116,7 @@ export function buildScene() {
     const d = R + 3 + r() * 9;
     spots.push([Math.cos(a) * d, Math.sin(a) * d, r() < 0.7 ? 'rainTree' : 'frangipani']);
   }
-  const cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2 });
+  const cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2, detail: 'bark' });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
   for (const sp of ['rainTree', 'frangipani']) {
     const list = spots.filter(s => s[2] === sp);

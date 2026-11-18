@@ -3,7 +3,8 @@
 // reflections).
 import * as THREE from 'three';
 import { PALETTE } from '../shared/palette.js';
-import { NOISE_GLSL, U } from '../core/shaderPatch.js';
+import { U } from '../core/shaderPatch.js';
+import { TEX } from './textures.js';
 
 const R = 20000;
 
@@ -15,6 +16,7 @@ export const skyUniforms = {
   sunDir: { value: new THREE.Vector3(...PALETTE.sunDir).normalize() },
   cloudCover: { value: 0.46 },
   time: U.time,
+  noiseTex: TEX.noise,                      // cloud shapes: one lookup of the shared noise texture instead of hashes
 };
 
 const vertexShader = /* glsl */`
@@ -28,8 +30,8 @@ void main() {
 const fragmentShader = /* glsl */`
 uniform vec3 zenith, horizon, haze, sunColor, sunDir;
 uniform float cloudCover, time;
+uniform sampler2D noiseTex;
 varying vec3 vDir;
-${NOISE_GLSL}
 void main() {
   vec3 d = normalize(vDir);
   float e = max(d.y, 0.0);
@@ -41,7 +43,8 @@ void main() {
   // clouds on a plane above the camera
   if (d.y > 0.01) {
     vec2 uv = d.xz / (d.y + 0.08) * 1.6 + vec2(time * 0.004, time * 0.0015);
-    float n = bsFbm(vec3(uv, 0.0)) * 0.75 + bsFbm(vec3(uv * 3.1, 1.7)) * 0.25;
+    vec4 na = texture2D(noiseTex, uv * 0.125), nb = texture2D(noiseTex, uv * 0.3875 + 0.21);
+    float n = dot(na.rgb, vec3(0.5, 0.3, 0.2)) * 0.75 + dot(nb.rgb, vec3(0.5, 0.3, 0.2)) * 0.25;
     float c = smoothstep(cloudCover, cloudCover + 0.22, n) * smoothstep(0.01, 0.18, d.y);
     vec3 cloud = mix(vec3(0.93, 0.95, 0.98), vec3(1.0, 0.98, 0.94), s) * (0.9 + 0.12 * n);
     col = mix(col, cloud, c * 0.85);

@@ -14,7 +14,8 @@ export function createRenderer(canvas) {
   return renderer;
 }
 
-const SHADOW_MAP = 4096, SHADOW_RANGE = 55, SUN_DIST = 400;
+const SUN_DIST = 400;
+let SHADOW_MAP = 4096, SHADOW_RANGE = 55;   // the high level's; setShadow() changes them with the picture-quality level
 
 export function createLights(scene) {
   const dir = new THREE.Vector3(...PALETTE.sunDir).normalize();
@@ -52,5 +53,12 @@ export function createLights(scene) {
     sun.position.copy(snapped).addScaledVector(dir, SUN_DIST);
   }
 
-  return { sun, hemi, sunDir: dir, follow };
+  /** The sun shadow's map size (pixels) and the metres round the focus it covers (QUALITY.levels[…].shadow). */
+  function setShadow(size, range) {
+    SHADOW_RANGE = range;
+    if (size !== SHADOW_MAP) { SHADOW_MAP = size; sun.shadow.mapSize.set(size, size); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+    cam.right = 0;                                      // (follow() sets the box again)
+  }
+
+  return { sun, hemi, sunDir: dir, follow, setShadow };
 }

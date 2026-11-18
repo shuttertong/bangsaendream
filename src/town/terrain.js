@@ -63,10 +63,12 @@ export function rockMask(x, y, z) {
   return smooth(ROCK.from, ROCK.full, y) * smooth(ROCK.cut[0], ROCK.cut[1], n);
 }
 
-/** Ground colour from height, slope (normal.y) and distance to the sea. */
-function groundColor(out, y, ny, dist, sea, x, z) {
+/** Ground colour from height, slope (normal.y) and distance to the sea. `kind` (optional, 4 numbers) gets what the
+ *  ground is made of there — sand, grass, rock, and how wet the sand is — for the close-up detail textures (world/detail.js). */
+function groundColor(out, y, ny, dist, sea, x, z, kind) {
   if (y < sea) {                                   // seabed, darker with depth
     out.copy(C.wetSand).lerp(C.seabed, smooth(0, 3, sea - y));
+    if (kind) { kind[0] = 1; kind[1] = kind[2] = 0; kind[3] = 1 - smooth(0, WET.under, sea - y); }
     return out;
   }
   const jitter = (hash(Math.floor(x / 13), Math.floor(z / 13)) - 0.5) * 10;
@@ -77,11 +79,27 @@ function groundColor(out, y, ny, dist, sea, x, z) {
     if (k > 0) { bw = bw + (p.sand - bw) * k; out.lerp(tmp.set(p.lawn), k * 0.9); }
   }
   const beach = 1 - smooth(bw - Math.min(8, bw), bw + 6, dist + jitter);
+  const rock = Math.max(smooth(0.86, 0.7, ny) * 0.8, rockMask(x, y, z));
   out.copy(C.lowland).lerp(C.lowlandDry, hash(Math.floor(x / 50), Math.floor(z / 50)) * 0.5);
   out.lerp(C.hill, smooth(12, 45, y));
-  out.lerp(C.rock, Math.max(smooth(0.86, 0.7, ny) * 0.8, rockMask(x, y, z)));
+  out.lerp(C.rock, rock);
   tmp.copy(C.sand).lerp(C.wetSand, 1 - smooth(0.2, 1.4, y - sea));
+  if (kind) { kind[0] = beach; kind[1] = (1 - beach) * (1 - rock); kind[2] = (1 - beach) * rock; kind[3] = beach * (1 - smooth(WET.above[0], WET.above[1], y - sea)); }
   return out.lerp(tmp, beach);
+}
+const WET = { above: [0.04, 0.42], under: 0.5 };   // the glistening strip: scene units above the sea where the sand is still wet; how far under the water the sheen carries on
+const KIND = [0, 0, 0, 0];
+/** Colour + `kind` attributes for a ground geometry (positions and normals set). */
+function paint(g, dist, sea) {
+  const pos = g.attributes.position, nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), kind = new Uint8Array(pos.count * 4), c = new THREE.Color();
+  for (let k = 0; k < pos.count; k++) {
+    const y = pos.getY(k);
+    groundColor(c, y, nrm.getY(k), dist ? dist[k] : y < sea ? 0 : 200, sea, pos.getX(k), pos.getZ(k), KIND).toArray(col, k * 3);
+    for (let i = 0; i < 4; i++) kind[k * 4 + i] = Math.round(Math.min(1, Math.max(0, KIND[i])) * 255);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setAttribute('kind', new THREE.BufferAttribute(kind, 4, true));
+  return g;
 }
 
 function coreMesh(map, dist) {
@@ -93,12 +111,7 @@ function coreMesh(map, dist) {
   // PlaneGeometry rotated -90° about X runs rows from -z to +z, matching the bin (north first)
   for (let k = 0; k < pos.count; k++) pos.setY(k, map.heights[k]);
   g.computeVertexNormals();
-  const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();
-  for (let k = 0; k < pos.count; k++) {
-    groundColor(c, pos.getY(k), nrm.getY(k), dist[k], map.sea, pos.getX(k), pos.getZ(k)).toArray(col, k * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return g;
+  return paint(g, dist, map.sea);
 }
 
 /** Height beyond the core square. Repeating the edge row outward would stretch any land that
@@ -150,24 +163,19 @@ function outerMesh(map) {
     pos.setY(k, inside ? lowest(x, z) - OUTER_UNDER : onEdge ? lowest(x, z) : heightOut(x, z));
   }
   g.computeVertexNormals();
-  const nrm = g.attributes.normal, col = new Float32Array(pos.count * 3), c = new THREE.Color();
-  for (let k = 0; k < pos.count; k++) {
-    const y = pos.getY(k);
-    groundColor(c, y, nrm.getY(k), y < map.sea ? 0 : 200, map.sea, pos.getX(k), pos.getZ(k)).toArray(col, k * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return g;
+  return paint(g, null, map.sea);
 }
 
 /** Cut the full core grid into TILE×TILE tiles (shared edge vertices, normals from the full grid). */
 function tiles(g, nx, nz) {
-  const out = [], P = g.attributes.position.array, N = g.attributes.normal.array, C = g.attributes.color.array;
+  const out = [], P = g.attributes.position.array, N = g.attributes.normal.array, C = g.attributes.color.array, K = g.attributes.kind.array;
   for (let tj = 0; tj < nz - 1; tj += TILE) for (let ti = 0; ti < nx - 1; ti += TILE) {
     const w = Math.min(TILE, nx - 1 - ti) + 1, h = Math.min(TILE, nz - 1 - tj) + 1;
-    const pos = new Float32Array(w * h * 3), nrm = new Float32Array(w * h * 3), col = new Float32Array(w * h * 3), idx = [];
+    const pos = new Float32Array(w * h * 3), nrm = new Float32Array(w * h * 3), col = new Float32Array(w * h * 3), kind = new Uint8Array(w * h * 4), idx = [];
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const src = ((tj + j) * nx + ti + i) * 3, dst = (j * w + i) * 3;
       pos.set(P.subarray(src, src + 3), dst); nrm.set(N.subarray(src, src + 3), dst); col.set(C.subarray(src, src + 3), dst);
+      kind.set(K.subarray(src / 3 * 4, src / 3 * 4 + 4), dst / 3 * 4);
     }
     for (let j = 0; j < h - 1; j++) for (let i = 0; i < w - 1; i++) {
       const a = j * w + i, b = a + w;
@@ -177,6 +185,7 @@ function tiles(g, nx, nz) {
     t.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     t.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
     t.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    t.setAttribute('kind', new THREE.BufferAttribute(kind, 4, true));
     t.setIndex(idx);
     t.computeBoundingSphere();
     out.push(t);
@@ -186,7 +195,7 @@ function tiles(g, nx, nz) {
 
 export function buildTerrain(map) {
   const dist = seaDistance(map);
-  const mat = paintedMaterial({ amp: 0.3, scale: 18 });
+  const mat = paintedMaterial({ amp: 0.3, scale: 18, detail: 'ground' });   // sand / grass / rock close-up textures by the `kind` attribute
   const group = new THREE.Group();
   for (const t of tiles(coreMesh(map, dist), map.core.nx, map.core.nz)) {
     const m = new THREE.Mesh(t, mat);

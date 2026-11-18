@@ -72,7 +72,7 @@ export function buildScene() {
   }
   sand.computeVertexNormals();
   sand.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const ground = new THREE.Mesh(sand, paintedMaterial({ amp: 0.22, scale: 1.5 }));
+  const ground = new THREE.Mesh(sand, paintedMaterial({ amp: 0.22, scale: 1.5, detail: 'sand' }));
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -99,7 +99,7 @@ export function buildScene() {
 
   // casuarina tree line behind the beach (instanced from the town's tree templates)
   const tpl = TREES.casuarina(rng(5)), cards = cardMaterial();
-  const trunkMat = paintedMaterial({ amp: 0.3, scale: 1.2 });
+  const trunkMat = paintedMaterial({ amp: 0.3, scale: 1.2, detail: 'bark' });
   const spots = [];
   for (let x = BEACH.x0 - 20; x < BEACH.x1 + 20; x += 5 + r() * 4) spots.push([x, BEACH.treeLine + r() * 6]);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);

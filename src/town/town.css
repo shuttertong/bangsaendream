@@ -542,6 +542,9 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 /* ---------- sponsor a building / donate (town/sponsor.js); the ⓘ panel's support buttons ---------- */
 .c-support { display: flex; gap: 8px; margin-bottom: 10px; } .c-support button { flex: 1; border: 0; border-radius: 12px; padding: 10px 8px; font: 500 14px 'Kanit', sans-serif; cursor: pointer; }
 .c-support .c-donate { background: #e2553f; color: #fff; } .c-support .c-pick { background: #fde9cf; color: #a35a1c; }
+.c-gfx { display: flex; gap: 6px; margin: 4px 0 6px; } .c-gfx button { flex: 1; border: 2px solid transparent; border-radius: 12px; padding: 9px 4px; font: 500 14px 'Kanit', sans-serif; background: #eef3f5; color: #35525e; cursor: pointer; }
+.c-gfx button.on { background: #dff3ee; border-color: #2f9c86; color: #1d6c5c; }
+#ui .credits p.c-note { font-size: 13px; opacity: .75; }
 .sp-panel .panel { max-width: 520px; text-align: left; }
 .sp-lead { margin: 4px 4px 10px; } .sp-lead small { color: #8a7a66; } .sp-note { font-size: 13px; color: #8a7a66; margin: 10px 4px 0; }
 .sp-tiers { display: grid; gap: 8px; }

@@ -7,9 +7,10 @@ import * as THREE from 'three';
 import { patch, replaceInclude, prelude } from '../core/shaderPatch.js';
 import { applyHaze } from './haze.js';
 import { rng } from '../core/rng.js';
+import { gfx } from '../core/quality.js';
 
 export const CELLS = { broad: 0, needle: 1, comb: 2, flower: 3 };
-const N = 4, S = 256;
+const N = 4, S = 256;   // S: the cell size the leaves are drawn in; the canvas is the picture-quality level's `leaf` pixels a cell
 
 function drawLeaf(g, x, y, len, wid, ang, shade) {
   g.save(); g.translate(x, y); g.rotate(ang);
@@ -20,9 +21,11 @@ function drawLeaf(g, x, y, len, wid, ang, shade) {
 
 function atlas() {
   const cv = document.createElement('canvas');
-  cv.width = S * N; cv.height = S;
+  const k = Math.max(1, gfx.L.leaf / S);              // sharper leaves (and leaf shadows) on the better levels
+  cv.width = S * N * k; cv.height = S * k;
   const g = cv.getContext('2d'), r = rng(7);
   g.clearRect(0, 0, cv.width, cv.height);
+  g.scale(k, k);
   // broadleaf clump: many small oval leaves inside a circle
   for (let i = 0; i < 260; i++) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * S * 0.42;
@@ -59,7 +62,7 @@ function atlas() {
   }
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = k > 1 ? 8 : 4;
   return tex;
 }
 

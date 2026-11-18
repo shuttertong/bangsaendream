@@ -106,7 +106,7 @@ export function buildScene() {
   }
   const palms = TREES.palm(rng(9)), fronds = frondMaterial();
   const palmSpots = [[-6, 10], [5.5, 11], [-14, 12], [12, 10.5], [20, 12]];
-  for (const [geo, mat] of [[palms.trunk, paintedMaterial({ amp: 0.3, scale: 1.2 })], [palms.fronds, fronds.material]]) {
+  for (const [geo, mat] of [[palms.trunk, paintedMaterial({ amp: 0.3, scale: 1.2, detail: 'bark' })], [palms.fronds, fronds.material]]) {
     const mesh = new THREE.InstancedMesh(geo, mat, palmSpots.length);
     palmSpots.forEach(([x, z], i) => mesh.setMatrixAt(i, m4.compose(new THREE.Vector3(x, -(z - 9) * 0.04, z), q.setFromAxisAngle(up, i * 1.3), new THREE.Vector3(0.9, 0.9, 0.9))));
     mesh.castShadow = true;

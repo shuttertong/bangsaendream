@@ -29,7 +29,9 @@ function padNorth(json, h, sea) {
   const landSign = agree * 2 >= seen ? 1 : -1;
   for (let j = 0; j < R; j++) for (let i = 0; i < nx; i++) {
     const x = x0 + i * step, z = z0 - (R - j) * step, edge = h[i], q = near(x, z), land = q.d > 300 ? edge >= sea : q.side === landSign;
-    const want = land ? Math.max(sea + 0.4, Math.min(Math.max(edge, sea + 0.4), sea + PAD.shore + q.d * PAD.rise)) : sea - Math.min(PAD.deep[2], PAD.deep[0] + q.d * PAD.deep[1]);
+    // (sea: sloping down from the shore, and never shallower than the baked sea beside it — a 4-unit-deep strip next to
+    // the 10-unit-deep bay showed from the air as a pale turquoise band along the map's old edge)
+    const want = land ? Math.max(sea + 0.4, Math.min(Math.max(edge, sea + 0.4), sea + PAD.shore + q.d * PAD.rise)) : sea - Math.max(Math.min(PAD.deep[2], PAD.deep[0] + q.d * PAD.deep[1]), Math.min(sea - edge, q.d * PAD.deep[1]));
     const t = Math.min(1, (R - j) / PAD.ease), e = t * t * (3 - 2 * t);
     H[j * nx + i] = edge + (want - edge) * e;
   }

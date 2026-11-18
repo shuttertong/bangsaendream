@@ -102,7 +102,7 @@ export function buildScene() {
   }
   g.computeVertexNormals();
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const ground = new THREE.Mesh(g, paintedMaterial({ amp: 0.2, scale: 1.2 }));
+  const ground = new THREE.Mesh(g, paintedMaterial({ amp: 0.2, scale: 1.2, detail: 'sand' }));
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -135,7 +135,7 @@ export function buildScene() {
     mesh.castShadow = true;
     scene.add(mesh);
   }
-  const tpl = TREES.casuarina(rng(3)), cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2 });
+  const tpl = TREES.casuarina(rng(3)), cards = cardMaterial(), bark = paintedMaterial({ amp: 0.3, scale: 1.2, detail: 'bark' });
   const treeSpots = [];
   for (let x = -60; x <= 60; x += 5 + r() * 4) treeSpots.push([x, 20 + r() * 8]);
   for (const [geo, mat, depth] of [[tpl.trunk, bark, null], [tpl.cards, cards.material, cards.depth]]) {

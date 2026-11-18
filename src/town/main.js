@@ -9,7 +9,9 @@ import { createInput } from '../core/input.js';
 import { createTouchControls } from '../core/touch.js';
 import { addSystem, startLoop, tick, setFrameRate, frameInfo } from '../core/loop.js';
 import { U } from '../core/shaderPatch.js';
-import { createQuality } from '../core/quality.js';
+import { createQuality, gfx } from '../core/quality.js';
+import { initTextures } from '../world/textures.js';
+import { setDetailLevel } from '../world/detail.js';
 import { createAudio } from '../core/audio.js';
 import { t, tr } from '../shared/i18n.js';
 import { loadMap } from './data.js';
@@ -95,6 +97,9 @@ async function boot() {
   const flat = flattenLowland(map);                                   // the beach and town are flat in reality: press the DEM's mounds down
   const graded = gradeRoads(map);                                     // smooth, level roads that never dip under the sea
   const renderer = createRenderer($('c'));
+  // picture quality: ?gfx=low|mid|high|auto chooses the level for this visit, ?res=1.5 pins the pixel ratio (tests)
+  const quality = createQuality(renderer, { mode: params.get('gfx'), ratio: +params.get('res') || 0 });
+  initTextures(renderer, gfx.L.tex);                                  // the detail textures, drawn on the GPU (before the sky: its clouds use one)
   const scene = new THREE.Scene();
   scene.fog = createFog();
   scene.environment = buildEnvironment(renderer);
@@ -238,7 +243,9 @@ async function boot() {
   };
   addEventListener('resize', resize);
   resize();
-  const quality = createQuality(renderer, resize);
+  // what the picture-quality level changes in the hub (the post-processing reads it on every resize)
+  quality.onChange(L => { lights.setShadow(...L.shadow); setDetailLevel(L.detail); culler.setView(L.view); nature.setRange(L.trees); sea.setGrid(L.sea); });
+  hub.hud.gfx = { mode: () => quality.mode, level: () => quality.level, set: m => quality.setMode(m) };   // the ⓘ panel's picture setting
 
   // local Wi-Fi multiplayer (only when served by tools/serve.py)
   const auras = createAuras(scene);                                   // wardrobe auras (the kid's and other players')
@@ -327,7 +334,7 @@ async function boot() {
     renderer.info.reset();
     if (game && !game.town) game.render(dt); else fx.render(dt);
     quality.update(dt);
-    dbg?.(dt, quality.ratio);
+    dbg?.(dt, quality.ratio, quality.level, quality.mode);
   });
   $('loading').textContent = '';
   if (params.has('notitle')) tutorial.start();
@@ -360,7 +367,7 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, quality, gfx, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {
@@ -368,13 +375,13 @@ function debugOverlay(renderer, camera) {
   el.hidden = false;
   renderer.info.autoReset = false;
   let acc = 0, frames = 0;
-  return (dt, ratio) => {
+  return (dt, ratio, level, mode) => {
     acc += dt; frames++;
     if (acc < 0.5) return;
     const i = renderer.info.render, p = camera.position;
     const hz = frameInfo.refresh ? ` (${frameInfo.refresh} Hz${frameInfo.every > 1 ? ` ÷${frameInfo.every}` : ''})` : '';
     el.textContent = `${(frames / acc).toFixed(0)} fps${hz}\ncalls ${i.calls}  tris ${(i.triangles / 1e6).toFixed(2)}M\n`
-      + `cam ${p.x.toFixed(0)}, ${p.y.toFixed(1)}, ${p.z.toFixed(0)}  res ×${ratio.toFixed(2)}`;
+      + `cam ${p.x.toFixed(0)}, ${p.y.toFixed(1)}, ${p.z.toFixed(0)}  res ×${ratio.toFixed(2)} ${level}${mode === 'auto' ? ' (auto)' : ''}`;
     acc = frames = 0;
   };
 }
