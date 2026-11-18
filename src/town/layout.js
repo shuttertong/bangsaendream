@@ -1,5 +1,6 @@
 // Shared layout helpers for placing things on the map: distance to the sea, a road
 // segment index and an occupancy grid so objects don't overlap. (rng re-exported.)
+import * as THREE from 'three';
 
 export { rng } from '../core/rng.js';
 
@@ -130,6 +131,19 @@ export function walkLine(p, step, fn, offset = 0) {
     carry = t - L;
     s += L;
   }
+}
+
+/** The ground's slope round (x, z): height change per metre along x and along z, measured `r` m either way (capped: a
+ *  cliff edge must not turn a bench into a slide). For kit.frame(…, slope) and shearTo(). */
+export function slopeAt(h, x, z, r = 1, max = 0.4) {
+  const c = v => Math.max(-max, Math.min(max, v));
+  return { x, z, gx: c((h(x + r, z) - h(x - r, z)) / (2 * r)), gz: c((h(x, z + r) - h(x, z - r)) / (2 * r)) };
+}
+const _shear = new THREE.Matrix4();
+/** Shear a placement matrix so the object's base follows that slope and its uprights stay upright (instanced things). */
+export function shearTo(m, s) {
+  _shear.set(1, 0, 0, 0, s.gx, 1, s.gz, -s.gx * s.x - s.gz * s.z, 0, 0, 1, 0, 0, 0, 0, 1);
+  return m.premultiply(_shear);
 }
 
 /** Is (x, z) on the map, at least `margin` m inside the edge of the core square? */

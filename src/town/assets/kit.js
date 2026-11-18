@@ -31,7 +31,9 @@ const CYL = new THREE.CylinderGeometry(1, 1, 1, 8, 1).toNonIndexed();
 const CYL_OPEN = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true).toNonIndexed();
 
 export class Kit {
-  constructor() { this.buckets = new Map(); this.tris = 0; }
+  /** true: built meshes keep their vertex arrays in memory (the fit audit draws them as wireframes, which three builds from the positions). */
+  static keep = false;
+  constructor() { this.buckets = new Map(); this.tris = 0; this.shear = null; }   // shear: { x, z, gx, gz } while a frame on sloping ground is adding (see frame())
 
   _bucket(mat, x, z) {
     const key = `${mat}|${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`;
@@ -51,10 +53,11 @@ export class Kit {
     const tx = at ? at.x : matrix.elements[12], tz = at ? at.z : matrix.elements[14];
     const b = this._bucket(mat, tx, tz);
     _n.getNormalMatrix(matrix);
-    const fn = typeof color === 'function' ? color : null;
+    const fn = typeof color === 'function' ? color : null, sh = this.shear;
     if (!fn) _c.set(color);
     for (let i = 0; i < p.count; i++) {
       _v.fromBufferAttribute(p, i).applyMatrix4(matrix);
+      if (sh) _v.y += sh.gx * (_v.x - sh.x) + sh.gz * (_v.z - sh.z);   // the base follows the ground's slope; uprights stay upright
       b.pos.push3(_v.x, _v.y, _v.z);
       const x = _v.x, y = _v.y, z = _v.z;
       _v.fromBufferAttribute(n, i).applyMatrix3(_n).normalize();
@@ -90,18 +93,23 @@ export class Kit {
   /**
    * Local frame at (x, y, z) turned `ry` about Y: u = right, v = up, w = front.
    * Lets building parts be written in facade coordinates.
+   * slope (optional, from layout.slopeAt): the ground's gradient there — everything the frame adds is then sheared
+   * to it, so a bench or a stall on sloping ground stands on all its legs instead of hovering on the low side.
    */
-  frame(x, y, z, ry) {
+  frame(x, y, z, ry, slope = null) {
     const c = Math.cos(ry), s = Math.sin(ry), kit = this;
     const P = (u, v, w) => new THREE.Vector3(x + u * c + w * s, y + v, z - u * s + w * c);
+    const sh = slope && (slope.gx || slope.gz) ? { x, z, gx: slope.gx, gz: slope.gz } : null;
+    const on = fn => { const old = kit.shear; kit.shear = sh; try { fn(); } finally { kit.shear = old; } };
     return {
       P,
-      box(mat, u, v, w, sx, sy, sz, color, rot = 0) { const p = P(u, v, w); kit.box(mat, p.x, p.y, p.z, sx, sy, sz, ry + rot, color); },
-      rod(mat, a, b, r, color) { kit.rod(mat, P(...a), P(...b), r, color); },
+      box(mat, u, v, w, sx, sy, sz, color, rot = 0) { const p = P(u, v, w); on(() => kit.box(mat, p.x, p.y, p.z, sx, sy, sz, ry + rot, color)); },
+      rod(mat, a, b, r, color) { on(() => kit.rod(mat, P(...a), P(...b), r, color)); },
+      add(mat, geo, matrix, color) { on(() => kit.add(mat, geo, matrix, color, { x, z })); },
       tris(mat, local, color) {
         const out = [];
         for (let i = 0; i < local.length; i += 3) { const p = P(local[i], local[i + 1], local[i + 2]); out.push(p.x, p.y, p.z); }
-        kit.tris3(mat, out, color, { x, z });
+        on(() => kit.tris3(mat, out, color, { x, z }));
       },
       /** Two-sided: adds each triangle again with reversed winding (thin awnings). */
       tris2(mat, local, color) {
@@ -110,6 +118,29 @@ export class Kit {
         this.tris(mat, local.concat(back), color);
       },
     };
+  }
+
+  /**
+   * A paved run that follows the ground: rows = [[lx, ly, lz, rx, ry, rz], …], the left and right top edge at each
+   * step along it. Each step shares its edge with the next (no gaps or steps on a slope or round a bend), and the run
+   * is closed down to `depth` below the top with side walls and end caps, so no daylight shows under it.
+   */
+  strip(mat, rows, depth, color, at) {
+    if (rows.length < 2) return;
+    const a = rows[0], b = rows[1];
+    if ((b[2] - a[2]) * (a[3] - a[0]) - (b[0] - a[0]) * (a[5] - a[2]) < 0) rows = rows.map(r => [r[3], r[4], r[5], r[0], r[1], r[2]]);   // (left and right the other way round)
+    const v = [], L = r => [r[0], r[1], r[2]], R = r => [r[3], r[4], r[5]], dn = p => [p[0], p[1] - depth, p[2]];
+    const quad = (p, q, r, t) => v.push(...p, ...q, ...r, ...p, ...r, ...t);
+    for (let i = 1; i < rows.length; i++) {
+      const pl = L(rows[i - 1]), pr = R(rows[i - 1]), ql = L(rows[i]), qr = R(rows[i]);
+      quad(pl, ql, qr, pr);                                          // top
+      quad(pl, dn(pl), dn(ql), ql);                                  // left side
+      quad(pr, qr, dn(qr), dn(pr));                                  // right side
+    }
+    const f = rows[0], e = rows[rows.length - 1];
+    quad(R(f), dn(R(f)), dn(L(f)), L(f));                            // end caps
+    quad(L(e), dn(L(e)), dn(R(e)), R(e));
+    this.tris3(mat, v, color, at || { x: f[0], z: f[2] });
   }
 
   /** Build meshes: one per (chunk, material). */
@@ -121,7 +152,7 @@ export class Kit {
       g.setAttribute('normal', b.nrm.attribute());
       g.setAttribute('color', b.col.attribute());
       g.computeBoundingSphere();                                   // (needs the positions: before they are freed)
-      for (const a of Object.values(g.attributes)) a.onUpload(freeAfterUpload);
+      if (!Kit.keep) for (const a of Object.values(g.attributes)) a.onUpload(freeAfterUpload);
       const mesh = new THREE.Mesh(g, getMaterial(b.mat));
       mesh.castShadow = castShadow && b.mat !== 'road' && b.mat !== 'lit';
       mesh.receiveShadow = receiveShadow;

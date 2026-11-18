@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { paintedMaterial } from '../world/materials.js';
 import { PALETTE } from '../shared/palette.js';
+import { roadPatches } from './corridor.js';
+import { gfx } from '../core/quality.js';
 
 const OUTER_HALF = 8000, OUTER_STEP = 80, OUTER_UNDER = 2;   // OUTER_UNDER: metres the outer mesh stays below the core's lowest ground nearby
 const TILE = 75;        // core terrain tile size in grid cells (600 m) for frustum culling
@@ -166,20 +168,44 @@ function outerMesh(map) {
   return paint(g, null, map.sea);
 }
 
-/** Cut the full core grid into TILE×TILE tiles (shared edge vertices, normals from the full grid). */
-function tiles(g, nx, nz) {
+/** Cut the full core grid into TILE×TILE tiles (shared edge vertices, normals from the full grid).
+ *  patches (corridor.js): cells beside roads that are drawn as a fine patch at the walk surface's height instead of
+ *  their two coarse triangles — same tile, same draw call. */
+function tiles(g, map, dist, patches) {
+  const { nx, nz, x0, z0, step } = map.core, cx = nx - 1;
   const out = [], P = g.attributes.position.array, N = g.attributes.normal.array, C = g.attributes.color.array, K = g.attributes.kind.array;
+  const distAt = (x, z) => {                                         // sea distance between grid nodes (bilinear)
+    const fx = Math.min(nx - 1.001, Math.max(0, (x - x0) / step)), fz = Math.min(nz - 1.001, Math.max(0, (z - z0) / step)), i = Math.floor(fx), j = Math.floor(fz), a = fx - i, b = fz - j, k = j * nx + i;
+    return (dist[k] * (1 - a) + dist[k + 1] * a) * (1 - b) + (dist[k + nx] * (1 - a) + dist[k + nx + 1] * a) * b;
+  };
+  const c = new THREE.Color();
   for (let tj = 0; tj < nz - 1; tj += TILE) for (let ti = 0; ti < nx - 1; ti += TILE) {
     const w = Math.min(TILE, nx - 1 - ti) + 1, h = Math.min(TILE, nz - 1 - tj) + 1;
-    const pos = new Float32Array(w * h * 3), nrm = new Float32Array(w * h * 3), col = new Float32Array(w * h * 3), kind = new Uint8Array(w * h * 4), idx = [];
+    let pos = new Float32Array(w * h * 3), nrm = new Float32Array(w * h * 3), col = new Float32Array(w * h * 3), kind = new Uint8Array(w * h * 4);
+    const idx = [], xp = [], xn = [], xc = [], xk = [];             // x…: the patches' own vertices, added after the grid's
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const src = ((tj + j) * nx + ti + i) * 3, dst = (j * w + i) * 3;
       pos.set(P.subarray(src, src + 3), dst); nrm.set(N.subarray(src, src + 3), dst); col.set(C.subarray(src, src + 3), dst);
       kind.set(K.subarray(src / 3 * 4, src / 3 * 4 + 4), dst / 3 * 4);
     }
     for (let j = 0; j < h - 1; j++) for (let i = 0; i < w - 1; i++) {
-      const a = j * w + i, b = a + w;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
+      const hs = patches.get((tj + j) * cx + ti + i);
+      if (!hs) { const a = j * w + i, b = a + w; idx.push(a, b, a + 1, b, b + 1, a + 1); continue; }
+      const m = Math.round(Math.sqrt(hs.length)), n = m - 1, f = step / n;   // the patch's own fineness (corridor.js: 2 m or 1 m squares)
+      const base = w * h + xp.length / 3, px = x0 + (ti + i) * step, pz = z0 + (tj + j) * step, at = (a, b) => hs[Math.min(n, Math.max(0, b)) * m + Math.min(n, Math.max(0, a))];
+      for (let b = 0; b < m; b++) for (let a = 0; a < m; a++) {
+        const x = px + a * f, z = pz + b * f, y = hs[b * m + a];
+        const sx = (at(a + 1, b) - at(a - 1, b)) / ((a === 0 || a === n ? 1 : 2) * f), sz = (at(a, b + 1) - at(a, b - 1)) / ((b === 0 || b === n ? 1 : 2) * f), l = Math.hypot(sx, 1, sz);
+        xp.push(x, y, z); xn.push(-sx / l, 1 / l, -sz / l);
+        groundColor(c, y, 1 / l, distAt(x, z), map.sea, x, z, KIND);
+        xc.push(c.r, c.g, c.b);
+        for (let q = 0; q < 4; q++) xk.push(Math.round(Math.min(1, Math.max(0, KIND[q])) * 255));
+      }
+      for (let b = 0; b < n; b++) for (let a = 0; a < n; a++) { const p = base + b * m + a, q = p + m; idx.push(p, q, p + 1, q, q + 1, p + 1); }
+    }
+    if (xp.length) {
+      const join = (A, X, T) => { const o = new T(A.length + X.length); o.set(A); o.set(X, A.length); return o; };
+      pos = join(pos, xp, Float32Array); nrm = join(nrm, xn, Float32Array); col = join(col, xc, Float32Array); kind = join(kind, xk, Uint8Array);
     }
     const t = new THREE.BufferGeometry();
     t.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -197,7 +223,8 @@ export function buildTerrain(map) {
   const dist = seaDistance(map);
   const mat = paintedMaterial({ amp: 0.3, scale: 18, detail: 'ground' });   // sand / grass / rock close-up textures by the `kind` attribute
   const group = new THREE.Group();
-  for (const t of tiles(coreMesh(map, dist), map.core.nx, map.core.nz)) {
+  const patched = roadPatches(map, gfx.level !== 'low');             // the ground beside roads, at the height the kid walks at
+  for (const t of tiles(coreMesh(map, dist), map, dist, patched.cells)) {
     const m = new THREE.Mesh(t, mat);
     m.receiveShadow = true;
     m.matrixAutoUpdate = false;
@@ -208,5 +235,5 @@ export function buildTerrain(map) {
   outer.receiveShadow = true;
   outer.name = 'terrain-outer';
   group.add(outer);
-  return { group, seaDist: dist };
+  return { group, seaDist: dist, patched: { cells: patched.count, fine: patched.fine } };
 }

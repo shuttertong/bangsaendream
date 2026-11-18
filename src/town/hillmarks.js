@@ -62,30 +62,38 @@ export function buildHillMarks(kit, map, layout, roads) {
     }
   }
 
-  // drain gutter + retaining wall on the bank side
+  // drain gutter + retaining wall on the bank side. Each metre is a strip from one sample's edge to the next
+  // (kit.strip), so both follow the road up the hill without steps and without daylight under the low end.
   function earthworks(road, hw, S, a, b) {
     const G = M.gutter, W = M.wall;
     for (const side of [-1, 1]) {
       const k = sideIndex(side);
+      // a row across the run at sample s: from offset o0 to o1 beyond the road's edge, top at `up` above the ground there
+      const row = (s, o0, o1, up) => {
+        const ex = s.nx * side, ez = s.nz * side, y = ground(s.x + ex * (hw + (o0 + o1) / 2), s.z + ez * (hw + (o0 + o1) / 2)) + up;
+        return [s.x + ex * (hw + o0), y, s.z + ez * (hw + o0), s.x + ex * (hw + o1), y, s.z + ez * (hw + o1)];
+      };
+      const bankAt = i => { let t = 0; for (let m = -3; m <= 3; m++) t += S[Math.min(b, Math.max(a, i + m))].bankH[k] / 7; return t; };   // smoothed, so the wall top does not step
       let wallLen = 0;
       for (let i = a + 1; i <= b; i++) {
         const p = S[i - 1], q = S[i];
         if (!(p.cut[k] && q.cut[k]) || onOther(road, q.x, q.z)) { wallLen = 0; continue; }
         // gutter: a shallow concrete channel along the edge
-        const ox = (p.x + q.x) / 2 + p.nx * side * (hw + G.off), oz = (p.z + q.z) / 2 + p.nz * side * (hw + G.off), ry = Math.atan2(q.dx, q.dz), y = ground(ox, oz);
+        const ox = (p.x + q.x) / 2 + p.nx * side * (hw + G.off), oz = (p.z + q.z) / 2 + p.nz * side * (hw + G.off);
         if (roadIdx.clearance(ox, oz, 4) > -0.2) {                                    // not across another road
-          kit.box('wall', ox, y + G.h / 2 - 0.02, oz, G.w, G.h, 1.05, ry, col(G.color));
-          kit.box('wall', ox, y + G.h - 0.025, oz, G.w * 0.55, 0.03, 1.07, ry, col(G.inner));
+          kit.strip('wall', [row(p, G.off - G.w / 2, G.off + G.w / 2, G.h - 0.02), row(q, G.off - G.w / 2, G.off + G.w / 2, G.h - 0.02)], G.h + 0.25, col(G.color));
+          kit.strip('wall', [row(p, G.off - G.w * 0.275, G.off + G.w * 0.275, G.h - 0.01), row(q, G.off - G.w * 0.275, G.off + G.w * 0.275, G.h - 0.01)], 0.03, col(G.inner));
           counts.gutter++;
         }
         // retaining wall where the bank is steep: height follows the bank, up to maxH
-        let bank = 0; for (let m = -3; m <= 3; m++) bank += S[Math.min(b, Math.max(a, i + m))].bankH[k] / 7;   // smoothed, so the wall top does not step
-        if (bank > W.minBank) {
-          const h = Math.min(W.maxH, bank * 0.85), wx = (p.x + q.x) / 2 + p.nx * side * (hw + W.off), wz = (p.z + q.z) / 2 + p.nz * side * (hw + W.off), wy = ground(wx, wz);
+        const hp = Math.min(W.maxH, bankAt(i - 1) * 0.85), hq = Math.min(W.maxH, bankAt(i) * 0.85);
+        if (Math.min(bankAt(i - 1), bankAt(i)) > W.minBank) {
+          const wx = (p.x + q.x) / 2 + p.nx * side * (hw + W.off), wz = (p.z + q.z) / 2 + p.nz * side * (hw + W.off), wy = ground(wx, wz), h = (hp + hq) / 2, ry = Math.atan2(q.dx, q.dz);
           if (roadIdx.clearance(wx, wz, 4) > 0.4) {
-            kit.box('wall', wx, wy + h / 2 - 0.1, wz, W.thick, h + 0.2, 1.06, ry, col(W.color));
-            kit.box('wall', wx, wy + h + 0.03, wz, W.thick + 0.14, 0.12, 1.08, ry, col(W.cap));
-            if (Math.floor(wallLen / W.every) !== Math.floor((wallLen + 1) / W.every)) kit.box('wall', wx - p.nx * side * (W.thick / 2 + 0.005), wy + h / 2, wz - p.nz * side * (W.thick / 2 + 0.005), 0.02, h, 1.07, ry, col(W.seam));   // expansion joint on the road face
+            const t0 = W.off - W.thick / 2, t1 = W.off + W.thick / 2;
+            kit.strip('wall', [row(p, t0, t1, hp), row(q, t0, t1, hq)], Math.max(hp, hq) + 0.5, col(W.color));
+            kit.strip('wall', [row(p, t0 - 0.07, t1 + 0.07, hp + 0.09), row(q, t0 - 0.07, t1 + 0.07, hq + 0.09)], 0.12, col(W.cap));
+            if (Math.floor(wallLen / W.every) !== Math.floor((wallLen + 1) / W.every)) kit.box('wall', wx - p.nx * side * (W.thick / 2 + 0.005), wy + h / 2, wz - p.nz * side * (W.thick / 2 + 0.005), 0.02, h, 1.07, ry, col(W.seam));   // expansion joint
             wallLen++; counts.wall++;
             if (wallLen % 2 === 0) solids.push({ x: wx, z: wz, r: 0.4, top: wy + h });
           }

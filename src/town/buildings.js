@@ -153,6 +153,13 @@ function placeRun(kit, map, r, run, kind, occ, counts, roadIdx) {
     lowest = Math.min(lowest, map.heightAt(q.x, q.z), map.heightAt(q.x - fx * D, q.z - fz * D));
   }
   const y = Math.max(front / n, map.sea);
+  // the lowest ground anywhere under the footprint — the ground that is drawn (map.groundAt), which beside a graded road
+  // lies below the level the road gives map.heightAt: measured at the row's ends only, plinths stopped short of it
+  const c = Math.cos(ry), sn = Math.sin(ry), half = W / 2 + 0.3;
+  for (let u = -half; u <= half + 0.01; u += Math.min(2.5, half)) for (const w of [D / 2 + 0.3, 0, -D / 2 - 0.3]) {
+    const px = x + u * c + w * sn, pz = zz - u * sn + w * c;
+    lowest = Math.min(lowest, map.heightAt(px, pz), map.groundAt ? map.groundAt(px, pz) : Infinity);
+  }
   const drop = Math.max(0, y - lowest);
   const main = kind === 'secondary' || kind === 'tertiary';
   const row = { x, y, z: zz, ry, n, D, road: kind, kind: 'empty', top: y + 14 - map.heightAt(x, zz) };

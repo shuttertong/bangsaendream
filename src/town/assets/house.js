@@ -39,7 +39,7 @@ function windowsOnFace(f, r, W, floors, w, sideU = 0, rot = 0) {
 /** Detached house, front centre at (x, z) facing ry. */
 export function house(kit, r, { x, y, z, ry, W = 8, D = 9, floors = 1, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
-  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, W + 0.1, drop + 0.8, D + 0.1, col(B.concrete));
+  f.box('wall', 0, -drop / 2 - 0.4, 0, W + 0.1, drop + 0.8, D + 0.1, col(B.concrete));   // plinth: always into the ground
   const wall = col(r.pick(B.houseWalls)), H = floors * FLOOR;
   f.box('wall', 0, H / 2 - 0.5, 0, W, H + 1, D, wall);
   f.box('wall', 0, 0.1, D / 2 + 1.1, W * 0.6, 0.35, 2.2, col(B.concrete));             // porch slab
@@ -98,14 +98,21 @@ function obb(p) {
 /** OSM footprint building: extruded walls, windows per floor, hip or flat roof. */
 export function footprintBuilding(kit, r, map, b) {
   const p = b.p;
-  let base = Infinity;
-  for (const [x, z] of p) base = Math.min(base, map.heightAt(x, z));
-  base = Math.max(base, map.sea) - 0.3;
+  // the floor is level with the lowest corner, as before; the walls go on down to the lowest ground anywhere along the
+  // outline (every ~3 m of every wall, and the ground that is drawn — map.groundAt): a long wall across a dip, or a
+  // building on a slope, showed daylight under its foot
+  let floor = Infinity, low = Infinity;
+  for (let i = 0; i < p.length; i++) {
+    const [ax, az] = p[i], [bx, bz] = p[(i + 1) % p.length], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 3));
+    floor = Math.min(floor, map.heightAt(ax, az));
+    for (let k = 0; k < n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; low = Math.min(low, map.heightAt(x, z), map.groundAt ? map.groundAt(x, z) : Infinity); }
+  }
+  const base = Math.max(floor, map.sea) - 0.3, foot = Math.min(base, Math.max(low, map.sea) - 0.4);
   const H = b.h || b.lv * FLOOR;
   const shape = new THREE.Shape(p.map(([x, z]) => new THREE.Vector2(x, -z)));
-  const g = new THREE.ExtrudeGeometry(shape, { depth: H + 0.3, bevelEnabled: false });
+  const g = new THREE.ExtrudeGeometry(shape, { depth: H + 0.3 + (base - foot), bevelEnabled: false });
   g.rotateX(-Math.PI / 2);
-  g.translate(0, base, 0);
+  g.translate(0, foot, 0);
   const wall = col(r.pick(b.lv >= 3 ? B.walls : B.houseWalls));
   const box = obb(p);
   kit.add('wall', g, new THREE.Matrix4(), wall, { x: box.cx, z: box.cz });

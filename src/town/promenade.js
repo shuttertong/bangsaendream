@@ -4,7 +4,7 @@
 // Stalls go into the static kit (no extra draw calls); palms are handed to nature.js so
 // they're instanced with the other trees.
 import * as THREE from 'three';
-import { rng, walkLine } from './layout.js';
+import { rng, walkLine, slopeAt } from './layout.js';
 import { PROMENADE } from './roads.js';
 import * as PROPS from './assets/props.js';
 
@@ -59,17 +59,18 @@ export function dressPromenades(kit, map, layout, promenades) {
       if (y < map.sea + 0.3 || roadIdx.clearance(px, pz, 6) < 1 || occ.test(px, pz, 0.9, 0.9)) { left = 0; gap = r.range(...S.gap); return; }
       const ry = Math.atan2(-nx, -nz);                            // front of the cart faces the walk
       const tables = withTables && r() < 0.7;
-      stall(kit, r, { x: px, y, z: pz, ry, color, tables });
+      const sl = slopeAt(map.heightAt, px, pz, 1.6), on = p => y + sl.gx * (p.x - px) + sl.gz * (p.z - pz);   // the sand slopes: the cart, the stools and the people on them follow it
+      stall(kit, r, { x: px, y, z: pz, ry, color, tables, slope: sl });
       // the seller behind the cart (on the stool, or standing), and people at the table
       const f = kit.frame(px, y, pz, ry);
       if (rp() < Pp.seller) {
         const sit = rp() < Pp.sit, p = sit ? f.P(0.9, 0, -0.7) : f.P(-0.15 + rp() * 0.3, 0, -0.8);
-        people.push({ x: p.x, y, z: p.z, yaw: ry + (sit ? -0.3 : 0) + (rp() - 0.5) * 0.4, role: 'seller', sit });
+        people.push({ x: p.x, y: on(p), z: p.z, yaw: ry + (sit ? -0.3 : 0) + (rp() - 0.5) * 0.4, role: 'seller', sit });
       }
       if (tables) for (const [u, w] of T.stools) {
         if (rp() > Pp.guest) continue;
         const p = f.P(u, 0, w);
-        people.push({ x: p.x, y, z: p.z, yaw: ry + Math.atan2(T.table[0] - u, T.table[1] - w), role: 'guest', sit: true });
+        people.push({ x: p.x, y: on(p), z: p.z, yaw: ry + Math.atan2(T.table[0] - u, T.table[1] - w), role: 'guest', sit: true });
       }
       addBaked(canopy, px - nx * 0.2, y + 0.15, pz - nz * 0.2, r() * Math.PI);
       occ.mark(px, pz, 1.6, 1.6);
@@ -81,22 +82,23 @@ export function dressPromenades(kit, map, layout, promenades) {
 }
 
 /** A beach stall: cart with goods on top, a stool for the seller, maybe a plastic table set behind. */
-function stall(kit, r, { x, y, z, ry, color, tables }) {
-  const f = kit.frame(x, y, z, ry), col = h => new THREE.Color(h);
+function stall(kit, r, { x, y, z, ry, color, tables, slope }) {
+  const f = kit.frame(x, y, z, ry, slope), col = h => new THREE.Color(h);
   f.box('wall', 0, 0.45, 0, 1.5, 0.7, 0.75, col(color));                          // cart body
   f.box('wall', 0, 0.83, 0, 1.6, 0.06, 0.85, col('#eceae4'));                      // counter
   f.box('wall', 0, 0.45, 0.39, 1.4, 0.5, 0.02, col('#c9cdd0'));                    // steel front
-  for (const u of [-0.6, 0.6]) f.box('wall', u, 0.12, 0.2, 0.1, 0.24, 0.24, col('#2a2a2a'));   // wheels
+  for (const u of [-0.6, 0.6]) f.box('wall', u, 0.1, 0.2, 0.1, 0.28, 0.24, col('#2a2a2a'));   // wheels (a little into the sand)
+  for (const u of [-0.6, 0.6]) f.box('wall', u, 0.05, -0.25, 0.06, 0.2, 0.06, col('#8a8f94'));  // prop legs at the back
   for (let i = 0; i < 5; i++) {                                                     // goods: snacks, drinks, toys
     const u = -0.6 + i * 0.3, h = 0.08 + r() * 0.2;
     f.box('wall', u, 0.86 + h / 2, (r() - 0.5) * 0.4, 0.22, h, 0.22, col(r.pick(DRESS.goods)));
   }
-  f.box('wall', 0.9, 0.2, -0.7, 0.32, 0.4, 0.32, col(r.pick(DRESS.stool)));         // seller's stool
+  f.box('wall', 0.9, 0.18, -0.7, 0.32, 0.44, 0.32, col(r.pick(DRESS.stool)));        // seller's stool
   f.rod('wall', [0, 0, -0.2], [0, 2.3, -0.2], 0.025, col('#d9d4c8'));             // umbrella pole
   if (!tables) return;
   const tc = r.pick(DRESS.stool);
   const [tu, tw] = DRESS.tableSet.table;
   f.box('wall', tu, 0.7, tw, 0.75, 0.04, 0.75, col('#f4f2ec'));                    // plastic table behind, on the sand
-  for (const [u, w] of [[-0.2, -1.55], [0.6, -1.55], [-0.2, -2.25], [0.6, -2.25]]) f.box('wall', u, 0.35, w, 0.04, 0.7, 0.04, col('#f4f2ec'));
-  for (const [u, w] of DRESS.tableSet.stools) f.box('wall', u, 0.22, w, 0.3, 0.44, 0.3, col(tc));
+  for (const [u, w] of [[-0.2, -1.55], [0.6, -1.55], [-0.2, -2.25], [0.6, -2.25]]) f.box('wall', u, 0.33, w, 0.04, 0.74, 0.04, col('#f4f2ec'));
+  for (const [u, w] of DRESS.tableSet.stools) f.box('wall', u, 0.2, w, 0.3, 0.48, 0.3, col(tc));
 }

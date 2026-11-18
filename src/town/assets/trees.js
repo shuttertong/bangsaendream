@@ -104,6 +104,12 @@ function branch(parts, from, dir, len, r0, r1, color, segs = 4, droop = 0) {
   return pts[pts.length - 1];
 }
 
+/** A trunk's points and radii with a root added below the ground: on a slope the foot of a flat-bottomed trunk hangs
+ *  in the air on the downhill side; with this it always goes into the ground. depth ≈ 2 × the trunk's radius or more. */
+function rooted(pts, radii, depth) {
+  return [[V(pts[0].x, pts[0].y - depth, pts[0].z), ...pts], [radii[0] * 1.06, ...radii]];
+}
+
 // ---------- species ----------
 export function coconutPalm(r) {
   const H = 8 + r() * 3.5, lean = 0.6 + r() * 1.8, parts = [];
@@ -115,8 +121,8 @@ export function coconutPalm(r) {
   }
   const bark = C('#bab09c');                      // pale grey-brown, like Bang Saen's old palms
   const barkAt = (c, y) => c.copy(bark).offsetHSL(0, 0, (Math.sin(y * 18) > 0.6 ? -0.06 : 0.02) - y * 0.004);
-  parts.push(tube(pts, rad, barkAt, 6));
-  const trunkLo = tube(pts.filter((_, i) => i % 4 === 0), rad.filter((_, i) => i % 4 === 0), barkAt, 4);
+  parts.push(tube(...rooted(pts, rad, 0.9), barkAt, 6));
+  const trunkLo = tube(...rooted(pts.filter((_, i) => i % 4 === 0), rad.filter((_, i) => i % 4 === 0), 0.9), barkAt, 4);
   const top = pts[pts.length - 1];
   // coconuts
   for (let i = 0; i < 4; i++) {
@@ -171,8 +177,8 @@ export function casuarina(r) {
   const H = 10 + r() * 5, parts = [], cards = new Cards();
   const pts = [], rad = [];
   for (let i = 0; i <= 10; i++) { const s = i / 10; pts.push(V((r() - 0.5) * 0.25 * s, H * s, (r() - 0.5) * 0.25 * s)); rad.push(0.26 * (1 - s) + 0.04); }
-  parts.push(tube(pts, rad, plain('#5f4d3f'), 6));
-  const trunkLo = tube([pts[0], pts[5], pts[10]], [rad[0], rad[5], rad[10]], plain('#5f4d3f'), 4);
+  parts.push(tube(...rooted(pts, rad, 0.9), plain('#5f4d3f'), 6));
+  const trunkLo = tube(...rooted([pts[0], pts[5], pts[10]], [rad[0], rad[5], rad[10]], 0.9), plain('#5f4d3f'), 4);
   const green = C('#5f7f4a');
   // horizontal layers of needles, like a black pine
   const layers = 7 + Math.floor(r() * 3);
@@ -192,8 +198,8 @@ export function casuarina(r) {
 export function rainTree(r) {
   const parts = [], cards = new Cards();
   const h0 = 2.5 + r() * 1.2, R = 6 + r() * 2.5, top = 7 + r() * 2.5;
-  parts.push(tube([V(0, 0, 0), V(0.1, h0 * 0.5, 0), V(0, h0, 0.1)], [0.55, 0.42, 0.38], plain('#6a5a4a'), 7));
-  const trunkLo = tube([V(0, 0, 0), V(0, h0 + 1.5, 0)], [0.5, 0.3], plain('#6a5a4a'), 4);
+  parts.push(tube(...rooted([V(0, 0, 0), V(0.1, h0 * 0.5, 0), V(0, h0, 0.1)], [0.55, 0.42, 0.38], 1.4), plain('#6a5a4a'), 7));
+  const trunkLo = tube(...rooted([V(0, 0, 0), V(0, h0 + 1.5, 0)], [0.5, 0.3], 1.4), plain('#6a5a4a'), 4);
   const green = C('#62843f'), centre = V(0, top - 1.5, 0);
   const limbs = 4 + Math.floor(r() * 3);
   for (let i = 0; i < limbs; i++) {
@@ -222,7 +228,9 @@ export function frangipani(r) {
       grow(end, V(Math.cos(a) * 0.6, 0.8, Math.sin(a) * 0.6).normalize(), len * 0.75, rad * 0.7, depth - 1);
     }
   };
+  parts.push(tube([V(0, -0.6, 0), V(0, 0.05, 0)], [0.19, 0.17], plain('#9a8f84'), 5));   // root (see rooted())
   grow(V(0, 0, 0), V(0, 1, 0), 1.1 + r() * 0.4, 0.17, 3);
+  parts.push(parts.shift());                                         // (the trunk stays parts[0]: the far-away shape)
   return { trunk: mergeGeometries(parts), trunkLo: parts[0], cards: cards.geometry(), cardsLo: cards.lod() };
 }
 

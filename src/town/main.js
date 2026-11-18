@@ -23,6 +23,7 @@ import { joinRoadEnds } from './roadjoin.js';
 import { gradeRoads } from './grading.js';
 import { flattenLowland } from './flatland.js';
 import { auditRoads } from './roadaudit.js';
+import { createFitAudit } from './fitaudit.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
@@ -115,6 +116,7 @@ async function boot() {
 
   // static town geometry, merged per (chunk, material)
   const t0 = performance.now();
+  Kit.keep = params.has('audit');                      // ?audit=1: keep the town's vertices for __game.auditFit() (≈ 150 MB more)
   const kit = new Kit();
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
   layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk): dressed
@@ -367,7 +369,17 @@ async function boot() {
     ms.sort((a, b) => a - b);
     return { ms: +ms[n >> 1].toFixed(1), calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   };
-  window.__game = { THREE, renderer, quality, gfx, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  // how well everything sits on the ground, scanned from above (debug; slow): __game.auditFit() or auditFit({ box: [x0, z0, x1, z1] })
+  const under = (o, g) => { for (let p = o; p; p = p.parent) if (p === g) return true; return false; };
+  const fit = createFitAudit({
+    renderer, scene, map, always: new Set(culler.items.map(it => it.m)),
+    walk: (x, z) => (walkable(x, z) && map.heightAt(x, z) > map.sea ? map.heightAt(x, z) + lift(x, z) : null),
+    // worth scanning: land near the sea, a road, or a deck over the water somewhere in the tile
+    inArea: (x, z, size) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const px = x + a * size / 2, pz = z + b * size / 2, d = layout.seaDist(px, pz); if ((d > 0 && d < 200) || collision.deckAt(px, pz) > -Infinity || layout.roadIdx.nearest(px, pz, 30)) return true; } return false; },
+    kinds: o => (under(o, sea.group) || o.name === 'sky' || o.isPoints ? null : under(o, terrain.group) || o.material?.name === 'road' ? 'ground' : 'object'),
+  });
+  const auditFit = opts => { if (!Kit.keep) console.warn('auditFit: open the game with ?audit=1 — without it the feet of walls, kerbs and posts are read too high'); nature.setRange([1e6, 1e6]); nature.update(camera.position); const r = fit.run(opts); nature.setRange(gfx.L.trees); return r; };   // (every tree in its close-up shape)
+  window.__game = { THREE, renderer, quality, gfx, auditFit, fit, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

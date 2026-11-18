@@ -1,7 +1,7 @@
 // Beach furniture along the sand (umbrella blocks with deck chairs or plastic tables,
 // inner-tube rental stalls) and street furniture (power poles + sagging cables).
 import * as THREE from 'three';
-import { rng, walkLine } from './layout.js';
+import { rng, walkLine, slopeAt, shearTo } from './layout.js';
 import { roadWidth } from './roads.js';
 import { getMaterial } from '../world/materials.js';
 import * as P from './assets/props.js';
@@ -42,6 +42,7 @@ export function buildBeach(map, ctx, kit) {
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
   const put = (list, x, z, ry, color, s = 1) => {
     m.compose(new THREE.Vector3(x, map.heightAt(x, z) - 0.05, z), q.setFromAxisAngle(up, ry), new THREE.Vector3(s, s, s));
+    shearTo(m, slopeAt(map.heightAt, x, z, 1.4));               // the beach slopes to the sea: every leg of the set stands on the sand
     list.push({ m: m.clone(), c: new THREE.Color(color), x, z, ry });
   };
 
@@ -144,7 +145,7 @@ function floodlights(map, ctx, kit) {
     const px = x + dz * L.row, pz = z - dx * L.row, y = map.heightAt(px, pz);
     if (noBeach(px, pz) || Math.abs(seaDist(px, pz) - L.row) > 5 || y < map.sea + 0.3 || roadIdx.clearance(px, pz, 6) < 2 || occ.test(px, pz, 0.6, 0.6)) return;
     const f = kit.frame(px, y, pz, Math.atan2(-dz, dx));
-    f.box('wall', 0, 0.3, 0, 0.7, 0.6, 0.7, new THREE.Color('#bdb8ac'));                // footing
+    f.box('wall', 0, 0.15, 0, 0.7, 0.9, 0.7, new THREE.Color('#bdb8ac'));               // footing (set into the sand)
     f.rod('wall', [0, 0.5, 0], [0, L.height, 0], 0.14, c);
     f.box('wall', 0, L.height + 0.1, 0, 2.2, 0.12, 0.12, c);                           // lamp bar
     for (const u of [-0.9, -0.3, 0.3, 0.9]) f.box('wall', u, L.height + 0.35, 0.05, 0.4, 0.45, 0.2, lamp);
@@ -163,8 +164,8 @@ function buildBenches(map, ctx, kit) {
       const y = map.heightAt(px, pz);
       if (noBeach(px, pz) || Math.abs(seaDist(px, pz) - B.row) > 5 || roadIdx.clearance(px, pz, 6) < 1.5 || occ.test(px, pz, 2.2, 1.2)
         || Math.abs(map.heightAt(px + dx, pz + dz) - map.heightAt(px - dx, pz - dz)) > 0.5 || Math.abs(y - map.sea) > 3) return;
-      const ry = Math.atan2(-nx, -nz), f = kit.frame(px, y, pz, ry);
-      for (const u of [-0.75, 0.75]) f.box('wall', u, 0.22, 0, 0.14, 0.44, 0.42, B.color);   // legs
+      const ry = Math.atan2(-nx, -nz), f = kit.frame(px, y, pz, ry, slopeAt(map.heightAt, px, pz, 0.9));
+      for (const u of [-0.75, 0.75]) f.box('wall', u, 0.17, 0, 0.14, 0.54, 0.42, B.color);   // legs (a little into the ground)
       f.box('wall', 0, 0.46, 0, 1.9, 0.08, 0.46, B.color);                                     // seat slab
       f.box('wall', 0, 0.8, -0.24, 1.9, 0.3, 0.06, B.color, 0);                               // backrest
       for (const u of [-0.75, 0.75]) f.box('wall', u, 0.62, -0.24, 0.1, 0.34, 0.08, B.color);

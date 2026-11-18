@@ -25,20 +25,23 @@ export function buildHillRoads(kit, map, layout, roads) {
   const counts = { kerbs: 0, redWhite: 0, rails: 0, lamps: 0, monkeys: 0 };
 
   for (const { road, hw, s: S } of roads) {
-    let rail = [null, null], sinceLamp = L.every * 0.5, sinceMonkey = MK.every * r();
+    let rail = [null, null], kerb = [null, null], sinceLamp = L.every * 0.5, sinceMonkey = MK.every * r();   // kerb: the last kerb edge on each side (the next metre carries on from it)
     for (let i = 0; i < S.length; i++) {
       const p = S[i];
-      if (!p.hill) { rail = [null, null]; continue; }
+      if (!p.hill) { rail = [null, null]; kerb = [null, null]; continue; }
       const bend = Math.abs(p.turn) > K.bend, out = outside(p);
       for (const side of [-1, 1]) {
         const k = sideIndex(side), kx = p.x + p.nx * side * (hw + K.w / 2), kz = p.z + p.nz * side * (hw + K.w / 2);
         const junction = roadIdx.onOtherRoad(kx, kz, road, 0.3);
         // ---- kerb: drop side always, bend outside red-white, nothing on the bank side (a gutter is there) ----
+        // each metre runs from the last sample's edge to this one's (kit.strip): on a slope a row of level blocks was a
+        // staircase with one end of every block in the air
         if (!junction && !p.cut[k] && (p.fall[k] || (bend && side === out))) {
-          const red = bend && (side === out || p.fall[k]);
-          kit.box('wall', kx, ground(kx, kz) + ROAD_LIFT + K.h / 2 - 0.05, kz, K.w, K.h, K.len * 0.98, Math.atan2(p.dx, p.dz), red ? kerbCols[i % 2] : plain);
-          counts.kerbs++; if (red) counts.redWhite++;
-        }
+          const red = bend && (side === out || p.fall[k]), y = ground(kx, kz) + ROAD_LIFT + K.h - 0.05, ex = p.nx * side, ez = p.nz * side;
+          const row = [p.x + ex * hw, y, p.z + ez * hw, p.x + ex * (hw + K.w), y, p.z + ez * (hw + K.w)];
+          if (kerb[k]) { kit.strip('wall', [kerb[k], row], K.h + 0.3, red ? kerbCols[i % 2] : plain); counts.kerbs++; if (red) counts.redWhite++; }
+          kerb[k] = row;
+        } else kerb[k] = null;
         // ---- guardrail on the drop side: posts every 2 m, two rails between ----
         const px = p.x + p.nx * side * (hw + R.off), pz = p.z + p.nz * side * (hw + R.off);
         if (i % R.every === 0) {
@@ -75,9 +78,11 @@ export function buildHillRoads(kit, map, layout, roads) {
       sinceMonkey += 1;
       if (sinceMonkey >= MK.every && r() < MK.chance) {
         sinceMonkey = 0;
-        const side = p.fall[0] ? -1 : p.fall[1] ? 1 : (r() < 0.5 ? 1 : -1), k = sideIndex(side), px = p.x + p.nx * side * (hw + K.w / 2), pz = p.z + p.nz * side * (hw + K.w / 2);
+        const side = p.fall[0] ? -1 : p.fall[1] ? 1 : (r() < 0.5 ? 1 : -1), k = sideIndex(side);
+        const kerb = p.fall[k] || (Math.abs(p.turn) > K.bend && side === outside(p));   // is there a kerb to sit on here? else: on the edge of the road itself
+        const off = kerb ? hw + K.w / 2 : hw - 0.35, px = p.x + p.nx * side * off, pz = p.z + p.nz * side * off;
         if (!p.cut[k] && !roadIdx.onOtherRoad(px, pz, road, 0.3)) {
-          sit(r.pick, px, ground(px, pz) + ROAD_LIFT + K.h - 0.05, pz, Math.atan2(p.dx, p.dz) + (r() < 0.5 ? 1 : -1) * Math.PI / 2 + (r() - 0.5));
+          sit(r.pick, px, ground(px, pz) + ROAD_LIFT + (kerb ? K.h - 0.05 : 0), pz, Math.atan2(p.dx, p.dz) + (r() < 0.5 ? 1 : -1) * Math.PI / 2 + (r() - 0.5));
           counts.monkeys++;
         }
       }

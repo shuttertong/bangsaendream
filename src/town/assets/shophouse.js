@@ -76,7 +76,7 @@ function upperFloor(f, r, u, y, W, D, wall, balcony) {
 /** Row of `n` shophouse units of width W, depth D, front centre at (x, z) facing `ry`. */
 export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
-  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, n * W + 0.08, drop + 0.8, D + 0.08, col(B.concrete));   // plinth where the ground falls away
+  f.box('wall', 0, -drop / 2 - 0.4, 0, n * W + 0.08, drop + 0.8, D + 0.08, col(B.concrete));   // plinth: always into the ground, and down to the lowest ground under the row where it falls away
   const rowWall = r.pick(B.walls);
   const total = n * W;
   for (let i = 0; i < n; i++) {
@@ -114,7 +114,7 @@ export function shophouseRow(kit, r, { x, y, z, ry, n, W = 4, D = 12, floors, dr
 /** Beach condo / hotel block: 6–12 floors with balconies on the front. */
 export function condoBlock(kit, r, { x, y, z, ry, width, D = 16, floors, drop = 0 }) {
   const f = kit.frame(x, y, z, ry);
-  if (drop > 0.15) f.box('wall', 0, -drop / 2 - 0.4, 0, width + 0.1, drop + 0.8, D + 0.1, col(B.concrete));
+  f.box('wall', 0, -drop / 2 - 0.4, 0, width + 0.1, drop + 0.8, D + 0.1, col(B.concrete));   // plinth (see shophouseRow)
   const wall = col(r.pick(['#eeeae2', '#e6e2d8', '#dfe6ea', '#f0e6d6']));
   const accent = col(r.pick(['#6f9fb5', '#b58a6a', '#8fa88a', '#c9b48a']));
   const H = floors * FLOOR;

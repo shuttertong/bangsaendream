@@ -39,6 +39,11 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   for (let i = 0; i < dp.count; i++) dp.setY(i, map.heightAt(dp.getX(i), dp.getZ(i)) + 0.22);   // draped over the slope (fine rings so it follows the terrain)
   disk.computeVertexNormals();
   kit.add('wall', disk, new THREE.Matrix4(), col(LK.paving), { x: lx, z: lz });
+  { // its rim goes down into the ground all round: no daylight under the edge of the paving
+    const rim = [];
+    for (let k = 0; k <= 40; k++) { const a = (k / 40) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), y = px => map.heightAt(lx + c * px, lz + s * px) + 0.22; rim.push([lx + c * (LK.r + 0.12), y(LK.r), lz + s * (LK.r + 0.12), lx + c * (LK.r - 0.05), y(LK.r), lz + s * (LK.r - 0.05)]); }
+    kit.strip('wall', rim, 1.2, col(LK.paving), { x: lx, z: lz });
+  }
   let dsx = 0, dsz = 0;                                              // downhill (toward the view)
   for (let a = 0; a < 6.28; a += 0.5) { const h = map.heightAt(lx + Math.cos(a) * 15, lz + Math.sin(a) * 15); dsx -= Math.cos(a) * h; dsz -= Math.sin(a) * h; }
   const view = Math.atan2(dsz, dsx);
@@ -67,18 +72,24 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   for (const road of map.roads) {
     if (!S.roads.includes(road.k) || road.p.length < 2 || !road.p.some(([x, z]) => inBox(x, z, K.box))) continue;
     const hw = roadWidth(road) / 2;
-    let run = 0, prevRail = null;
+    let run = 0, prevRail = null, walk = [], face = [];
+    // the walkway and the wall under its sea edge are continuous runs that follow the road's slope (kit.strip): as level
+    // 3 m boxes they stepped down the hill with one end of every slab in the air
+    const flush = () => {
+      if (walk.length > 1) { kit.strip('wall', walk, 1.2, col(K.colors.walk)); kit.strip('wall', face, S.drop, col(K.colors.wall)); }
+      walk = []; face = []; prevRail = null;
+    };
     walkLine(road.p, S.every, (x, z, dx, dz) => {
-      if (!inBox(x, z, K.box) || inBox(x, z, VILLAGE.shore)) { prevRail = null; return; }   // the village has houses, not a seawall
+      if (!inBox(x, z, K.box) || inBox(x, z, VILLAGE.shore)) { flush(); return; }   // the village has houses, not a seawall
       let nx = -dz, nz = dx;                                         // toward the sea side
       if (seaDist(x + nx * 6, z + nz * 6) > seaDist(x - nx * 6, z - nz * 6)) { nx = -nx; nz = -nz; }
-      if (seaDist(x + nx * (hw + S.walk), z + nz * (hw + S.walk)) > S.sea) { prevRail = null; run = 0; return; }
+      if (seaDist(x + nx * (hw + S.walk), z + nz * (hw + S.walk)) > S.sea) { flush(); run = 0; return; }
       const y = Math.max(map.heightAt(x, z), map.sea) + 0.1, ry = Math.atan2(dx, dz);        // level with the road
       const wx = x + nx * (hw + S.walk / 2 - 0.2), wz = z + nz * (hw + S.walk / 2 - 0.2);      // overlaps the road edge: no gap
-      const f = kit.frame(wx, y, wz, ry);                             // local u = across (toward −sea?), w = along the road
-      f.box('wall', 0, 0.05, 0, S.walk + 0.4, 0.25, S.every + 0.05, col(K.colors.walk));
+      const at = (d, h) => [x + nx * (hw + d), y + h, z + nz * (hw + d)];
+      walk.push([...at(-0.3, 0.175), ...at(S.walk + 0.02, 0.175)]);
+      face.push([...at(S.walk - 0.05, 0.2), ...at(S.walk + 0.3, 0.2)]);
       const ox = nx * (S.walk / 2 + 0.15), oz = nz * (S.walk / 2 + 0.15);
-      kit.box('wall', wx + ox, y - S.drop / 2 + 0.2, wz + oz, 0.35, S.drop, S.every + 0.05, ry, col(K.colors.wall));   // wall face down to the water
       const rail = new THREE.Vector3(wx + ox, y + 1.05, wz + oz);
       kit.rod('wall', rail, rail.clone().setY(y + 0.2), 0.04, col(K.colors.rail));
       if (prevRail) { kit.rod('wall', prevRail, rail, 0.035, col(K.colors.rail)); kit.rod('wall', prevRail.clone().setY(prevRail.y - 0.45), rail.clone().setY(rail.y - 0.45), 0.025, col(K.colors.rail)); }
@@ -99,6 +110,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
         solids.push({ x: c.x, z: c.z, r: 0.2, top: y + 3.5 });
       }
     });
+    flush();
   }
 
   // ---- rock outcrops where the terrain shows bare granite ----
@@ -140,7 +152,7 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
   for (let i = 0; i < Mk.count; i++) {
     const a = r() * Math.PI * 2, d = r() * Mk.spread, x = Mk.near[0] + Math.cos(a) * d, z = Mk.near[1] + Math.sin(a) * d;
     if (map.heightAt(x, z) < map.sea + 0.3) continue;
-    sit(r.pick, x, map.heightAt(x, z) + 0.05, z, r() * 6.28);
+    sit(r.pick, x, map.heightAt(x, z) + (Math.hypot(x - lx, z - lz) < LK.r ? 0.22 : 0) + 0.02, z, r() * 6.28);   // on the clearing's paving, or on the ground round it
   }
 
   // ---- mussel-farm poles in Ang Sila bay (one instanced draw) ----
@@ -173,11 +185,16 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
 /** A sitting macaque merged into the kit: sit(pick, x, y, z, ry). Idle pose as in the monkey game,
  *  merged with its own vertex colours, legs tucked under the body. */
 export function sittingMonkeys(kit) {
-  const geos = MONKEYS.slice(0, 3).map(m => { const g = monkeyGeometry(m); return { m, parts: [g.body, g.front.clone().rotateX(-0.9).translate(0, 0.3, 0.14), g.back.clone().rotateX(0.4).translate(0, 0.3, -0.14)] }; });
+  const geos = MONKEYS.slice(0, 3).map(m => {
+    const g = monkeyGeometry(m), parts = [g.body, g.front.clone().rotateX(-0.9).translate(0, 0.3, 0.14), g.back.clone().rotateX(0.4).translate(0, 0.3, -0.14)];
+    let low = Infinity;                                              // the model's lowest point: (x, y, z) is where that rests — they used to hang in the air by this much
+    for (const p of parts) { p.computeBoundingBox(); low = Math.min(low, p.boundingBox.min.y); }
+    return { m, parts, low };
+  });
   const up = new THREE.Vector3(0, 1, 0);
   return (pick, x, y, z, ry) => {
-    const { m, parts } = pick(geos), s = m.size * 1.3;
-    const mat = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(up, ry), new THREE.Vector3(s, s, s));
+    const { m, parts, low } = pick(geos), s = m.size * 1.3;
+    const mat = new THREE.Matrix4().compose(new THREE.Vector3(x, y - low * s - 0.02, z), new THREE.Quaternion().setFromAxisAngle(up, ry), new THREE.Vector3(s, s, s));
     for (const g of parts) { const c = g.attributes.color; let v = 0; kit.add('wall', g, mat, () => new THREE.Color().fromBufferAttribute(c, v++)); }
   };
 }
