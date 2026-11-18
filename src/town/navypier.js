@@ -62,7 +62,10 @@ export function buildNavyPier(kit, map, layout, fleet) {
     kit.add('wall', g, new THREE.Matrix4().makeRotationY(ry).setPosition(f.P(0, 0, sw).x, y + h / 2, f.P(0, 0, sw).z), col(roofC));
   }
   f.rod('wall', [0, top + 6.1, sw], [0, top + 7.3, sw], 0.08, col(c.gold));
-  for (let k = 0; k < 3; k++) f.box('wall', 0, top + 0.3, sw - S.d / 2 + 2 + k * 3, S.w - 3, 0.1, 0.5, col('#9a7a52'));   // benches inside
+  for (let k = 0; k < 3; k++) {                                                                 // benches inside
+    f.box('wall', 0, top + 0.3, sw - S.d / 2 + 2 + k * 3, S.w - 3, 0.1, 0.5, col('#9a7a52'));
+    for (const u of [-(S.w - 3) / 2 + 0.3, 0, (S.w - 3) / 2 - 0.3]) f.box('wall', u, top + 0.13, sw - S.d / 2 + 2 + k * 3, 0.1, 0.27, 0.4, col('#7a5f40'));   // legs
+  }
   const salaMid = f.P(0, 0, sw);
   decks.push({ x: salaMid.x, z: salaMid.z, w: S.w + 1, d: S.d + 1, ry, top });
   const mid = f.P(0, 0, N.len / 2);

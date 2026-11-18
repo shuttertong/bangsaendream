@@ -66,7 +66,7 @@ export function buildHillRoads(kit, map, layout, roads) {
         const side = counts.lamps % 2 ? 1 : -1, k = sideIndex(side), px = p.x + p.nx * side * (hw + 0.8), pz = p.z + p.nz * side * (hw + 0.8);
         if (!p.cut[k] && roadIdx.clearance(px, pz, 8) > 0.3 && !occ.test(px, pz, 0.4, 0.4)) {
           const y = ground(px, pz), top = new THREE.Vector3(px, y + L.h, pz), end = new THREE.Vector3(px - p.nx * side * L.arm, y + L.h + 0.3, pz - p.nz * side * L.arm);
-          kit.rod('metal', new THREE.Vector3(px, y, pz), top, 0.07, lampCol);
+          kit.rod('metal', new THREE.Vector3(px, y - 0.3, pz), top, 0.07, lampCol);   // (set into the ground)
           kit.rod('metal', top, end, 0.04, lampCol);
           kit.box('wall', end.x, end.y - 0.08, end.z, 0.3, 0.12, 0.6, Math.atan2(p.nx * side, p.nz * side), headCol);
           solids.push({ x: px, z: pz, r: 0.15, top: y + L.h });

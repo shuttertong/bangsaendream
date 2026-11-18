@@ -146,7 +146,7 @@ function floodlights(map, ctx, kit) {
     if (noBeach(px, pz) || Math.abs(seaDist(px, pz) - L.row) > 5 || y < map.sea + 0.3 || roadIdx.clearance(px, pz, 6) < 2 || occ.test(px, pz, 0.6, 0.6)) return;
     const f = kit.frame(px, y, pz, Math.atan2(-dz, dx));
     f.box('wall', 0, 0.15, 0, 0.7, 0.9, 0.7, new THREE.Color('#bdb8ac'));               // footing (set into the sand)
-    f.rod('wall', [0, 0.5, 0], [0, L.height, 0], 0.14, c);
+    f.rod('wall', [0, 0.5, 0], [0, L.height + 0.1, 0], 0.14, c);                        // (up into the lamp bar: it stopped 4 cm short)
     f.box('wall', 0, L.height + 0.1, 0, 2.2, 0.12, 0.12, c);                           // lamp bar
     for (const u of [-0.9, -0.3, 0.3, 0.9]) f.box('wall', u, L.height + 0.35, 0.05, 0.4, 0.45, 0.2, lamp);
     occ.mark(px, pz, 0.8, 0.8);

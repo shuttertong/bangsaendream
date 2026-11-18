@@ -24,6 +24,7 @@ import { gradeRoads } from './grading.js';
 import { flattenLowland } from './flatland.js';
 import { auditRoads } from './roadaudit.js';
 import { createFitAudit } from './fitaudit.js';
+import { createJointRecorder, auditJoints } from './jointaudit.js';
 import { Kit } from './assets/kit.js';
 import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
@@ -116,7 +117,9 @@ async function boot() {
 
   // static town geometry, merged per (chunk, material)
   const t0 = performance.now();
-  Kit.keep = params.has('audit');                      // ?audit=1: keep the town's vertices for __game.auditFit() (≈ 150 MB more)
+  Kit.keep = params.has('audit');                      // ?audit=1: keep the town's vertices for __game.auditFit() (≈ 150 MB more)…
+  const joints = Kit.keep ? createJointRecorder() : null;   // …and the box of every part, for __game.auditJoints()
+  if (joints) Kit.record = joints.record.bind(joints);
   const kit = new Kit();
   const layout = { occ: new Occupancy(), roadIdx: new RoadIndex(map.roads, roadWidth), seaDist: seaDistSampler(map, terrain.seaDist) };
   layout.strip = stripSampler(map, layout.seaDist);                  // coastal strip + inland corridors (road 3137, Khao Sam Muk): dressed
@@ -379,7 +382,11 @@ async function boot() {
     kinds: o => (under(o, sea.group) || o.name === 'sky' || o.isPoints ? null : under(o, terrain.group) || o.material?.name === 'road' ? 'ground' : 'object'),
   });
   const auditFit = opts => { if (!Kit.keep) console.warn('auditFit: open the game with ?audit=1 — without it the feet of walls, kerbs and posts are read too high'); nature.setRange([1e6, 1e6]); nature.update(camera.position); const r = fit.run(opts); nature.setRange(gfx.L.trees); return r; };   // (every tree in its close-up shape)
-  window.__game = { THREE, renderer, quality, gfx, auditFit, fit, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  if (joints) Kit.record = null;                                       // (only the town as built at start)
+  const kitMeshes = new Set();
+  scene.traverse(o => o.isMesh && o.userData.kit && kitMeshes.add(o));
+  const auditJ = () => (joints ? auditJoints({ rec: joints, scene, map, kitMeshes, skip: o => o.name === 'sky' || under(o, sea.group) || under(o, terrain.group) || o.isSkinnedMesh, terrain: terrain.group, surface: (x, z) => Math.max(map.heightAt(x, z), map.sea) + lift(x, z) }) : 'open the game with ?audit=1');
+  window.__game = { THREE, renderer, quality, gfx, auditFit, fit, auditJoints: auditJ, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

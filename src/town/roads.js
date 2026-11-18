@@ -48,6 +48,9 @@ export const roadWidth = r => {
   return n ? Math.max(st.w, n * LANES.w + LANES.shoulder) : st.w;
 };
 
+/** How far a road's ribbon lies above map.heightAt: each class a few millimetres apart, so the more important road wins where they overlap. */
+export function ribbonLift(kind) { return ROAD_LIFT + (Object.keys(ROAD_STYLE).reverse().indexOf(kind) + 1) * 0.004; }
+
 /** How high the walkable surface is above the terrain at (x, z): road, pavement or 0. */
 export function surfaceLift(roadIdx, x, z) {
   const n = roadIdx.nearest(x, z, 12);
@@ -165,7 +168,6 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
   // pavements, kerbs and the promenade stop where they would lie on another road (clean junctions)
   const offRoads = roadIdx ? (x, z) => roadIdx.clearance(x, z, 14) > -0.15 : null;
   // bigger roads drawn slightly higher so they win at junctions
-  const order = Object.keys(ROAD_STYLE).reverse();
   const white = new THREE.Color('#ebe7dc');
   for (const r of map.roads) {
     const st = ROAD_STYLE[r.k];
@@ -174,7 +176,7 @@ export function buildRoads(kit, map, seaDist, roadIdx = null) {
     // ground pokes up through its edge): sample hill roads every metre
     const F = frame(r.p, r.p.some(([x, z]) => map.heightAt(x, z) > HILL_ROAD) ? STEP_HILL : STEP);
     const ownSurface = roadIdx ? (x, z) => !roadIdx.onOtherRoad(x, z, r) : null;   // markings stop where another road crosses
-    const lift = ROAD_LIFT + (order.indexOf(r.k) + 1) * 0.004;
+    const lift = ribbonLift(r.k);
     const mid = F.pts[F.pts.length >> 1];
     const at = { x: mid[0], z: mid[1] };
     const W = roadWidth(r), hw = W / 2, base = new THREE.Color(st.col), c = new THREE.Color();

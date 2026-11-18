@@ -64,7 +64,7 @@ export function buildWalkingStreet(kit, map, layout) {
       const hgt = 0.06 + r() * 0.18;
       f.box('wall', -0.9 + i * 0.36, 0.77 + hgt / 2, -0.7 + (r() - 0.5) * 0.4, 0.3, hgt, 0.3, col(r.pick(c.goods)));
     }
-    if (r() < 0.3) { f.box('wall', 0.6, 0.55, 0.6, 1.2, 0.8, 0.7, col('#c9cdd0')); f.box('wall', 0.6, 0.97, 0.6, 1.25, 0.05, 0.75, col('#e8e6e0')); }   // steel food cart
+    if (r() < 0.3) { f.box('wall', 0.6, 0.55, 0.6, 1.2, 0.8, 0.7, col('#c9cdd0')); f.box('wall', 0.6, 0.97, 0.6, 1.25, 0.05, 0.75, col('#e8e6e0')); for (const du of [-0.5, 0.5]) for (const dw of [-0.28, 0.28]) f.box('wall', 0.6 + du, 0.07, 0.6 + dw, 0.12, 0.2, 0.12, col('#2a2a2a')); }   // steel food cart on its wheels
     f.box('wall', -0.6, 0.22, 0.7, 0.32, 0.44, 0.32, col(r.pick(c.stool)));
     solids.push({ x, z, r: 1.3, top: y + 3 });
     // who is here: the seller behind the table (on the stool, or standing) and maybe someone looking at the goods

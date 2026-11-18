@@ -38,6 +38,7 @@ export function khaoLamStand(kit, { x, y, z, ry }) {
     f.rod('wall', [u, h, -0.18], [u, h, 0.18], 0.04, col('#e0cf8e'));
   }
   f.box('wall', 0.35, 1.2, 0.3, 0.7, 0.24, 0.03, col('#f4e9c8'));                    // sign board
+  for (const du of [-0.3, 0.3]) f.rod('wall', [0.35 + du, 0.76, 0.3], [0.35 + du, 1.1, 0.3], 0.012, col('#8a8a86'));   // on two wires from the table
   f.box('wall', 0.35, 1.2, 0.315, 0.6, 0.06, 0.01, col('#7a2e1c'));
   // roasting line: blackened bamboo leaning on a rail, husks smouldering underneath
   f.rod('wall', [1.1, 0.55, -0.1], [2.4, 0.55, -0.1], 0.02, col('#5a5a58'));

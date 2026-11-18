@@ -124,7 +124,7 @@ export function buildSkatePark(kit, scene, map, layout, start) {
   };
   const hl = R.L / 2, hd = R.D / 2;
   rail(-hl, hd, hl, hd); rail(hl, hd, hl, -hd); rail(-hl, -hd, -hl, hd); rail(-hl, -hd, -2.2, -hd); rail(2.2, -hd, hl, -hd);
-  for (const [u, w] of [[-hl, hd], [hl, hd], [-hl, -hd], [hl, -hd]]) { f.rod('metal', [u, 0, w + w0], [u, 6.5, w + w0], 0.07, col('#8f959b')); f.box('lit', u * 0.97, 6.5, w * 0.95 + w0, 0.7, 0.14, 0.4, col('#fff4d2')); }
+  for (const [u, w] of [[-hl, hd], [hl, hd], [-hl, -hd], [hl, -hd]]) { f.rod('metal', [u, 0, w + w0], [u, 6.5, w + w0], 0.07, col('#8f959b')); f.rod('metal', [u, 6.45, w + w0], [u * 0.97, 6.45, w * 0.95 + w0], 0.04, col('#8f959b')); f.box('lit', u * 0.97, 6.5, w * 0.95 + w0, 0.7, 0.14, 0.4, col('#fff4d2')); }   // (an arm out to the lamp: it hung beside the pole)
   // benches along the apron, the school's kiosk with an awning and a rack of skates and helmets
   for (const u of [4.5, 8.5, 12.5]) { f.box('wall', u, 0.42, wa - 1.2, 2.4, 0.08, 0.5, col('#8a6a4a')); for (const s of [-1, 1]) f.box('wall', u + s * 0.95, 0.2, wa - 1.2, 0.1, 0.4, 0.45, col('#6a6a6a')); }
   const ku = -9.5, kw = wa - 0.9;
@@ -135,6 +135,7 @@ export function buildSkatePark(kit, scene, map, layout, start) {
   const ru = -4.6, rw = wa - 0.3;
   for (const y of [0.35, 0.8, 1.25]) f.box('wall', ru, y, rw, 2.2, 0.05, 0.45, col('#8a6a4a'));
   for (const s of [-1, 1]) f.box('wall', ru + s * 1.1, 0.7, rw, 0.06, 1.4, 0.45, col('#6a6a6a'));
+  for (const y of [0.33, 0.78, 1.38]) f.box('wall', ru, y, rw, 2.2, 0.04, 0.45, col('#7a7a7a'));   // shelves (the skates and helmets stood on nothing)
   for (let i = 0; i < 5; i++) for (const [y, hex] of [[0.45, ['#d8443a', '#2f6fc4', '#f2c230', '#3a9a6a', '#9a5a8a'][i]], [0.9, ['#2f6fc4', '#f08a3a', '#d8443a', '#f4f1e8', '#3a9a6a'][i]]]) f.box('wall', ru - 0.84 + i * 0.42, y, rw, 0.16, 0.2, 0.3, col(hex));
   for (let i = 0; i < 4; i++) { const p = f.P(ru - 0.75 + i * 0.5, 1.4, rw); kit.add('wall', new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.Matrix4().setPosition(p), col(['#f2c230', '#d8443a', '#2f6fc4', '#3a9a6a'][i])); }
   { const q = f.P(ru, 0, rw); solids.push({ x: q.x, z: q.z, r: 1.0, top: plot.top + 1.5 }); }

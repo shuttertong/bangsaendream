@@ -99,6 +99,6 @@ function stall(kit, r, { x, y, z, ry, color, tables, slope }) {
   const tc = r.pick(DRESS.stool);
   const [tu, tw] = DRESS.tableSet.table;
   f.box('wall', tu, 0.7, tw, 0.75, 0.04, 0.75, col('#f4f2ec'));                    // plastic table behind, on the sand
-  for (const [u, w] of [[-0.2, -1.55], [0.6, -1.55], [-0.2, -2.25], [0.6, -2.25]]) f.box('wall', u, 0.33, w, 0.04, 0.74, 0.04, col('#f4f2ec'));
-  for (const [u, w] of DRESS.tableSet.stools) f.box('wall', u, 0.2, w, 0.3, 0.48, 0.3, col(tc));
+  for (const [u, w] of [[-0.2, -1.55], [0.6, -1.55], [-0.2, -2.25], [0.6, -2.25]]) f.box('wall', u, 0.3, w, 0.04, 0.8, 0.04, col('#f4f2ec'));
+  for (const [u, w] of DRESS.tableSet.stools) f.box('wall', u, 0.17, w, 0.3, 0.54, 0.3, col(tc));   // (a little into the sand: on the steepest spots the slope is more than the stall follows)
 }

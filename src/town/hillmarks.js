@@ -4,13 +4,13 @@
 // the kit ('road' material for the paint, 'wall' for the concrete) following the ground every metre.
 import * as THREE from 'three';
 import { HILL, sideIndex } from './hillgeom.js';
-import { ROAD_LIFT } from './roads.js';
+import { ribbonLift } from './roads.js';
 
 export const MARKS = {
   kinds: ['residential', 'unclassified', 'secondary', 'tertiary'],   // lanes (service roads stay unmarked)
   edge: { in: 0.3, w: 0.13 },
   centre: { w: 0.13, dash: 3, gap: 5, solidTurn: 0.12 },             // solid when the road turns more than this over the look-ahead span
-  paint: '#ece8dc', yellow: '#e8c23a', lift: ROAD_LIFT + 0.09,
+  paint: '#ece8dc', yellow: '#e8c23a', lift: 0.012,   // over this road's own ribbon (roads.js ribbonLift; the samples match the ribbon's — it was 9 cm when they were half a metre out of step)
   gutter: { off: 0.35, w: 0.5, h: 0.12, color: '#a39d92', inner: '#6f6a62' },
   wall: { minBank: 1.5, maxH: 2.3, thick: 0.55, off: 1.1, color: '#9f998d', cap: '#c3bdb0', seam: '#7e786d', every: 1.4 },
 };
@@ -29,7 +29,7 @@ export function buildHillMarks(kit, map, layout, roads) {
     for (let i = a + 1; i <= b; i++) {
       const p = S[i - 1], q = S[i];
       if (onOther(road, (p.x + q.x) / 2, (p.z + q.z) / 2)) continue;                // the paint stops at a junction
-      const P = (s, t) => [s.x + s.nx * t, ground(s.x + s.nx * t, s.z + s.nz * t) + M.lift, s.z + s.nz * t];
+      const up = ribbonLift(road.k) + M.lift, P = (s, t) => [s.x + s.nx * t, ground(s.x + s.nx * t, s.z + s.nz * t) + up, s.z + s.nz * t];
       const a1 = P(q, t1), a2 = P(q, t0), b1 = P(p, t1), b2 = P(p, t0);
       v.push(...b1, ...a1, ...b2, ...b2, ...a1, ...a2);                              // faces up
     }

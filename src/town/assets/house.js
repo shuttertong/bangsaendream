@@ -58,7 +58,7 @@ export function house(kit, r, { x, y, z, ry, W = 8, D = 9, floors = 1, drop = 0 
 export function spiritHouse(kit, p, ry, r) {
   const f = kit.frame(p.x, p.y, p.z, ry + Math.PI);
   const [gold, white, red] = B.spirit.map(col);
-  f.box('wall', 0, 0.6, 0, 0.22, 1.2, 0.22, white);
+  f.box('wall', 0, 0.3, 0, 0.22, 1.8, 0.22, white);                // post (down into the ground: the lot can stand above it)
   f.box('wall', 0, 1.25, 0, 0.9, 0.1, 0.9, white);
   f.box('wall', 0, 1.6, 0, 0.62, 0.6, 0.55, gold);
   f.box('wall', 0, 1.55, 0.3, 0.3, 0.35, 0.04, red);
@@ -187,6 +187,7 @@ export function grandmaHouse(kit, r, { x, y, z, ry, W = 12, D = 12 }) {
   for (const u of [-hw, hw]) f.box('wall', u, floor + 1.4, vz, 0.18, 2.8, 0.18, post);     // veranda posts
   // stairs down to the yard
   for (let i = 0; i < 6; i++) f.box('wall', 0, floor - 0.3 * (i + 1) + 0.15, vz + 0.35 + i * 0.3, 1.2, 0.08, 0.3, wood);
+  for (const u of [-0.62, 0.62]) f.rod('wall', [u, floor + 0.02, vz + 0.12], [u, floor - 1.95, vz + 2.1], 0.06, wood);   // stringers: the treads hung loose
   // steep clay-tile gable roof over body + veranda
   gableRoof(f, 'wall', hw * 2, hd * 2 + 1.8, floor + wallH + 0.05, 2.6, 0.7, col('#b0553a'), wood);
   // under the house: bamboo bench (แคร่) and glazed water jars (โอ่ง)

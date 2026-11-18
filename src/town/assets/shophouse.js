@@ -41,7 +41,7 @@ function groundFloor(f, r, u, W, D, wall) {
       }
     }
     f.box('wall', u + (r() - 0.5) * 0.8, 0.45, w - 0.75, W * 0.45, 0.9, 0.55, col(r.pick(B.awnings)).offsetHSL(0, -0.25, 0.08));
-    f.box('lit', u, 2.8, w - BAY / 2, W * 0.5, 0.05, 0.08, col('#f4f6f0'));
+    f.box('lit', u, 2.875, w - BAY / 2, W * 0.5, 0.05, 0.08, col('#f4f6f0'));       // tube against the bay's ceiling (2.9)
     f.box('metal', u, 2.72, w - 0.02, W - 0.3, 0.3, 0.3, col(B.shutter));        // rolled-up shutter
   } else {
     f.box('metal', u, 1.35, w - 0.05, W - 0.5, 2.7, 0.08, col(B.shutter));
@@ -67,10 +67,10 @@ function upperFloor(f, r, u, y, W, D, wall, balcony) {
   if (balcony) {
     f.box('wall', u, y + 0.08, w + 0.45, W - 0.1, 0.16, 0.9, wall);                // slab
     f.box('wall', u, y + 1.02, w + 0.88, W - 0.1, 0.06, 0.06, col(B.rail));        // rail top
-    for (let x = -W / 2 + 0.2; x <= W / 2 - 0.15; x += 0.28) f.box('metal', u + x, y + 0.6, w + 0.88, 0.035, 0.85, 0.035, col(B.rail));
+    for (let x = -W / 2 + 0.2; x <= W / 2 - 0.15; x += 0.28) f.box('metal', u + x, y + 0.585, w + 0.88, 0.035, 0.87, 0.035, col(B.rail));   // from the slab up into the rail
   }
   // AC unit on some floors
-  if (r.chance(0.35)) f.box('wall', u + W * 0.3, y + 0.9, w + 0.3, 0.8, 0.55, 0.35, col('#e9e8e2'));
+  if (r.chance(0.35)) f.box('wall', u + W * 0.3, y + 0.9, w + 0.18, 0.8, 0.55, 0.35, col('#e9e8e2'));   // (against the wall: it floated 12 cm off it)
 }
 
 /** Row of `n` shophouse units of width W, depth D, front centre at (x, z) facing `ry`. */

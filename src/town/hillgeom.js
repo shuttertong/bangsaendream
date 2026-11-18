@@ -24,7 +24,7 @@ export function hillSamples(map, roadIdx = null) {
   for (const road of map.roads) {
     if (!H.kinds.includes(road.k) || !road.p.some(([x, z]) => inBox(x, z, H.box))) continue;
     const hw = roadWidth(road) / 2, s = [];
-    walkLine(road.p, H.step, (x, z, dx, dz) => s.push({ x, z, y: ground(x, z), dx, dz, nx: -dz, nz: dx, turn: 0, hill: false, cut: [false, false], fall: [false, false], bankH: [0, 0] }), H.step / 2);
+    walkLine(road.p, H.step, (x, z, dx, dz) => s.push({ x, z, y: ground(x, z), dx, dz, nx: -dz, nz: dx, turn: 0, hill: false, cut: [false, false], fall: [false, false], bankH: [0, 0] }));   // (in step with the road ribbon's own 1 m samples, roads.js: the paint can lie right on the asphalt)
     const K = Math.round(H.turn.look / H.step);
     s.forEach((p, i) => {
       p.hill = inBox(p.x, p.z, H.box) && map.heightAt(p.x, p.z) - map.sea > H.minHeight;

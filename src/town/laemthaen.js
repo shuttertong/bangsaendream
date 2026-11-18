@@ -188,6 +188,7 @@ export function buildLaemThaen(kit, map, layout, scene) {
         for (const u of [-0.7, 0.7]) fb.box('wall', u, 0.22, 0, 0.14, 0.44, 0.42, col(c.bench));
         fb.box('wall', 0, 0.46, 0, 1.8, 0.08, 0.46, col(c.bench));
         fb.box('wall', 0, 0.8, -0.24, 1.8, 0.3, 0.06, col(c.bench));
+        for (const u of [-0.7, 0.7]) fb.box('wall', u, 0.62, -0.24, 0.1, 0.34, 0.08, col(c.bench));   // uprights: the backrest hung in the air above the seat
       } else if (lampIn <= 0 && ok(bx, bz) && layout.roadIdx.clearance(bx, bz, 6) > 0.4) {
         lampIn = L.lampEvery;
         lamp(bx, map.heightAt(bx, bz), bz);

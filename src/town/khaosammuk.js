@@ -125,7 +125,11 @@ export function buildKhaoSamMuk(kit, scene, map, layout) {
       if (roadIdx.clearance(bx, bz, 12) < s * 0.8 + 1) continue;          // big boulders stay off the road edge
       const g = new THREE.DodecahedronGeometry(1, 0).scale(s * (0.6 + r() * 0.5), h, s * (0.5 + r() * 0.4));
       const rot = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler((r() - 0.5) * 0.5, r() * 6, (r() - 0.5) * 0.5));
-      kit.add('wall', g, rot.setPosition(bx, by + h * (1 - O.sink) - h * 0.4, bz), col(r.pick(O.colors)));
+      // set against the lowest ground round its footprint, not the ground at its middle: on a steep slope the downhill side
+      // of the rock hung out over the hillside
+      let low = by;
+      for (let a = 0; a < 8; a++) low = Math.min(low, map.heightAt(bx + Math.cos(a * 0.785) * s * 0.75, bz + Math.sin(a * 0.785) * s * 0.75));
+      kit.add('wall', g, rot.setPosition(bx, Math.min(by + h * (1 - O.sink) - h * 0.4, low + h * 0.45), bz), col(r.pick(O.colors)));
       occ.mark(bx, bz, s * 0.8, s * 0.8);
       if (layout.strip(bx, bz) < 8) solids.push({ x: bx, z: bz, r: s * 0.8, top: by + s });
     }

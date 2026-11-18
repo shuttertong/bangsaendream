@@ -115,6 +115,7 @@ export function buildFishingVillage(kit, map, layout, scene) {
     f.box('wall', 0, floorY + 1.05, -0.09, 1.2, 2.2, 0.05, col(c.trim));                          // door to the road
     f.box('wall', 0, floorY + 1.0, -0.12, 1.0, 2.0, 0.05, col(c.wood));
     f.box('wall', 0, floorY + 0.55, D + 2, W, 0.08, 0.06, col(c.rail));                           // back-deck rail
+    for (let u = -W / 2 + 0.1; u <= W / 2 - 0.09; u += (W - 0.2) / Math.max(1, Math.round((W - 0.2) / 1.5))) f.box('wall', u, floorY + 0.29, D + 1.98, 0.06, 0.6, 0.06, col(c.rail));   // its posts
     // gable roof, ridge along the shore (u); overhangs front and back
     const y0 = floorY + H, rise = 1.4, o = 0.6, w0 = -o, w1 = D + o, wm = D / 2, uL = -W / 2 - o, uR = W / 2 + o;
     f.tris2('wall', [uL, y0, w0, uR, y0, w0, uL, y0 + rise, wm, uL, y0 + rise, wm, uR, y0, w0, uR, y0 + rise, wm,

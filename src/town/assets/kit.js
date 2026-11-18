@@ -33,6 +33,8 @@ const CYL_OPEN = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true).toNonIndexed();
 export class Kit {
   /** true: built meshes keep their vertex arrays in memory (the fit audit draws them as wireframes, which three builds from the positions). */
   static keep = false;
+  /** (minx, miny, minz, maxx, maxy, maxz) of every part added, for the joint audit (jointaudit.js); null = off. */
+  static record = null;
   constructor() { this.buckets = new Map(); this.tris = 0; this.shear = null; }   // shear: { x, z, gx, gz } while a frame on sloping ground is adding (see frame())
 
   _bucket(mat, x, z) {
@@ -53,19 +55,22 @@ export class Kit {
     const tx = at ? at.x : matrix.elements[12], tz = at ? at.z : matrix.elements[14];
     const b = this._bucket(mat, tx, tz);
     _n.getNormalMatrix(matrix);
-    const fn = typeof color === 'function' ? color : null, sh = this.shear;
+    const fn = typeof color === 'function' ? color : null, sh = this.shear, rec = Kit.record;
     if (!fn) _c.set(color);
+    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
     for (let i = 0; i < p.count; i++) {
       _v.fromBufferAttribute(p, i).applyMatrix4(matrix);
       if (sh) _v.y += sh.gx * (_v.x - sh.x) + sh.gz * (_v.z - sh.z);   // the base follows the ground's slope; uprights stay upright
       b.pos.push3(_v.x, _v.y, _v.z);
       const x = _v.x, y = _v.y, z = _v.z;
+      if (rec) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z; }
       _v.fromBufferAttribute(n, i).applyMatrix3(_n).normalize();
       b.nrm.push3(_v.x, _v.y, _v.z);
       const c = fn ? fn(x, y, z, _v.x, _v.y, _v.z) : _c;
       b.col.push3(Math.min(1, Math.max(0, c.r)), Math.min(1, Math.max(0, c.g)), Math.min(1, Math.max(0, c.b)));
     }
     this.tris += p.count / 3;
+    if (rec && p.count) rec(x0, y0, z0, x1, y1, z1);
   }
 
   /** Axis box centred at (x, y, z) with size (sx, sy, sz), rotated `ry` about Y. */
@@ -157,6 +162,7 @@ export class Kit {
       mesh.castShadow = castShadow && b.mat !== 'road' && b.mat !== 'lit';
       mesh.receiveShadow = receiveShadow;
       mesh.matrixAutoUpdate = false;
+      mesh.userData.kit = true;                                     // (the joint audit knows these parts already)
       group.add(mesh);
     }
     this.buckets.clear();                                          // the build buffers are no longer needed
