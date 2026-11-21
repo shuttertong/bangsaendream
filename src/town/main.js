@@ -26,7 +26,10 @@ import { auditRoads } from './roadaudit.js';
 import { createFitAudit } from './fitaudit.js';
 import { createJointRecorder, auditJoints } from './jointaudit.js';
 import { Kit } from './assets/kit.js';
-import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap } from './layout.js';
+import { RoadIndex, Occupancy, seaDistSampler, stripSampler, inMap, inPoly } from './layout.js';
+import { levelMarineSite, buildMarine } from './marine.js';
+import { buildAquarium } from './aquarium.js';
+import { buildMarineSigns, createMarineVisit } from './marinevisit.js';
 import { buildRoads, roadWidth, surfaceLift } from './roads.js';
 import { buildBuildings } from './buildings.js';
 import { buildNature } from './nature.js';
@@ -98,6 +101,7 @@ async function boot() {
   const joins = joinRoadEnds(map);                                    // close small gaps between roads
   const flat = flattenLowland(map);                                   // the beach and town are flat in reality: press the DEM's mounds down
   const graded = gradeRoads(map);                                     // smooth, level roads that never dip under the sea
+  levelMarineSite(map);                                               // the Institute of Marine Science's grounds are level
   const renderer = createRenderer($('c'));
   // picture quality: ?gfx=low|mid|high|auto chooses the level for this visit, ?res=1.5 pins the pixel ratio (tests)
   const quality = createQuality(renderer, { mode: params.get('gfx'), ratio: +params.get('res') || 0 });
@@ -138,6 +142,10 @@ async function boot() {
   const walking = buildWalkingStreet(kit, map, layout);                // market stalls, bulbs, the paved seafront lot
   const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
   createBobbingBoats(scene, navyFleet);
+  const roofKit = new Kit(), marine = buildMarine(kit, roofKit, scene, map, layout);   // 🐠 สถาบันวิทยาศาสตร์ทางทะเล: its own fenced grounds, reached only by travel
+  const aquarium = buildAquarium(kit, scene), marineSigns = buildMarineSigns(kit, scene, aquarium.labels);
+  const marineRoof = roofKit.build();
+  scene.add(marineRoof);
   const skatePark = buildSkatePark(kit, scene, map, layout, START);   // 🛼 the inline-skating rink and its school, on the beach by the promenade (first, so umbrellas, palms and stalls keep off the plot)
   const promenade = dressPromenades(kit, map, layout, promenades);   // before buildings/beach so they keep off it
   const counts = buildBuildings(kit, map, layout, START);
@@ -147,7 +155,7 @@ async function boot() {
   scene.add(beach.group);
   const walkZones = [...landmarks.walkZones, ...GP.walk];           // the roundabout; the kart loop's short stretch outside the strip
   const inZone = (x, z) => walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
-  const walkable = (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z));
+  const walkable = (x, z) => inMap(map, x, z) && (layout.walkStrip(x, z) <= 4 || inZone(x, z) || inPoly(x, z, marine.walkPoly));
   // the kart circuit leaves the map for a stretch round the hill's north tip: the two barriers that close it to walkers
   // are built apart from the rest, so they can be taken away for a race
   const segDist = (x, z, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1))); return Math.hypot(a[0] + dx * u - x, a[1] + dz * u - z); };
@@ -160,16 +168,18 @@ async function boot() {
   const town = kit.build();
   scene.add(town);
   const planted = { palm: [...promenade.palms, ...beach.palms] };      // trees other modules planted, by species
-  for (const set of [ksm.trees, laem.trees, landmarks.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
+  for (const set of [ksm.trees, laem.trees, landmarks.trees, marine.trees]) for (const [sp, list] of Object.entries(set)) (planted[sp] ||= []).push(...list);
   const nature = buildNature(map, layout, planted);
   scene.add(nature.group);
   const crowd = buildCrowd([...walking.people, ...promenade.people]);   // sellers, shoppers and people at the tables (one mesh per map chunk)
   scene.add(crowd.group);
   if (DEBUG) console.log('town', counts, 'beach', beach.counts, 'promenade', { runs: promenades.length, palms: promenade.palms.length, stalls: promenade.stalls.length }, 'trees', nature.counts, 'crowd', crowd.counts, `${town.children.length} meshes, ${(kit.tris / 1e3).toFixed(0)}k tris, ${(performance.now() - t0).toFixed(0)} ms`);
 
-  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || []), ...(skatePark?.solids || [])], decks: [...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks, ...(skatePark?.decks || [])], strip: layout.walkStrip });
+  const collision = buildCollision(map, layout.seaDist, { buildings: counts, nature, poles: beach.poles, solids: [...marine.solids, ...aquarium.solids, ...laem.solids, ...ksm.solids, ...hillRoads.solids, ...hillMarks.solids, ...hillSigns.solids, ...viewpoint.solids, ...village.solids, ...walking.solids, ...navy.solids, ...roadblocks.solids, ...(goHouse?.solids || []), ...(skatePark?.solids || [])], decks: [...marine.decks, ...laem.decks, ...village.decks, ...navy.decks, ...viewpoint.decks, ...(skatePark?.decks || [])], strip: layout.walkStrip });
   for (const s of [...landmarks.solids, ...beach.solids]) collision.circle(s.x, s.z, s.r, s.top);
   collision.walkZones.push(...walkZones);                  // the whole roundabout is walkable, even its inland side
+  for (const r of [...marine.rects, ...aquarium.rects]) collision.rect(r.x, r.z, r.w, r.d, r.ry, r.top);   // the institute's walls, tanks and counter
+  collision.walkPolys.push(marine.walkPoly);               // its grounds: walkable, but joined to nothing (no road opens to it)
   const input = createInput($('c'));
   const touch = createTouchControls($('hud'), input);
   // audio can only start after a user gesture (iOS / Chrome autoplay rules)
@@ -228,7 +238,7 @@ async function boot() {
     return true;
   };
   const binos = createBinoculars({ spots: viewpoint.scopes, camera, input, map, root: $('hud'), audio, player, toast: m => { hub.hud.toast(m); audio.play('coin'); } });   // look through the viewpoint's coin binoculars
-  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place, ...(skatePark ? { skate: skatePark.place } : {}) }, scopes: binos, ambient: [crowd, strollers] });
+  const hub = createHub({ scene, map, collision, seaDist: layout.seaDist, start: START, buildings: counts, beach, player, camera: tpc, root: $('hud'), startGame, audio, lift, input, welcome: landmarks.welcome, viewpoint: viewpoint.place, spots: { walking: walking.place, navyPier: navy.place, marine: marine.place, ...(skatePark ? { skate: skatePark.place } : {}) }, scopes: binos, ambient: [crowd, strollers] });
 
   const kickabout = buildKickabout({ scene, map, lift, seaDist: layout.seaDist, collision, at: hub.places.beach });   // goals on the sand in front of Tonkla (ฟุตบอลชายหาด)
   const sponsor = createSponsor({ scene, map, hub, root: $('hud'), audio, rows: counts.rows, osm: map.buildings, lift });   // 🏬 sponsor a building / ❤️ donate
@@ -236,8 +246,10 @@ async function boot() {
   hub.hud.support = { donate: () => sponsor.openDonate(), pick: () => sponsor.startPicking() };
   const partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร
   hub.partners = partners;
+  const marineVisit = createMarineVisit({ root: $('hud'), marine, labels: marineSigns.labels, collision, roof: marineRoof, arms: marine.arms, far: [marineSigns.mesh, marine.clerk], audio, toast: (m, snd = 'coin') => { hub.hud.toast(m); audio.play(snd); } });
+  hub.extras.push(marineVisit.interact);
   partners.onLoaded = list => sponsor.dress(list);                                        // building sponsors are dressed once the list is in from Supabase (none until the admin adds some)
-  const culler = createChunkCuller([town, beach.group, crowd.group]);   // hide map chunks far behind the haze
+  const culler = createChunkCuller([town, beach.group, crowd.group, marineRoof]);   // hide map chunks far behind the haze
   const fx = createPostFX(renderer, scene, camera);
   const resize = () => {
     camera.aspect = innerWidth / innerHeight;
@@ -302,6 +314,8 @@ async function boot() {
     takraw.update(dt, !game && !free && !hub.frozen);
     journal.update(dt, !game && !free && !hub.frozen);
     bots?.update(dt);
+    aquarium.update(dt, time, player.state);
+    marineVisit.update(dt, player.state);
     if (game) { game.update(dt, time); if (!game.town) { input.endFrame(); return; } }
     let focus;
     if (game) focus = game.focus;
@@ -386,7 +400,7 @@ async function boot() {
   const kitMeshes = new Set();
   scene.traverse(o => o.isMesh && o.userData.kit && kitMeshes.add(o));
   const auditJ = () => (joints ? auditJoints({ rec: joints, scene, map, kitMeshes, skip: o => o.name === 'sky' || under(o, sea.group) || under(o, terrain.group) || o.isSkinnedMesh, terrain: terrain.group, surface: (x, z) => Math.max(map.heightAt(x, z), map.sea) + lift(x, z) }) : 'open the game with ?audit=1');
-  window.__game = { THREE, renderer, quality, gfx, auditFit, fit, auditJoints: auditJ, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
+  window.__game = { THREE, renderer, quality, gfx, auditFit, fit, auditJoints: auditJ, marine, aquarium, marineVisit, scene, camera, map, cam, tpc, player, collision, fx, sea, lights, layout, town, nature, hillRoads, hillMarks, hillSigns, friends, goHouse, tutorial, crowd, strollers, kickabout, journal, takraw, bikes, skating, sponsor, flat, viewpoint, binos, feedback, roadblocks, drone, joins, graded, auditRoads: () => auditRoads({ map, collision, layout, lift }), hub, P, bench, tick, startGame, audio, counts, mp, coop, input, get bots() { return bots; }, get game() { return game; } };
 }
 
 function debugOverlay(renderer, camera) {

@@ -11,6 +11,7 @@ export const DRONE_AREAS = [
   { id: 'overview', icon: '🗺️', name: { th: 'ภาพรวมบางแสน', en: 'All of Bang Saen' }, at: [-300, -400], size: 3600 },
   { id: 'kid', icon: '🧒', name: { th: 'ตัวเรา', en: 'Me' }, at: 'player', size: 140 },
   { id: 'beach', icon: '🏖️', name: { th: 'หาดบางแสน', en: 'Bang Saen Beach' }, at: [60, 560], size: 1500 },
+  { id: 'marine', icon: '🐠', name: { th: 'สถาบันวิทยาศาสตร์ทางทะเล', en: 'Institute of Marine Science' }, at: [1597, 1070], size: 220 },
   { id: 'roundabout', icon: '🐬', name: { th: 'วงเวียนบางแสน', en: 'Bang Saen roundabout' }, at: [616, 1236], size: 220 },
   { id: 'road3137', icon: '🛣️', name: { th: 'ถนน 3137 ลงหาดบางแสน', en: 'Road 3137' }, at: [1450, 1030], size: 1300 },
   { id: 'laemThaen', icon: '🪨', name: { th: 'แหลมแท่น', en: 'Laem Thaen' }, at: [-1330, -760], size: 380 },

@@ -13,6 +13,7 @@ export class Collision {
     this.h = new Map();
     this.decks = new Map();                    // walkable platforms over water (piers): cell → surface height
     this.walkZones = [];                       // [{x, z, r}]: walkable even beyond the coastal strip (e.g. the whole roundabout)
+    this.walkPolys = [];                       // [[x, z], …]: the same as polygons (the marine institute's fenced grounds)
     this.limit = (map.inland || 100) + 4;     // metres from the sea the player may walk
     this.strip = null;                         // layout.strip: metres outside the strip + corridors (≤ 0 inside)
     this.wade = 1.1;                           // max water depth (scene units)
@@ -29,6 +30,15 @@ export class Collision {
         const u = px * c - pz * s, v = px * s + pz * c;      // into the rect's frame
         if (Math.abs(u) <= w / 2 && Math.abs(v) <= d / 2) this._set(i, j, top);
       }
+    }
+  }
+
+  /** Take away what an oriented rectangle covers (a gate that opens). */
+  clearRect(x, z, w, d, ry) {
+    const c = Math.cos(ry), s = Math.sin(ry), r = Math.hypot(w, d) / 2;
+    for (let i = Math.floor((x - r) / CELL); i <= Math.floor((x + r) / CELL); i++) for (let j = Math.floor((z - r) / CELL); j <= Math.floor((z + r) / CELL); j++) {
+      const px = (i + 0.5) * CELL - x, pz = (j + 0.5) * CELL - z, u = px * c - pz * s, v = px * s + pz * c;
+      if (Math.abs(u) <= w / 2 + CELL && Math.abs(v) <= d / 2 + CELL) this.h.delete(key(i, j));
     }
   }
 
@@ -72,7 +82,7 @@ export class Collision {
   /** Inside the playable area (coastal strip, open corridors, walk zones)? Ignores water and solids. */
   inArea(x, z) {
     if (!inMap(this.map, x, z)) return false;                 // never off the edge of the map
-    return (this.strip ? this.strip(x, z) <= 4 : this.seaDist(x, z) <= this.limit) || this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r);
+    return (this.strip ? this.strip(x, z) <= 4 : this.seaDist(x, z) <= this.limit) || this.walkZones.some(w => (x - w.x) ** 2 + (z - w.z) ** 2 < w.r * w.r) || this.walkPolys.some(p => inPoly(x, z, p));
   }
 
   /** Can a body of radius r stand at (x, z) with feet at height y? */

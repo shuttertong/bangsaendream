@@ -556,3 +556,13 @@ body.drone .fr-ask, body.talking .fr-ask, body.wardrobe .fr-ask, body.scope .fr-
 .sp-pp { display: grid; gap: 6px; justify-items: center; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 12px; margin: 8px 0; } .sp-ppid { font: 700 22px 'Kanit', sans-serif; letter-spacing: 1px; } .sp-copy { border: 0; border-radius: 999px; padding: 6px 14px; background: #efe6d4; font: 500 13px 'Kanit', sans-serif; cursor: pointer; } .sp-qr { width: 180px; border-radius: 10px; }
 .sp-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; } .sp-link { border-radius: 999px; padding: 8px 14px; background: var(--accent); color: #fff; text-decoration: none; font: 500 14px 'Kanit', sans-serif; }
 #game-ui .g-sponsor { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -4px 0 8px; font: 500 13px 'Kanit', sans-serif; color: var(--c); } #game-ui .g-sponsor img { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; }
+
+/* the aquarium's info card (marinevisit.js) */
+.aq-card { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); width: min(460px, calc(100vw - 32px)); max-height: 56vh; overflow: auto;
+  background: rgba(250, 250, 246, .97); border-radius: 18px; box-shadow: 0 8px 28px rgba(0, 30, 60, .28); padding: 0 0 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 9; font-family: 'Sarabun', sans-serif; }
+.aq-card.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.aq-head { background: #1f5fa8; color: #fff; font: 600 18px 'Kanit', sans-serif; padding: 12px 16px; border-radius: 18px 18px 0 0; position: sticky; top: 0; }
+.aq-row { display: flex; gap: 12px; padding: 10px 16px 0; align-items: flex-start; }
+.aq-row .aq-ic { font-size: 30px; line-height: 1; flex: none; }
+.aq-row b { font: 600 16px 'Kanit', sans-serif; color: #17324a; } .aq-row p { margin: 2px 0 0; font-size: 15px; line-height: 1.45; color: #34495a; }
+.aq-close { display: block; margin: 12px auto 0; border: 0; border-radius: 12px; padding: 8px 22px; background: #e4eef6; color: #1f5fa8; font: 500 15px 'Kanit', sans-serif; cursor: pointer; }

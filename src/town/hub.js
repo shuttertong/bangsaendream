@@ -126,7 +126,8 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
 
   // deck chairs (rented) and public benches (free)
   const seats = createSeats({ list: beach.seats, player, collision, toast });
-  let nearSeat = null, seatT = 0, nearScope = null, nearShop = null, partners = null, wardrobe = null;   // binocular viewer (binoculars.js) / partner shop (partners.js) in reach
+  let nearSeat = null, seatT = 0, nearScope = null, nearShop = null, partners = null, wardrobe = null, nearExtra = null;
+  const extras = [];                                                 // other things with an F prompt: { nearest(p) → it | null, prompt(it) → [key, vars], use(it) } (the aquarium)   // binocular viewer (binoculars.js) / partner shop (partners.js) in reach
 
   let near = null, talkingTo = null, nearChat = null;                // nearChat: someone in the background crowd (ambient) to chat with
   const chatNear = p => ambient.reduce((best, src) => { const n = src.nearest(p); return n && (!best || n.reach < best.reach) ? n : best; }, null);
@@ -147,6 +148,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
     else if (nearSeat && seats.sit(nearSeat)) audio?.play('thud');
     else if (nearScope) scopes.use(nearScope);
     else if (nearShop) partners.use(nearShop);
+    else if (nearExtra) nearExtra.src.use(nearExtra.it);
   };
   const startTalk = (who = near) => {
     if (!who || talk.active || travel.open) return;
@@ -188,6 +190,7 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       engine: riding ? 1 : clamp01(1 - truckD / 30) });
   }
   return {
+    extras,
     places, people, talk, travel, hud, trucks, seats, guide,
     get riding() { return riding; },
     /** coop.js sets this: (gameId) → open a co-op lobby. */
@@ -266,9 +269,10 @@ export function createHub({ scene, map, collision, seaDist, start, buildings, be
       nearSeat = near || nearTruck || nearChat || busy ? null : seats.nearest(p);
       nearScope = near || nearTruck || nearChat || nearSeat || busy || !scopes || scopes.active ? null : scopes.nearest(p);
       nearShop = near || nearTruck || nearChat || nearSeat || nearScope || busy || !partners || partners.active ? null : partners.nearest(p);
+      nearExtra = near || nearTruck || nearChat || nearSeat || nearScope || nearShop || busy ? null : extras.reduce((hit, src) => hit || ((it => (it ? { src, it } : null))(src.nearest(p))), null);
       partners?.update(p);
       guide.update(dt);
-      const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : [null, null];
+      const [seatKey, seatVars] = nearSeat ? seats.prompt(nearSeat) : nearScope ? scopes.prompt(nearScope) : nearShop ? partners.prompt(nearShop) : nearExtra ? nearExtra.src.prompt(nearExtra.it) : [null, null];
       sponsor?.update(p, !busy);
       const [spKey, spVars] = sponsor?.picking && sponsor.near ? sponsor.prompt() : [null, null];
       const [bkKey, bkVars] = bike && (bike.busy || (!busy && !near && bike.near)) ? bike.prompt() : [null, null];
