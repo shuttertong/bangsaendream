@@ -19,6 +19,9 @@ export const EXHIBIT = {
   eel: { u: -29.85, w: -17 },                 // the eel's cabinet on the jelly room's far wall (it faces +u)
   touch: [-3, 3, -20.5, -13.5],               // the touch pool (u0, u1, w0, w1)
   jellyCols: [[-26, -37], [-21, -38.5], [-16, -37], [-26, -26], [-21, -24.5], [-16, -26]],
+  jellyWall: { u: [-27, -15], depth: 1.2, y: [0.7, 3.3], n: 18, lo: '#04141a', hi: '#128a5a' },   // the wall of moon jellies glowing green (on the room's front wall)
+  cylinder: { u: 16.5, w: -23.5, r: 1.5, h: 4, base: 0.6, water: '#1f6aa8' },                     // the tall round tank with a rock tower in it
+  belt: { w: 1.4, color: '#22262c', edge: '#e8c23a' },                                             // the moving walkway down the tunnel
   water: { back: '#0a3a62', top: '#2a90c0', sand: '#b8ac86', big: '#062c4a', bigTop: '#2488b8', jelly: '#14204a' },   // deep enough that the animals stand out
   coral: ['#f07a6a', '#f4b23a', '#c86ad8', '#5fd0b0', '#f4f0e6', '#e85a9a'],
   shown: 0.24,                                // the smallest an animal is drawn (m): a 11 cm clownfish is lost behind 2 m of glass
@@ -97,7 +100,7 @@ export function buildAquarium(kit, scene) {
 
   // ---- the big tank and the tunnel through it ----
   { const [u0, u1, w0, w1] = R.big, t = M.tunnel, top = 5.6, low = floor + 0.05;
-    litBox(kit, f, u0 + 0.2, u1 - 0.2, low, top, w0 + 0.25, w1 - 0.05, X.big, X.bigTop, X.sand, 'w1');
+    litBox(kit, f, u0 + 0.2, u1 - 0.2, low - 0.15, top, w0 + 0.25, w1 - 0.05, X.big, X.bigTop, X.sand, 'w1');   // (its sand lies just under the tunnel's walkway)
     for (let k = 0; k < 14; k++) { const side = k % 2 ? 1 : -1; rock(side * (t.u + 1.6 + r() * 7), low + 0.3, w0 + 2 + r() * 16, 0.5 + r() * 0.9, r.pick(['#8a7a66', '#9a8a72', '#6f6454'])); }
     for (let k = 0; k < 10; k++) { const side = k % 2 ? 1 : -1; coral(side * (t.u + 1.2 + r() * 8), low + 0.15, w0 + 1.5 + r() * 17, 0.6); }
     // the front: a sill, two big windows either side of the tunnel's mouth, the wall above
@@ -114,6 +117,11 @@ export function buildAquarium(kit, scene) {
     for (let w = w1 - 2; w > t.end; w -= 2.5) { const arc = new THREE.TorusGeometry(1, 0.05, 4, 16, Math.PI).scale(t.u + 0.16, t.h - 0.4, 1), [x, z] = toWorld(0, w); kit.add('metal', arc, new THREE.Matrix4().makeRotationY(M.ry).setPosition(x, M.level + floor + 0.4, z), col('#c9ced2')); }   // its ribs
     for (const sd of [-1, 1]) f.box('wall', sd * (t.u + 0.1), floor + 0.2, (w1 + t.end) / 2, 0.25, 0.4, w1 - t.end, col('#2a3440'));
     f.box('wall', 0, floor + 0.01, (w1 + t.end) / 2, 2 * t.u, 0.02, w1 - t.end, col('#3a4a5a'));            // the walkway
+    { const Bt = E.belt, mid = (w1 + t.end) / 2, len = w1 - t.end - 2;                                   // the moving walkway down its middle (as in the real tunnel; here it does not move)
+      f.box('wall', 0, floor + 0.03, mid, Bt.w, 0.03, len, col(Bt.color));
+      for (const sd of [-1, 1]) f.box('wall', sd * (Bt.w / 2 + 0.04), floor + 0.035, mid, 0.07, 0.04, len, col(Bt.edge));
+      for (let w = mid - len / 2 + 0.3; w < mid + len / 2; w += 0.6) f.box('wall', 0, floor + 0.047, w, Bt.w - 0.1, 0.006, 0.05, col('#3a4048'));
+      for (const e of [-1, 1]) f.box('metal', 0, floor + 0.04, mid + e * (len / 2 + 0.2), Bt.w + 0.3, 0.05, 0.4, col('#aab2b8')); }
     pane(0, floor + t.h / 2, t.end - 0.02, 2 * t.u + 0.3, t.h, 0.04);
     stock('big', [u0 + 0.6, u1 - 0.6, low + 0.15, top - 0.3, w0 + 0.8, w1 - 0.6], { u: t.u + 0.55, y: floor + t.h + 0.3 });
     labels.push({ tank: 'big', u: 0, w: w1 + 1.2, plate: { u: t.u + 1.6, y: 0.51, w: w1 + 0.21, face: [0, 1], flat: true } });
@@ -122,7 +130,7 @@ export function buildAquarium(kit, scene) {
 
   // ---- the jellyfish room: dark walls, columns of water lit in slowly changing colours ----
   const J = R.jelly, dark = col('#141c30');
-  for (const [u0, u1, w0, w1] of [[J[0] + 0.25, J[1] - 0.2, J[2] + 0.25, J[2] + 0.3], [J[0] + 0.25, J[1] - 0.2, J[3] - 0.3, J[3] - 0.25], [J[0] + 0.25, J[0] + 0.3, J[2] + 0.25, J[3] - 0.25], [J[1] - 0.25, J[1] - 0.2, J[2] + 0.25, J[3] - 0.25]]) {
+  for (const [u0, u1, w0, w1] of [[J[0] + 0.25, J[1] - 0.2, J[2] + 0.25, J[2] + 0.3], [J[0] + 0.25, J[1] - 0.2, J[3] - 0.3, J[3] - 0.25], [J[0] + 0.25, J[0] + 0.3, J[2] + 0.25, J[3] - 0.25], [J[1] - 0.25, J[1] - 0.2, J[2] + 0.25, -19], [J[1] - 0.25, J[1] - 0.2, -15, J[3] - 0.25]]) {   // (the doorway to the hall stays open)
     f.box('wall', (u0 + u1) / 2, M.building.ceiling / 2, (w0 + w1) / 2, u1 - u0, M.building.ceiling - 0.05, w1 - w0, dark);
   }
   { const pl = new THREE.PlaneGeometry(J[1] - J[0] - 0.4, J[3] - J[2] - 0.4).rotateX(Math.PI / 2), [x, z] = toWorld((J[0] + J[1]) / 2, (J[2] + J[3]) / 2);
@@ -143,7 +151,30 @@ export function buildAquarium(kit, scene) {
   for (const [u, w] of E.jellyCols) for (let k = 0; k < 2 && swimmers.filter(s => s.id === 'jelly').length < TANKS.jelly[0][1]; k++) {
     swimmers.push({ id: 'jelly', model: 'jelly', cu: u, cw: w, ru: 0.25, rw: 0.25, y: floor + 1.1 + k * 0.8, bob: 0.3, sp: 0.15 * (k ? 1 : -1), ph: r() * 6.28 });
   }
+  { // the wall of moon jellies
+    const W = E.jellyWall, [u0, u1] = W.u, w1 = J[3] - 0.32, w0 = w1 - W.depth, [ya, yb] = W.y;
+    f.box('wall', (u0 + u1) / 2, (floor + ya) / 2, (w0 + w1) / 2, u1 - u0 + 0.3, ya - floor, W.depth, col('#10161f'));
+    f.box('wall', (u0 + u1) / 2, yb + 0.3, (w0 + w1) / 2, u1 - u0 + 0.3, 0.6, W.depth, col('#10161f'));
+    litBox(kit, f, u0, u1, ya, yb, w0 + 0.02, w1, W.lo, W.hi, '#0a1a1a', 'w0');
+    pane((u0 + u1) / 2, (ya + yb) / 2, w0, u1 - u0, yb - ya, 0.03);
+    solid(u0 - 0.15, u1 + 0.15, w0, w1, yb + 0.6);
+    for (let k = 0; k < W.n; k++) swimmers.push({ id: 'jelly', model: 'jelly', cu: u0 + 0.5 + r() * (u1 - u0 - 1), cw: (w0 + w1) / 2 + 0.1, ru: 0.3, rw: 0.25, y: ya + 0.5 + r() * (yb - ya - 1.1), bob: 0.3, sp: 0.1 * (r() < 0.5 ? -1 : 1), ph: r() * 6.28 });
+    labels.push({ tank: 'jelly', u: (u0 + u1) / 2, w: w0 - 0.8, plate: { u: u1 - 0.9, y: 0.38, w: w0 - 0.01, face: [0, -1] } });
+  }
   labels.push({ tank: 'jelly', u: (J[0] + J[1]) / 2, w: -31.5, plate: { u: (J[0] + J[1]) / 2, y: 1.1, w: -31.5, face: [0, 1], stand: true } });
+
+  // ---- the tall round tank in the ocean hall: a tower of rock and coral, fish circling it ----
+  const Cy = E.cylinder, [cyx, cyz] = toWorld(Cy.u, Cy.w), cyY = M.level + floor + Cy.base;
+  kit.add('wall', new THREE.CylinderGeometry(Cy.r + 0.15, Cy.r + 0.25, Cy.base, 28), new THREE.Matrix4().setPosition(cyx, M.level + floor + Cy.base / 2, cyz), col('#141a26'));
+  kit.add('wall', new THREE.CylinderGeometry(Cy.r + 0.15, Cy.r + 0.15, 0.5, 28), new THREE.Matrix4().setPosition(cyx, cyY + Cy.h + 0.25, cyz), col('#141a26'));
+  for (let k = 0; k < 7; k++) { const s = 0.75 - k * 0.07, a = k * 2.1; kit.add('lit', new THREE.DodecahedronGeometry(s, 0).scale(1, 0.75, 1), new THREE.Matrix4().makeRotationY(a).setPosition(cyx + Math.cos(a) * 0.15, cyY + 0.3 + k * 0.5, cyz + Math.sin(a) * 0.15), col(k % 2 ? '#5a6a5e' : '#4a5a58')); }
+  for (let k = 0; k < 16; k++) { const a = r() * 6.28, y = 0.3 + r() * 3.2, rr = 0.55 - y * 0.06, [lu, lw] = [Cy.u + Math.cos(a) * rr, Cy.w + Math.sin(a) * rr]; coral(lu, floor + Cy.base + y, lw, 0.3 + r() * 0.2); }
+  const cylWater = new THREE.Mesh(new THREE.CylinderGeometry(Cy.r - 0.03, Cy.r - 0.03, Cy.h, 28, 1, true).translate(cyx, cyY + Cy.h / 2, cyz), new THREE.MeshBasicMaterial({ color: Cy.water, side: THREE.BackSide }));
+  cylWater.name = 'cylinder-water'; scene.add(cylWater);
+  glass.push(new THREE.CylinderGeometry(Cy.r, Cy.r, Cy.h, 28, 1, true).applyMatrix4(new THREE.Matrix4().setPosition(cyx, cyY + Cy.h / 2, cyz)));
+  colSolids.push({ x: cyx, z: cyz, r: Cy.r + 0.25, top: cyY + Cy.h });
+  for (const [id, n] of TANKS.cylinder) for (let k = 0; k < n; k++) { const rr = 0.95 + r() * 0.3; swimmers.push({ id, model: SPECIES[id].model, cu: Cy.u, cw: Cy.w, ru: rr, rw: rr, y: floor + Cy.base + 0.4 + r() * (Cy.h - 0.8), bob: 0.08, sp: (0.3 + r() * 0.3) * (r() < 0.5 ? -1 : 1), ph: r() * 6.28 }); }
+  labels.push({ tank: 'cylinder', u: Cy.u, w: Cy.w + Cy.r + 1, plate: { u: Cy.u, y: 1.1, w: Cy.w + Cy.r + 0.9, face: [0, 1], stand: true } });
 
   // ---- the glass: one see-through mesh ----
   const glassMat = new THREE.MeshBasicMaterial({ color: '#c8eef6', transparent: true, opacity: 0.08, depthWrite: false });   // one side only: both sides of a pane doubled the veil and washed the tanks out
@@ -189,7 +220,7 @@ export function buildAquarium(kit, scene) {
     labels, solids: colSolids, rects,
     update(dt, time, p) {
       const d = Math.hypot(p.x - cx, p.z - cz), on = d < 220;
-      if (on !== shown) { shown = on; for (const e of Object.values(meshes)) e.mesh.visible = on; glassMesh.visible = glow.visible = on; }
+      if (on !== shown) { shown = on; for (const e of Object.values(meshes)) e.mesh.visible = on; glassMesh.visible = glow.visible = cylWater.visible = on; }
       if (d > VISIT.near) return;
       place(time);
       glowMat.color.setHSL((0.6 + 0.12 * Math.sin(time * 0.15)) % 1, 0.6, 0.42 + 0.08 * Math.sin(time * 0.4));   // the columns' light shifts slowly from blue to violet to teal

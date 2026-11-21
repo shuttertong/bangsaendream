@@ -26,7 +26,17 @@ export const MARINE = {
   colors: {
     wall: '#f4f2ec', trim: '#2f78c8', glass: '#5f8fa8', floor: '#d8d4ca', hallFloor: '#8a96a0', jellyWall: '#1c2a40', jellyFloor: '#26344a',
     museumWall: '#e8e2d4', paving: '#cfc9bc', paving2: '#bdb6a8', drive: '#5a5a58', kerb: '#d8d2c4', lawn: '#7aa64e', fence: '#3f6a52', post: '#9aa3a8',
-    basin: '#e8e4da', water: '#5fb8c8', stone: '#a89a86', canopy: '#ffffff', counter: '#2f6fa8', rail: '#c9ced2',
+    basin: '#e8e4da', water: '#5fb8c8', stone: '#a89a86', canopy: '#ffffff', counter: '#1f4f9a', rail: '#c9ced2',
+    // from visitors' photos of the real place (2025–26): a long low building with a deep red-brown fascia over white fins
+    // and columns, terracotta paving and steps, a brick fountain bed; a blue ticket hall; a dark-blue hall of white models
+    fascia: '#8a4a32', fin: '#f6f4ee', window: '#34424e', tile: '#b8735a', tile2: '#9a5c46', brick: '#a8553c', shrub: ['#6f9a3a', '#a8b83a', '#4f8a3a'],
+    ticketWall: '#2f8fc8', ticketWave: '#8fd0ec', ocean: '#1c38a0', oceanFloor: '#22305a', pad: ['#2f6fd8', '#5a9af0'], model: '#eef2f8',
+  },
+  facade: { floor2: 3.9, finTop: 7.4, finStep: 1.5, column: 6, overhang: 0.8 },
+  oceanHall: {                                // white models under the ceiling: [species, u, w, height, yaw, scale]
+    models: [['brydesWhale', 21, -30, 4.5, 0.08, 0.75], ['whaleShark', 22, -16.5, 4.9, Math.PI * 0.5, 0.8], ['ray', 16, -36, 4.9, 0.6, 1.6], ['ray', 26.5, -23, 5.2, -0.9, 1.4], ['ray', 25, -34, 5.5, 2.2, 1.2],
+      ['brydesWhale', 26, -38, 4.4, 2.4, 0.2], ['brydesWhale', 15.5, -29, 3.9, 0.5, 0.2], ['brydesWhale', 16.5, -31, 4.3, 0.3, 0.17]],
+    pad: [21, -24, 7, 9],                     // the glowing blue floor (u, w, size u, size w)
   },
 };
 
@@ -62,8 +72,15 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
   { const [x, z] = toWorld(0, (M.site.w[0] + M.site.w[1]) / 2); layout.occ.mark(x, z, (M.site.u[1] - M.site.u[0]) / 2 + 2, (M.site.w[1] - M.site.w[0]) / 2 + 2, M.ry); }
 
   // ---- the grounds: forecourt, the drive, the fountain, lawns and palms, the shut gate, the fence ----
-  f.box('wall', 0, 0.03, 4, 60, 0.12, 8, col(C.paving));                                        // the plaza in front
-  for (let u = -29; u <= 29; u += 2) f.box('wall', u, 0.095, 4, 0.06, 0.01, 7.9, col(C.paving2));   // its paving joints
+  f.box('wall', 0, 0.03, 4, 60, 0.12, 8, col(C.tile));                                          // the terrace in front: terracotta tiles
+  for (let u = -29; u <= 29; u += 2) f.box('wall', u, 0.095, 4, 0.06, 0.01, 7.9, col(C.tile2));     // its joints
+  for (let k = 0; k < 3; k++) f.box('wall', 0, 0.07 - k * 0.025, 8.3 + k * 0.6, 16 + k * 1.2, 0.05, 0.6, col(k % 2 ? C.tile : C.tile2));   // the wide steps down to the drive
+  for (const sd of [-1, 1]) {                                                                    // a white railing along the terrace either side of the steps
+    const a = sd * 8.6, b = sd * 30, mid = (a + b) / 2, len = Math.abs(b - a);
+    for (const v of [0.55, 0.95]) f.box('metal', mid, v, 8, len, 0.06, 0.06, col(C.fin));
+    for (let u = Math.min(a, b); u <= Math.max(a, b) + 0.01; u += 1.78) f.box('metal', u, 0.5, 8, 0.07, 0.95, 0.07, col(C.fin));
+    const [x, z] = toWorld(mid, 8); rects.push({ x, z, w: len, d: 0.8, ry: M.ry, top: y0 + 1.2 });   // (wide enough to catch the 0.5 m collision cells)
+  }
   f.box('road', 0, 0.02, (M.fountain.w + M.fountain.ring[1] + M.site.w[1]) / 2, 8, 0.08, M.site.w[1] - M.fountain.w - M.fountain.ring[1] + 0.5, col(C.drive));   // the drive
   for (const sd of [-1, 1]) {
     f.box('wall', sd * 5.6, 0.04, (M.fountain.w + M.site.w[1]) / 2 + 4, 2.4, 0.1, M.site.w[1] - M.fountain.w - 8, col(C.paving));   // footpaths
@@ -74,7 +91,14 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
     const F = M.fountain, [r0, r1] = F.ring, ring = new THREE.RingGeometry(r0, r1, 48, 1).rotateX(-Math.PI / 2).translate(0, 0.03, 0);
     f.add('road', ring, new THREE.Matrix4().makeRotationY(M.ry).setPosition(...(([x, z]) => [x, y0, z])(toWorld(0, F.w))), col(C.drive));
     const basin = new THREE.CylinderGeometry(F.r + 0.25, F.r + 0.35, 0.55, 40, 1, true), [fx, fz] = toWorld(0, F.w);
-    kit.add('wall', basin, new THREE.Matrix4().setPosition(fx, y0 + 0.27, fz), col(C.basin));
+    kit.add('wall', basin, new THREE.Matrix4().setPosition(fx, y0 + 0.27, fz), col(C.brick));
+    { // a brick bed of shrubs round the basin, and a golden shell on the spout
+      const bed = new THREE.CylinderGeometry(F.r + 1.45, F.r + 1.5, 0.36, 40, 1, true);
+      kit.add('wall', bed, new THREE.Matrix4().setPosition(fx, y0 + 0.18, fz), col(C.brick));
+      kit.add('wall', new THREE.RingGeometry(F.r + 0.3, F.r + 1.45, 40).rotateX(-Math.PI / 2), new THREE.Matrix4().setPosition(fx, y0 + 0.34, fz), col('#5a4a3a'));
+      for (let k = 0; k < 22; k++) { const a = (k / 22) * Math.PI * 2, rr = F.r + 0.88, s = 0.36 + (k * 7 % 5) * 0.05; kit.add('wall', new THREE.DodecahedronGeometry(s, 1).scale(1.25, 0.8, 1.25), new THREE.Matrix4().setPosition(fx + Math.cos(a) * rr, y0 + 0.34 + s * 0.6, fz + Math.sin(a) * rr), col(C.shrub[k % 3])); }
+      kit.add('metal', new THREE.SphereGeometry(0.42, 14, 10).scale(1, 0.8, 1), new THREE.Matrix4().setPosition(fx, y0 + 1.86, fz), col('#c8a84a'));
+    }
     kit.add('wall', new THREE.TorusGeometry(F.r + 0.3, 0.12, 6, 40).rotateX(Math.PI / 2), new THREE.Matrix4().setPosition(fx, y0 + 0.56, fz), col(C.basin));
     kit.add('glass', new THREE.CircleGeometry(F.r + 0.25, 40).rotateX(-Math.PI / 2), new THREE.Matrix4().setPosition(fx, y0 + 0.42, fz), col(C.water));
     kit.add('wall', new THREE.CylinderGeometry(0.5, 0.7, 1.4, 16), new THREE.Matrix4().setPosition(fx, y0 + 0.7, fz), col(C.stone));
@@ -83,7 +107,7 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
     const dol = sealifeGeometry('brydesWhale', SPECIES.brydesWhale).clone().scale(0.15, 0.15, 0.15);
     for (const a of [0, Math.PI]) kit.add('wall', dol, new THREE.Matrix4().makeRotationY(a).multiply(new THREE.Matrix4().makeRotationX(-0.7)).setPosition(fx + Math.cos(a) * 0.9, y0 + 2.3, fz + Math.sin(a) * 0.9), col('#9ab8c8'));
     for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; kit.rod('lit', new THREE.Vector3(fx + Math.cos(a) * 1.1, y0 + 1.5, fz + Math.sin(a) * 1.1), new THREE.Vector3(fx + Math.cos(a) * 2.4, y0 + 0.5, fz + Math.sin(a) * 2.4), 0.03, col('#e8f6fa')); }   // jets of water
-    solids.push({ x: fx, z: fz, r: F.r + 0.4, top: y0 + 0.6 });
+    solids.push({ x: fx, z: fz, r: F.r + 1.55, top: y0 + 0.6 });
   }
   // the shut gate on the road, the institute's sign beside it, a guard's booth
   { const w = M.site.w[1];
@@ -121,15 +145,14 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
     const [x, z] = toWorld((u0 + u1) / 2, 0); rects.push({ x, z, w: u1 - u0, d: 0.3, ry: M.ry, top: y0 + IN });
   }
   f.box('wall', 0, IN + (H - IN) / 2, 0, 24, H - IN, 0.4, col(C.wall));                       // above the glass
-  f.box('wall', 0, H - 0.3, 0.25, 60.4, 0.25, 0.1, col(C.trim));                               // a blue band along the top
-  { // the wave canopy over the entrance (white, on round columns)
-    const N = 24, v = [];
-    for (let k = 0; k < N; k++) {
-      const a = k / N, b = (k + 1) / N, y = t => 5.6 + Math.sin(t * Math.PI * 2) * 0.45, w = t => 0.3 + t * 7;
-      for (const [u0, u1] of [[-10, 10]]) v.push(u0, y(a), w(a), u1, y(a), w(a), u0, y(b), w(b), u1, y(a), w(a), u1, y(b), w(b), u0, y(b), w(b));
-    }
-    f.tris2('wall', v, col(C.canopy));
-    for (const u of [-9, 9]) { f.rod('wall', [u, 0, 6.6], [u, 5.6, 6.6], 0.18, col(C.canopy)); const [x, z] = toWorld(u, 6.6); solids.push({ x, z, r: 0.25, top: y0 + 6 }); }
+  { // the front as it really is: a colonnade below, a band of dark windows behind white fins above, a deep red-brown fascia
+    const A = M.facade, o = A.overhang;
+    f.box('wall', 0, A.floor2, 0.2 + o / 2, 60.6, 0.22, o + 0.4, col(C.fin));                    // the upper floor's slab
+    for (const sd of [-1, 1]) f.box('wall', sd * 21, (A.floor2 + A.finTop) / 2, 0.24, 18, A.finTop - A.floor2, 0.1, col(C.window));
+    f.box('wall', 0, (IN + A.finTop) / 2, 0.24, 24, A.finTop - IN, 0.1, col(C.window));
+    for (let u = -30; u <= 30.01; u += A.finStep) f.box('wall', u, (A.floor2 + A.finTop) / 2, 0.2 + o / 2, 0.18, A.finTop - A.floor2, o, col(C.fin));
+    f.box('wall', 0, (A.finTop + H) / 2 + 0.1, 0.2 + o / 2, 60.8, H - A.finTop + 0.2, o + 0.5, col(C.fascia));
+    for (let u = -27; u <= 27.01; u += A.column) { f.box('wall', u, A.floor2 / 2, o + 0.1, 0.42, A.floor2, 0.42, col(C.fin)); const [x, z] = toWorld(u, o + 0.1); solids.push({ x, z, r: 0.3, top: y0 + A.floor2 }); }
   }
   // rooms: the lobby's back wall (the turnstile gap), the hall's sides (doors to the wings), the wings' walls
   const [tu0, tu1, tw] = M.turnstile, door = [-19, -15], T = 0.15;
@@ -155,6 +178,13 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
   // ---- the ticket counter, its clerk and the turnstiles ----
   f.box('wall', 8, 0.55, -5, 1.2, 1.1, 4.4, col(C.counter)); f.box('wall', 8, 1.12, -5, 1.4, 0.06, 4.6, col('#f4f4f0'));   // along the lobby's side, facing the way in
   { const [x, z] = toWorld(8, -5); rects.push({ x, z, w: 1.2, d: 4.4, ry: M.ry, top: y0 + 1.2 }); }
+  { // the ticket hall as it is: a blue wall with a wave across it, round ticket windows over the counter
+    f.box('wall', 11.8, IN / 2, -5, 0.06, IN - 0.1, 9.4, col(C.ticketWall));
+    for (let k = 0; k < 30; k++) { const w = -9.6 + k * 0.31; f.box('wall', 11.75, 3.55 + Math.sin(k * 0.42) * 0.32, w, 0.04, 0.5, 0.32, col(C.ticketWave)); }
+    f.box('glass', 8, 1.85, -5, 0.05, 1.45, 4.4, col(C.glass));
+    const hole = new THREE.TorusGeometry(0.42, 0.07, 8, 24).rotateY(Math.PI / 2);
+    for (const w of [-6.3, -5, -3.7]) { const [x, z] = toWorld(7.94, w); kit.add('wall', hole, new THREE.Matrix4().makeRotationY(M.ry).setPosition(x, y0 + 1.75, z), col(C.fin)); }
+  }
   const clerk = new THREE.Mesh(bakePerson({ scale: 1.3, headScale: 0.9, skin: '#c8956a', hair: '#2a2420', hairStyle: 'bun', shirt: '#2f78c8', outfit: 'work', hat: 'none', smile: 'smile', print: 'none' }, null, 0.5), personMaterial);
   { const [x, z] = toWorld(9.4, -5); clerk.position.set(x, top, z); clerk.rotation.y = M.ry - Math.PI / 2; clerk.castShadow = true; scene.add(clerk); }   // behind it, facing the visitors
   for (let u = tu0; u <= tu1 + 0.01; u += (tu1 - tu0) / 3) f.box('metal', u, 0.5, tw, 0.25, 1.0, 0.5, col(C.rail));   // turnstile posts
@@ -163,15 +193,25 @@ export function buildMarine(kit, roofKit, scene, map, layout) {
     arms.geometry.dispose(); arms.geometry = mergeGeometries(g); arms.name = 'turnstile-arms'; scene.add(arms); }
   const gate = (() => { const [x, z] = toWorld(0, tw); return { x, z, w: tu1 - tu0, d: 0.5, ry: M.ry, top: y0 + 1.0 }; })();
 
-  // ---- the museum: a Bryde's whale and a whale shark hanging from the ceiling, a rocky shore display ----
-  const hang = (id, u, w, y, yaw) => {
-    const s = SPECIES[id], g = sealifeGeometry(id, s), [x, z] = toWorld(u, w), m = new THREE.Matrix4().makeRotationY(M.ry + yaw).setPosition(x, y0 + y, z);
-    const c = g.attributes.color; let v = 0;
-    kit.add('wall', g, m, () => C2.fromBufferAttribute(c, v++), { x, z });          // (the model's own colours)
-    for (const d of [-s.size * 0.3, s.size * 0.3]) { const [cx, cz] = toWorld(u + Math.sin(yaw) * d, w + Math.cos(yaw) * d); kit.rod('metal', new THREE.Vector3(cx, y0 + y + s.size * 0.06, cz), new THREE.Vector3(cx, y0 + IN, cz), 0.012, col('#6a6a6a')); }
+  // ---- the ocean hall (the museum wing): dark-blue walls, a glowing blue floor, white models of whales, rays and
+  // dolphins under the ceiling, a rocky shore display ----
+  const C2 = new THREE.Color(), O = M.oceanHall;
+  { const [u0, u1, w0, w1] = R.museum, ocean = col(C.ocean), t = 0.05, g = 0.22, hh = IN - 0.05;
+    const clad = (a, b, c, d) => f.box('lit', (a + b) / 2, hh / 2, (c + d) / 2, b - a, hh, d - c, ocean);   // (lit: the hall glows blue whatever the sun does)
+    clad(u0 + g, u1 - g, w0 + g, w0 + g + t); clad(u0 + g, u1 - g, w1 - g - t, w1 - g); clad(u1 - g - t, u1 - g, w0 + g, w1 - g);
+    clad(u0 + g, u0 + g + t, w0 + g, door[0]); clad(u0 + g, u0 + g + t, door[1], w1 - g);          // (the doorway stays open)
+    const pl = new THREE.PlaneGeometry(u1 - u0 - 0.4, w1 - w0 - 0.4).rotateX(Math.PI / 2), [x, z] = toWorld((u0 + u1) / 2, (w0 + w1) / 2);
+    f.add('lit', pl, new THREE.Matrix4().makeRotationY(M.ry).setPosition(x, y0 + IN - 0.03, z), col('#14246a'));
+    f.box('wall', (u0 + u1) / 2, B.floor + 0.005, (w0 + w1) / 2, u1 - u0, 0.01, w1 - w0, col(C.oceanFloor));
+    const [pu, pw, su, sw] = O.pad;
+    f.box('lit', pu, B.floor + 0.012, pw, su, 0.01, sw, col(C.pad[0])); f.box('lit', pu, B.floor + 0.018, pw, su - 1.6, 0.01, sw - 1.6, col(C.pad[1]));
+  }
+  const hang = (id, u, w, y, yaw, k = 1) => {
+    const s = SPECIES[id], g = k === 1 ? sealifeGeometry(id, s) : sealifeGeometry(id, s).clone().scale(k, k, k), L = s.size * k, [x, z] = toWorld(u, w);
+    kit.add('wall', g, new THREE.Matrix4().makeRotationY(M.ry + yaw).setPosition(x, y0 + y, z), col(C.model), { x, z });
+    for (const d of [-L * 0.25, L * 0.25]) { const [cx, cz] = toWorld(u + Math.sin(yaw) * d, w + Math.cos(yaw) * d); kit.rod('metal', new THREE.Vector3(cx, y0 + y + L * 0.03, cz), new THREE.Vector3(cx, y0 + IN, cz), 0.012, col('#8a8a8a')); }
   };
-  const C2 = new THREE.Color();
-  hang('brydesWhale', 21, -30, 4.2, 0.08); hang('whaleShark', 22, -16.5, 3.4, Math.PI * 0.5);
+  for (const m of O.models) hang(...m);
   { const [x, z] = toWorld(21, -40.5); kit.add('wall', new THREE.DodecahedronGeometry(1, 0).scale(5, 0.9, 2.2), new THREE.Matrix4().setPosition(x, y0 + 0.4, z), col(C.stone)); rects.push({ x, z, w: 10, d: 4.4, ry: M.ry, top: y0 + 1.2 }); }
   for (const [u, w] of [[18.5, -40], [20, -41.2], [22.4, -39.8], [24, -40.8]]) { const g = sealifeGeometry('crab', SPECIES.crab), c = g.attributes.color, [x, z] = toWorld(u, w); let v = 0; kit.add('wall', g, new THREE.Matrix4().makeRotationY(u).setPosition(x, y0 + 1.25, z), () => C2.fromBufferAttribute(c, v++), { x, z }); }
 

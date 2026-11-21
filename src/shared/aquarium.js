@@ -54,6 +54,7 @@ export const TANKS = {
   touch:    [['starfish', 9], ['seaCucumber', 5]],
   eel:      [['eel', 2]],
   jelly:    [['jelly', 9]],
+  cylinder: [['parrotfish', 4], ['clownfish', 9], ['puffer', 2]],
 };
 
 // each label in the aquarium opens one zone: its title and the animals it tells about
@@ -66,6 +67,7 @@ export const ZONES = {
   touch:      { icon: '🖐️', name: { th: 'บ่อสัมผัส', en: 'Touch pool' }, species: ['starfish', 'seaCucumber'] },
   jelly:      { icon: '🪼', name: { th: 'โซนแมงกะพรุน', en: 'Jellyfish' }, species: ['jelly'] },
   eel:        { icon: '⚡', name: { th: 'ปลาน้ำจืด', en: 'Freshwater corner' }, species: ['eel'] },
+  cylinder:   { icon: '🫧', name: { th: 'ตู้ทรงกระบอก · หอหินปะการัง', en: 'The round tank and its coral tower' }, species: ['parrotfish', 'clownfish', 'puffer'] },
   whale:      { icon: '🐋', name: { th: 'วาฬในอ่าวไทย', en: 'Whales of the Gulf of Thailand' }, species: ['brydesWhale'] },
   whaleShark: { icon: '🦈', name: { th: 'ฉลามวาฬ', en: 'Whale shark' }, species: ['whaleShark'] },
   shore:      { icon: '🦀', name: { th: 'ชายฝั่งหิน', en: 'Rocky shore' }, species: ['crab', 'starfish'] },

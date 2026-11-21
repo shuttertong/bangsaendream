@@ -26,10 +26,14 @@ export function buildMarineSigns(kit, scene, labels) {
   const font = (c, wt, px, fam = 'Kanit') => { c.font = `${wt} ${px}px ${fam}, sans-serif`; };
   const centre = (c, text, x, y, max) => { c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x, y, max); };
   const front = [0, 1];
-  sign('facade', 1024, 200, 0, 7.7, 0.25, front, 16, 3.125, (c, W, H) => {
-    c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#1f5fa8'; font(c, 600, 72); centre(c, t('aqFacade1'), W / 2, H * 0.45, W - 40);   // (room above for the Thai marks)
-    c.fillStyle = '#2f9ac8'; font(c, 600, 42); centre(c, t('aqFacade2'), W / 2, H * 0.82, W - 40);
+  sign('facade', 2048, 128, 0, 8.25, 1.26, front, 24, 1.5, (c, W, H) => {                             // light letters on the red-brown fascia, as on the real building
+    c.fillStyle = '#7c4028'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#f6efe2'; font(c, 600, 76); centre(c, `${t('aqFacade1')}   ·   ${t('aqFacade2')}`, W / 2, H * 0.56, W - 60);
+  });
+  sign('admission', 1024, 200, 11.74, 4.9, -5, [-1, 0], 5.6, 1.1, (c, W, H) => {                      // over the ticket windows
+    c.fillStyle = '#2a86bc'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#ffffff'; font(c, 600, 84); centre(c, t('aqAdmission1'), W / 2, H * 0.4, W - 40);
+    font(c, 500, 44); centre(c, t('aqAdmission2'), W / 2, H * 0.82, W - 40);
   });
   for (const fw of [1, -1]) sign(`gate${fw}`, 1024, 220, -12.75, 2.3, M.site.w[1] + fw * 0.51, [0, fw], 8.2, 1.76, (c, W, H) => {   // on both faces of the sign wall
     c.fillStyle = '#f4f1e8'; c.fillRect(0, 0, W, H);
