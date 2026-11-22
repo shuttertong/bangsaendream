@@ -1,5 +1,5 @@
 // The aquarium's exhibits inside the Institute of Marine Science (marine.js builds the building): wall tanks in the
-// hall, the touch pool, the big tank with its glass tunnel, the jellyfish columns in the dark room and the eel tank,
+// hall, the touch pool, the big tank with its glass tunnel, the eel tank (the glowing jellyfish room is jellyroom.js),
 // and the animals in them (shared/aquarium.js: species and who lives where). Tank insides are lit (unaffected by the
 // building's shade); animals are instanced per species and swim on loops, updated only while the kid is near.
 // buildAquarium(kit, scene) → { labels, update(dt, time, p) }.
@@ -10,6 +10,7 @@ import { sealifeGeometry } from './assets/sealife.js';
 import { paintedMaterial } from '../world/materials.js';
 import { MARINE, toWorld } from './marine.js';
 import { rng } from './layout.js';
+import { buildJellyRoom } from './jellyroom.js';
 
 const M = MARINE, R = M.rooms;
 export const EXHIBIT = {
@@ -18,11 +19,9 @@ export const EXHIBIT = {
   cabinet: { w: 4.2, depth: 1.45, base: 0.7, top: 2.7, at: 10.4 },
   eel: { u: -29.85, w: -17 },                 // the eel's cabinet on the jelly room's far wall (it faces +u)
   touch: [-3, 3, -20.5, -13.5],               // the touch pool (u0, u1, w0, w1)
-  jellyCols: [[-26, -37], [-21, -38.5], [-16, -37], [-26, -26], [-21, -24.5], [-16, -26]],
-  jellyWall: { u: [-27, -15], depth: 1.2, y: [0.7, 3.3], n: 18, lo: '#04141a', hi: '#128a5a' },   // the wall of moon jellies glowing green (on the room's front wall)
   cylinder: { u: 16.5, w: -23.5, r: 1.5, h: 4, base: 0.6, water: '#1f6aa8' },                     // the tall round tank with a rock tower in it
   belt: { w: 1.4, color: '#22262c', edge: '#e8c23a' },                                             // the moving walkway down the tunnel
-  water: { back: '#0a3a62', top: '#2a90c0', sand: '#b8ac86', big: '#062c4a', bigTop: '#2488b8', jelly: '#14204a' },   // deep enough that the animals stand out
+  water: { back: '#0a3a62', top: '#2a90c0', sand: '#b8ac86', big: '#062c4a', bigTop: '#2488b8' },   // deep enough that the animals stand out
   coral: ['#f07a6a', '#f4b23a', '#c86ad8', '#5fd0b0', '#f4f0e6', '#e85a9a'],
   shown: 0.24,                                // the smallest an animal is drawn (m): a 11 cm clownfish is lost behind 2 m of glass
 };
@@ -128,40 +127,9 @@ export function buildAquarium(kit, scene) {
     labels.push({ tank: 'big', u: 0, w: (w1 + t.end) / 2 });
   }
 
-  // ---- the jellyfish room: dark walls, columns of water lit in slowly changing colours ----
-  const J = R.jelly, dark = col('#141c30');
-  for (const [u0, u1, w0, w1] of [[J[0] + 0.25, J[1] - 0.2, J[2] + 0.25, J[2] + 0.3], [J[0] + 0.25, J[1] - 0.2, J[3] - 0.3, J[3] - 0.25], [J[0] + 0.25, J[0] + 0.3, J[2] + 0.25, J[3] - 0.25], [J[1] - 0.25, J[1] - 0.2, J[2] + 0.25, -19], [J[1] - 0.25, J[1] - 0.2, -15, J[3] - 0.25]]) {   // (the doorway to the hall stays open)
-    f.box('wall', (u0 + u1) / 2, M.building.ceiling / 2, (w0 + w1) / 2, u1 - u0, M.building.ceiling - 0.05, w1 - w0, dark);
-  }
-  { const pl = new THREE.PlaneGeometry(J[1] - J[0] - 0.4, J[3] - J[2] - 0.4).rotateX(Math.PI / 2), [x, z] = toWorld((J[0] + J[1]) / 2, (J[2] + J[3]) / 2);
-    f.add('wall', pl, new THREE.Matrix4().makeRotationY(M.ry).setPosition(x, M.level + M.building.ceiling - 0.03, z), dark); }
-  const glowGeo = [], colSolids = [];
-  for (const [u, w] of E.jellyCols) {
-    const [x, z] = toWorld(u, w);
-    kit.add('wall', new THREE.CylinderGeometry(0.95, 1.05, 0.6, 20), new THREE.Matrix4().setPosition(x, M.level + floor + 0.3, z), col('#1a2230'));
-    kit.add('wall', new THREE.CylinderGeometry(0.95, 0.95, 0.35, 20), new THREE.Matrix4().setPosition(x, M.level + 3.15, z), col('#1a2230'));
-    glowGeo.push(new THREE.CylinderGeometry(0.72, 0.72, 2.3, 20, 1, true).applyMatrix4(new THREE.Matrix4().setPosition(x, M.level + floor + 0.6 + 1.15, z)));
-    glass.push(new THREE.CylinderGeometry(0.8, 0.8, 2.3, 20, 1, true).applyMatrix4(new THREE.Matrix4().setPosition(x, M.level + floor + 0.6 + 1.15, z)));
-    colSolids.push({ x, z, r: 1.05, top: M.level + 3.3 });
-  }
-  const glowMat = new THREE.MeshBasicMaterial({ color: '#4a6ad8', side: THREE.BackSide });
-  const glow = new THREE.Mesh(mergeGeometries(glowGeo), glowMat);
-  glow.name = 'jelly-glow';
-  scene.add(glow);
-  for (const [u, w] of E.jellyCols) for (let k = 0; k < 2 && swimmers.filter(s => s.id === 'jelly').length < TANKS.jelly[0][1]; k++) {
-    swimmers.push({ id: 'jelly', model: 'jelly', cu: u, cw: w, ru: 0.25, rw: 0.25, y: floor + 1.1 + k * 0.8, bob: 0.3, sp: 0.15 * (k ? 1 : -1), ph: r() * 6.28 });
-  }
-  { // the wall of moon jellies
-    const W = E.jellyWall, [u0, u1] = W.u, w1 = J[3] - 0.32, w0 = w1 - W.depth, [ya, yb] = W.y;
-    f.box('wall', (u0 + u1) / 2, (floor + ya) / 2, (w0 + w1) / 2, u1 - u0 + 0.3, ya - floor, W.depth, col('#10161f'));
-    f.box('wall', (u0 + u1) / 2, yb + 0.3, (w0 + w1) / 2, u1 - u0 + 0.3, 0.6, W.depth, col('#10161f'));
-    litBox(kit, f, u0, u1, ya, yb, w0 + 0.02, w1, W.lo, W.hi, '#0a1a1a', 'w0');
-    pane((u0 + u1) / 2, (ya + yb) / 2, w0, u1 - u0, yb - ya, 0.03);
-    solid(u0 - 0.15, u1 + 0.15, w0, w1, yb + 0.6);
-    for (let k = 0; k < W.n; k++) swimmers.push({ id: 'jelly', model: 'jelly', cu: u0 + 0.5 + r() * (u1 - u0 - 1), cw: (w0 + w1) / 2 + 0.1, ru: 0.3, rw: 0.25, y: ya + 0.5 + r() * (yb - ya - 1.1), bob: 0.3, sp: 0.1 * (r() < 0.5 ? -1 : 1), ph: r() * 6.28 });
-    labels.push({ tank: 'jelly', u: (u0 + u1) / 2, w: w0 - 0.8, plate: { u: u1 - 0.9, y: 0.38, w: w0 - 0.01, face: [0, -1] } });
-  }
-  labels.push({ tank: 'jelly', u: (J[0] + J[1]) / 2, w: -31.5, plate: { u: (J[0] + J[1]) / 2, y: 1.1, w: -31.5, face: [0, 1], stand: true } });
+  // ---- the glowing jellyfish room (jellyroom.js): columns, the moon window, the green wall, the photo spot ----
+  const colSolids = [], room = buildJellyRoom(kit, { glass, solid, rnd: r });
+  colSolids.push(...room.solids); labels.push(...room.labels); scene.add(room.group);
 
   // ---- the tall round tank in the ocean hall: a tower of rock and coral, fish circling it ----
   const Cy = E.cylinder, [cyx, cyz] = toWorld(Cy.u, Cy.w), cyY = M.level + floor + Cy.base;
@@ -183,14 +151,13 @@ export function buildAquarium(kit, scene) {
   scene.add(glassMesh);
 
   // ---- the animals: one instanced mesh per species ----
-  const mat = paintedMaterial({ amp: 0.04, scale: 1 }), jellyMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.62, emissive: '#3a4a7a', depthWrite: false });
+  const mat = paintedMaterial({ amp: 0.04, scale: 1 });
   const meshes = {};
   for (const s of swimmers) (meshes[s.id] ||= { n: 0 }).n++;
   for (const [id, e] of Object.entries(meshes)) {
     const sz = SPECIES[id].size, k = sz < E.shown ? E.shown / sz : 1, geo = k > 1 ? sealifeGeometry(id, SPECIES[id]).clone().scale(k, k, k) : sealifeGeometry(id, SPECIES[id]);
-    const m = new THREE.InstancedMesh(geo, id === 'jelly' ? jellyMat : mat, e.n);
+    const m = new THREE.InstancedMesh(geo, mat, e.n);
     m.castShadow = false; m.receiveShadow = false; m.frustumCulled = false; m.name = `sea-${id}`;
-    m.renderOrder = id === 'jelly' ? 3 : 0;
     scene.add(m); e.mesh = m; e.k = 0;
   }
   for (const s of swimmers) { const e = meshes[s.id]; s.mesh = e.mesh; s.k = e.k++; }
@@ -203,8 +170,7 @@ export function buildAquarium(kit, scene) {
       const a = s.ph + t * s.sp, ca = Math.cos(a), sa = Math.sin(a);
       let u = s.cu + s.ru * ca, w = s.cw + s.rw * sa, y = s.y + s.bob * Math.sin(2 * a + s.ph);
       let du = -s.ru * sa * Math.sign(s.sp), dw = s.rw * ca * Math.sign(s.sp), roll = 0, sy = 1, sxz = 1;
-      if (s.model === 'jelly') { y = s.y + 0.3 * Math.sin(t * 0.35 + s.ph); const p = Math.sin(t * 2.1 + s.ph); sy = 1 - 0.14 * p; sxz = 1 + 0.1 * p; du = 0; dw = 1; }
-      else if (s.model === 'seahorse') { u = s.cu + 0.1 * ca; w = s.cw + s.rw * 0.6 * sa; du = Math.cos(s.ph); dw = Math.sin(s.ph); }
+      if (s.model === 'seahorse') { u = s.cu + 0.1 * ca; w = s.cw + s.rw * 0.6 * sa; du = Math.cos(s.ph); dw = Math.sin(s.ph); }
       else if (s.model === 'ray') roll = 0.22 * Math.sin(t * 1.8 + s.ph);
       else if (s.model === 'fish' || s.model === 'shark' || s.model === 'lionfish') roll = 0.05 * Math.sin(t * 6 + s.ph);
       const [x, z] = toWorld(u, w);
@@ -217,13 +183,13 @@ export function buildAquarium(kit, scene) {
   place(0);
 
   return {
-    labels, solids: colSolids, rects,
+    labels, solids: colSolids, rects, photo: room.photo, room,
     update(dt, time, p) {
       const d = Math.hypot(p.x - cx, p.z - cz), on = d < 220;
-      if (on !== shown) { shown = on; for (const e of Object.values(meshes)) e.mesh.visible = on; glassMesh.visible = glow.visible = cylWater.visible = on; }
+      if (on !== shown) { shown = on; for (const e of Object.values(meshes)) e.mesh.visible = on; glassMesh.visible = room.group.visible = cylWater.visible = on; }
       if (d > VISIT.near) return;
       place(time);
-      glowMat.color.setHSL((0.6 + 0.12 * Math.sin(time * 0.15)) % 1, 0.6, 0.42 + 0.08 * Math.sin(time * 0.4));   // the columns' light shifts slowly from blue to violet to teal
+      room.update(time);
     },
   };
 }

@@ -53,7 +53,6 @@ export const TANKS = {
   big:      [['grouper', 5], ['ray', 4], ['bambooShark', 4], ['turtle', 2], ['parrotfish', 6], ['barramundi', 6]],
   touch:    [['starfish', 9], ['seaCucumber', 5]],
   eel:      [['eel', 2]],
-  jelly:    [['jelly', 9]],
   cylinder: [['parrotfish', 4], ['clownfish', 9], ['puffer', 2]],
 };
 
@@ -76,5 +75,6 @@ export const ZONES = {
 export const VISIT = {
   ticket: 40,                      // ฿, the real price for a Thai child (adults ฿80)
   reach: 2.4,                      // metres from a tank label to read it
+  photoReach: 1.1, smile: 8,       // the jellyfish room's photo spot: how near to stand, and how long the kid beams (s)
   near: 80,                        // the tanks animate only while the kid is this close
 };

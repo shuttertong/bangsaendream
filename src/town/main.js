@@ -143,7 +143,7 @@ async function boot() {
   const navyFleet = [], navy = buildNavyPier(kit, map, layout, navyFleet);   // สะพานราชนาวี
   createBobbingBoats(scene, navyFleet);
   const roofKit = new Kit(), marine = buildMarine(kit, roofKit, scene, map, layout);   // 🐠 สถาบันวิทยาศาสตร์ทางทะเล: its own fenced grounds, reached only by travel
-  const aquarium = buildAquarium(kit, scene), marineSigns = buildMarineSigns(kit, scene, aquarium.labels);
+  const aquarium = buildAquarium(kit, scene), marineSigns = buildMarineSigns(kit, scene, aquarium.labels, aquarium.photo);
   const marineRoof = roofKit.build();
   scene.add(marineRoof);
   const skatePark = buildSkatePark(kit, scene, map, layout, START);   // 🛼 the inline-skating rink and its school, on the beach by the promenade (first, so umbrellas, palms and stalls keep off the plot)
@@ -246,7 +246,7 @@ async function boot() {
   hub.hud.support = { donate: () => sponsor.openDonate(), pick: () => sponsor.startPicking() };
   const partners = createPartners({ scene, map, collision, hub, root: $('hud'), audio });   // ร้านพันธมิตร
   hub.partners = partners;
-  const marineVisit = createMarineVisit({ root: $('hud'), marine, labels: marineSigns.labels, collision, roof: marineRoof, arms: marine.arms, far: [marineSigns.mesh, marine.clerk], audio, toast: (m, snd = 'coin') => { hub.hud.toast(m); audio.play(snd); } });
+  const marineVisit = createMarineVisit({ root: $('hud'), marine, labels: marineSigns.labels, collision, roof: marineRoof, arms: marine.arms, far: [marineSigns.mesh, marine.clerk], photo: aquarium.photo, player, camera: tpc, audio, toast: (m, snd = 'coin') => { hub.hud.toast(m); audio.play(snd); } });
   hub.extras.push(marineVisit.interact);
   partners.onLoaded = list => sponsor.dress(list);                                        // building sponsors are dressed once the list is in from Supabase (none until the admin adds some)
   const culler = createChunkCuller([town, beach.group, crowd.group, marineRoof]);   // hide map chunks far behind the haze

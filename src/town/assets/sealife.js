@@ -149,16 +149,6 @@ function turtle(s) {
   return mergeGeometries(parts).scale(s.size, s.size, s.size);
 }
 
-/** The jelly's bell and tentacles (its own translucent material in aquarium.js). */
-function jelly(s) {
-  const [bell, inner, frill] = s.colors;
-  const g = new THREE.LatheGeometry([[0.001, 0.32], [0.18, 0.3], [0.33, 0.2], [0.42, 0.04], [0.4, 0.0], [0.3, 0.06]].map(([r, y]) => new THREE.Vector2(r, y)), 18);
-  const parts = [paint(g, (x, y) => C.set(bell).lerp(C.clone().set(inner), y > 0.18 ? 0.3 : 0))];
-  for (let k = 0; k < 4; k++) parts.push(paint(new THREE.TorusGeometry(0.07, 0.018, 4, 10).rotateX(Math.PI / 2).translate(Math.cos(k * 1.57) * 0.11, 0.2, Math.sin(k * 1.57) * 0.11), solid(frill)));   // the four rings
-  for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; parts.push(paint(new THREE.CylinderGeometry(0.006, 0.003, 0.55, 3).translate(Math.cos(a) * 0.36, -0.27, Math.sin(a) * 0.36), solid(frill))); }
-  return mergeGeometries(parts).scale(s.size * 2, s.size * 2, s.size * 2);
-}
-
 function eel(s) {
   const [body, belly, dark] = s.colors, pts = [];
   for (let k = 0; k <= 10; k++) pts.push(P3(Math.sin(k * 0.9) * 0.05, 0, 0.5 - k * 0.1));
@@ -209,7 +199,7 @@ function whaleShark(s) {
   return g.scale(s.size, s.size * 1.2, s.size);
 }
 
-const MODELS = { fish: s => fish(s, { tall: s.tall ?? 0.36 }), puffer, lionfish, lobster, seahorse, crab, ray, shark: s => shark(s), turtle, jelly, eel, starfish, cucumber, whale, whaleShark };
+const MODELS = { fish: s => fish(s, { tall: s.tall ?? 0.36 }), puffer, lionfish, lobster, seahorse, crab, ray, shark: s => shark(s), turtle, eel, starfish, cucumber, whale, whaleShark };
 const cache = new Map();
 /** The geometry for a species (built once). */
 export function sealifeGeometry(id, spec) {

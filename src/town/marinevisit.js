@@ -20,7 +20,7 @@ const MUSEUM = [
 const TICKET_AT = [6.9, -5];                  // where to stand at the counter (local)
 
 /** Signs: the facade, the gate, the price board, the welcome banner and a plate by every label. */
-export function buildMarineSigns(kit, scene, labels) {
+export function buildMarineSigns(kit, scene, labels, photo = null) {
   const all = [...labels, ...MUSEUM], signs = [];
   const sign = (name, pw, ph, u, y, w, face, sw, sh, draw) => signs.push({ name, pw, ph, u, y, w, face, sw, sh, draw });
   const font = (c, wt, px, fam = 'Kanit') => { c.font = `${wt} ${px}px ${fam}, sans-serif`; };
@@ -63,6 +63,14 @@ export function buildMarineSigns(kit, scene, labels) {
     if (p.stand) { const [x, z] = toWorld(p.u, p.w); kit.rod('metal', new THREE.Vector3(x, M.level + M.building.floor, z), new THREE.Vector3(x, M.level + p.y - 0.3, z), 0.03, new THREE.Color('#6a7480')); }
     else { const [x, z] = toWorld(p.u - p.face[0] * 0.02, p.w - p.face[1] * 0.02); kit.box('wall', x, M.level + p.y, z, 1.26, 0.66, 0.02, M.ry + Math.atan2(p.face[0], p.face[1]), new THREE.Color('#1a2430')); }   // a backing board
   }
+  if (photo) {                                                                                        // the photo spot's little sign, on a stand
+    const { u, w } = photo.sign, [x, z] = toWorld(u, w);
+    sign('photo', 256, 128, u, 1.0, w, front, 0.9, 0.45, (c, W, H) => {
+      c.fillStyle = '#141c30'; c.fillRect(0, 0, W, H); c.strokeStyle = '#8fd8ff'; c.lineWidth = 6; c.strokeRect(5, 5, W - 10, H - 10);
+      c.fillStyle = '#e8f6ff'; font(c, 600, 44); centre(c, '📷', W / 2, H * 0.34, W - 20); font(c, 600, 34); centre(c, t('aqPhotoSign'), W / 2, H * 0.72, W - 24);
+    });
+    kit.rod('metal', new THREE.Vector3(x, M.level + M.building.floor, z), new THREE.Vector3(x, M.level + 0.8, z), 0.025, new THREE.Color('#6a7480'));
+  }
   // pack the signs into one canvas, in rows
   const W = 2048;
   let x = 0, y = 0, row = 0;
@@ -96,7 +104,7 @@ export function buildMarineSigns(kit, scene, labels) {
 }
 
 /** The ticket, the turnstile, the labels' cards and the roof. Plugs into the hub's F prompt through `interact`. */
-export function createMarineVisit({ root, marine, labels, collision, roof, arms, far = [], audio, toast }) {
+export function createMarineVisit({ root, marine, labels, collision, roof, arms, far = [], audio, toast, photo = null, player = null, camera = null }) {
   const card = document.createElement('div');
   card.className = 'aq-card';
   root.appendChild(card);
@@ -121,12 +129,20 @@ export function createMarineVisit({ root, marine, labels, collision, roof, arms,
   const interact = {
     nearest(p) {
       if (!hasTicket() && Math.hypot(p.x - tx, p.z - tz) < VISIT.reach) return { kind: 'ticket' };
+      if (photo && player && Math.hypot(p.x - photo.x, p.z - photo.z) < VISIT.photoReach) return { kind: 'photo' };
       let best = null, bd = VISIT.reach;
       for (const L of pts) { const d = Math.hypot(p.x - L.x, p.z - L.z); if (d < bd) { bd = d; best = L; } }
       return best ? { kind: 'label', L: best } : null;
     },
-    prompt(it) { return it.kind === 'ticket' ? ['aqTicket', { n: VISIT.ticket }] : [open === it.L ? 'aqClose' : 'aqLook', { zone: tr(ZONES[it.L.tank].name) }]; },
+    prompt(it) { return it.kind === 'photo' ? ['aqPhoto', {}] : it.kind === 'ticket' ? ['aqTicket', { n: VISIT.ticket }] : [open === it.L ? 'aqClose' : 'aqLook', { zone: tr(ZONES[it.L.tank].name) }]; },
     use(it) {
+      if (it.kind === 'photo') {                                                         // stand on the ring facing the room; the camera comes round in front, the moon behind
+        player.place(photo.x, photo.z, photo.yaw);
+        if (camera) { Object.assign(camera.state, { yaw: photo.yaw, pitch: photo.pitch, dist: photo.dist }); camera.snap(); }
+        player.kid.express(VISIT.smile);
+        toast(t('aqPhotoHint'), 'click');
+        return;
+      }
       if (it.kind === 'ticket') {
         if (P.get().baht >= VISIT.ticket) { P.addBaht(-VISIT.ticket); toast(t('aqTicketPaid', { n: VISIT.ticket }), 'coin'); }
         else toast(t('aqTicketFree'), 'catch');
